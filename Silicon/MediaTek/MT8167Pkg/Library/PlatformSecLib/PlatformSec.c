@@ -32,8 +32,7 @@ PlatformInitialize ()
   // LK has already set up clocks, the PMIC wrapper, UART and display
   // (edk2-mtk MT8167 PlatformPrePiLib does nothing else either).
   // The watchdog LK left running is stopped here; a board that wants it
-  // (a04br3Pkg with A04BR3_TEST_CYCLE=1) arms it again from its
-  // PlatformSecBoardLib instance and keeps it alive in DXE.
+  // arms it again from its PlatformSecBoardLib instance.
   DisableWatchDogTimer ();
   PlatformSecBoardInitialize ();
 }

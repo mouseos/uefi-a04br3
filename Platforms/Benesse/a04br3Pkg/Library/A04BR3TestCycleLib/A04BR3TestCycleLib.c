@@ -47,9 +47,6 @@
 #define TOPRGU_RESTART          (TOPRGU_BASE + 0x08)
 #define TOPRGU_RESTART_KEY      0x1971
 
-// TOPRGU LENGTH holds at most 31 s (Linux mtk_wdt max_timeout).
-#define WATCHDOG_SECONDS        31
-
 STATIC
 VOID
 Write32 (
@@ -173,8 +170,11 @@ A04BR3WatchdogArm (
 
   Write32 (TOPRGU_LENGTH, ((Seconds << 6) << 5) | 0x08);
   Write32 (TOPRGU_RESTART, TOPRGU_RESTART_KEY);
-  // Enable; no interrupt, no dual mode (Linux mtk_wdt_start).
-  Mode = (MmioRead32 (TOPRGU_MODE) & 0x00FFFFFFU & ~0x08U & ~0x40U) | 0x22000001U;
+  // Enable with the external reset and auto restart bits that the reset
+  // path proven on this tablet sets (A04BR3AutoReset.cpp resetNow: 0x14),
+  // no interrupt, no dual mode (Linux mtk_wdt: EXRST_EN BIT(2),
+  // IRQ_EN BIT(3), AUTO_START BIT(4), DUAL_EN BIT(6)).
+  Mode = (MmioRead32 (TOPRGU_MODE) & 0x00FFFFFFU & ~0x48U) | 0x22000015U;
   Write32 (TOPRGU_MODE, Mode);
 }
 

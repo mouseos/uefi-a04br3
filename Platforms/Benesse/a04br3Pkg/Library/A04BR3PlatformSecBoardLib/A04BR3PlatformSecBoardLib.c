@@ -25,8 +25,9 @@ PlatformSecBoardInitialize (
 {
   BOOLEAN  Flag;
 
-  Flag = A04BR3SetFastbootFlag ();
+  // Arm first: a PMIC wrapper access that stalls still ends in a reset.
   A04BR3WatchdogArm (A04BR3_WATCHDOG_SECONDS);
+  Flag = A04BR3SetFastbootFlag ();
   DEBUG ((
     DEBUG_ERROR,
     "A04BR3 SEC: test cycle: fastboot flag %a, watchdog armed for %u s\n",
