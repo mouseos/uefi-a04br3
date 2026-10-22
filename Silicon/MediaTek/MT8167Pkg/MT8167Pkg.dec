@@ -13,6 +13,13 @@
   PACKAGE_GUID                        = 8F169043-4634-42B9-ADAB-5040F633596C
   PACKAGE_VERSION                     = 0.1
 
+[Includes]
+  Include
+
+[LibraryClasses]
+  ## @libraryclass  Board hook called once from the SEC phase (PlatformSecLib)
+  PlatformSecBoardLib|Include/Library/PlatformSecBoardLib.h
+
 [Guids]
   gMt8167TokenSpaceGuid               = { 0x8F60DCFF, 0x621F, 0x4F92, { 0x96, 0xB7, 0x4D, 0x44, 0xB7, 0x31, 0x95, 0x1E } }
 

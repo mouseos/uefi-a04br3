@@ -68,6 +68,7 @@
   # SEC Libraries
   #
   PlatformSecLib|MT8167Pkg/Library/PlatformSecLib/PlatformSecLib.inf
+  PlatformSecBoardLib|MT8167Pkg/Library/PlatformSecBoardLibNull/PlatformSecBoardLibNull.inf
 
   #
   # Serial: MT8167 UART0 (16550 compatible, 32-bit register spacing). Used for

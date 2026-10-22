@@ -9,3 +9,10 @@
   PACKAGE_NAME                        = a04br3Pkg
   PACKAGE_GUID                        = 0B6D4E0A-1F3C-4C8B-A2E5-7A04B3816701
   PACKAGE_VERSION                     = 0.1
+
+[Includes]
+  Include
+
+[LibraryClasses]
+  ## @libraryclass  LK fastboot flag and TOPRGU watchdog of the unattended test cycle
+  A04BR3TestCycleLib|Include/Library/A04BR3TestCycleLib.h

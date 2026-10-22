@@ -1,0 +1,26 @@
+##
+#  Benesse TAB-A04-BR3 SEC board hook for the unattended test cycle: LK
+#  fastboot flag and 31 s watchdog from SEC on.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = A04BR3PlatformSecBoardLib
+  FILE_GUID                      = 0B6D4E0A-1F3C-4C8B-A2E5-7A04B3816709
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = PlatformSecBoardLib
+
+[Sources]
+  A04BR3PlatformSecBoardLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MT8167Pkg/MT8167Pkg.dec
+  a04br3Pkg/a04br3.dec
+
+[LibraryClasses]
+  A04BR3TestCycleLib
+  DebugLib

@@ -22,9 +22,10 @@
 
 [Packages]
   MdePkg/MdePkg.dec
+  a04br3Pkg/a04br3.dec
 
 [LibraryClasses]
-  ArmLib
+  A04BR3TestCycleLib
   DebugLib
   IoLib
   UefiBootServicesTableLib

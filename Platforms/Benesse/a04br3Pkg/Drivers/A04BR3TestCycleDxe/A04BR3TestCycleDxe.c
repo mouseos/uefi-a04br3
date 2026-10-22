@@ -12,14 +12,20 @@
       unixnu/_research/lk/lk-fastboot-entry.json). With the bit set, every
       reset lands in fastboot.
    2. A reset when progress stops. SEC (MT8167Pkg PlatformSecLib) stops the
-      MT8167 TOPRGU hardware watchdog that LK left running; this driver arms
-      it again with its longest timeout (31 s) and kicks it from a periodic
-      timer event.
+      MT8167 TOPRGU hardware watchdog that LK left running and then calls the
+      board hook (PlatformSecBoardLib); with the test cycle the a04br3 hook
+      (Library/A04BR3PlatformSecBoardLib) sets the flag and arms the watchdog
+      for 31 s at once, so a hang in SEC, PrePi or early DXE also resets into
+      fastboot. This driver keeps the watchdog alive from a periodic timer
+      event.
 
   Timeline:
+   - SEC: flag set, watchdog armed for 31 s (not kicked).
    - Driver entry (dispatched from the APRIORI list, right after the timer
      and PMIC wrapper drivers, see Include/APRIORI.inc): set the fastboot
-     flag, arm the watchdog, start kicking every second. A hang anywhere in
+     flag, arm the watchdog, start kicking every second. Each kick arms the
+     watchdog again if another driver disabled it and retries the flag if it
+     was not set. A hang anywhere in
      DXE or BDS that blocks timer callbacks (TPL_CALLBACK) stops the kicks and
      the watchdog resets into fastboot.
    - No ExitBootServices within FIRMWARE_STAGE_SECONDS (120 s) after entry,
@@ -37,52 +43,21 @@
   0); the default firmware is unchanged and never touches the flag or the
   watchdog after SEC.
 
-  Register sequences (identical to A04BR3AutoReset.cpp):
-   - PWRAP WACS2 (0x1000F000 +0xA0 CMD, +0xA4 RDATA with FSM bits [18:16] and
-     INIT_DONE bit 21, +0xA8 VLDCLR) and the RTC unlock / write trigger order
-     are those of the stock LK (FUN_41e0588c, FUN_41e06280, FUN_41e06254).
-     LK has initialized the wrapper before it starts the kernel slot. The
-     PmicWrapperDxe protocol is not used: it neither checks INIT_DONE nor
-     clears a pending valid while waiting for idle, and waits without bound.
-   - TOPRGU 0x10007000 (MODE key 0x22000000, LENGTH key 0x08, RESTART key
-     0x1971) follows Linux drivers/watchdog/mtk_wdt.c (mtk_wdt_set_timeout,
-     mtk_wdt_start, mtk_wdt_ping).
+  Register access: Library/A04BR3TestCycleLib.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include <Uefi.h>
 
-#include <Library/ArmLib.h>
+#include <Library/A04BR3TestCycleLib.h>
 #include <Library/DebugLib.h>
 #include <Library/IoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
 #include <Guid/EventGroup.h>
 
-#define PWRAP_BASE              0x1000F000U
-#define PWRAP_WACS2_CMD         (PWRAP_BASE + 0xA0)
-#define PWRAP_WACS2_RDATA       (PWRAP_BASE + 0xA4)
-#define PWRAP_WACS2_VLDCLR      (PWRAP_BASE + 0xA8)
-#define PWRAP_INIT_DONE         BIT21
-#define PWRAP_FSM_IDLE          0
-#define PWRAP_FSM_WFVLDCLR      6
-
-#define RTC_BBPU                0x8000
-#define RTC_BBPU_CBUSY          BIT6
-#define RTC_PDN1                0x802C
-#define RTC_PDN1_FASTBOOT       BIT13
-#define RTC_PROT                0x8036
-#define RTC_WRTGR               0x803C
-
-#define TOPRGU_BASE             0x10007000U
-#define TOPRGU_MODE             (TOPRGU_BASE + 0x00)
-#define TOPRGU_LENGTH           (TOPRGU_BASE + 0x04)
-#define TOPRGU_RESTART          (TOPRGU_BASE + 0x08)
-#define TOPRGU_RESTART_KEY      0x1971
-
-// TOPRGU LENGTH holds at most 31 s (Linux mtk_wdt max_timeout).
-#define WATCHDOG_SECONDS        31
+#define WATCHDOG_SECONDS        A04BR3_WATCHDOG_SECONDS
 
 // Kick period, in 100 ns units: 1 s, well inside the 31 s timeout.
 #define KICK_PERIOD             10000000ULL
@@ -96,143 +71,7 @@ STATIC EFI_EVENT  mKickEvent;
 STATIC EFI_EVENT  mExitBootServicesEvent;
 STATIC UINTN      mKicks;
 STATIC BOOLEAN    mKicking;
-
-STATIC
-VOID
-Write32 (
-  IN UINTN   Address,
-  IN UINT32  Value
-  )
-{
-  MmioWrite32 (Address, Value);
-  ArmDataSynchronizationBarrier ();  // dsb sy, as A04BR3AutoReset.cpp
-}
-
-/**
-  One WACS2 transaction, as the stock LK: wait for the idle FSM (clearing a
-  pending valid), issue, and for a read wait for valid data. Bounded: FALSE on
-  timeout or when the wrapper never finished its initialization.
-**/
-STATIC
-BOOLEAN
-Wacs (
-  IN  BOOLEAN  IsWrite,
-  IN  UINT32   Address,
-  IN  UINT32   Data,
-  OUT UINT32   *Out OPTIONAL
-  )
-{
-  UINT32  Status;
-  UINT32  Fsm;
-  UINTN   Spin;
-
-  for (Spin = 0; ; Spin++) {
-    Status = MmioRead32 (PWRAP_WACS2_RDATA);
-    if (((Status & PWRAP_INIT_DONE) == 0) || (Spin > 1000000)) {
-      return FALSE;
-    }
-
-    Fsm = (Status >> 16) & 7;
-    if (Fsm == PWRAP_FSM_IDLE) {
-      break;
-    }
-
-    if (Fsm == PWRAP_FSM_WFVLDCLR) {
-      Write32 (PWRAP_WACS2_VLDCLR, 1);
-    }
-  }
-
-  Write32 (PWRAP_WACS2_CMD, (IsWrite ? BIT31 : 0) | ((Address >> 1) << 16) | (Data & 0xFFFF));
-  if (IsWrite) {
-    return TRUE;
-  }
-
-  for (Spin = 0; ; Spin++) {
-    Status = MmioRead32 (PWRAP_WACS2_RDATA);
-    if (Spin > 1000000) {
-      return FALSE;
-    }
-
-    if (((Status >> 16) & 7) == PWRAP_FSM_WFVLDCLR) {
-      *Out = Status & 0xFFFF;
-      Write32 (PWRAP_WACS2_VLDCLR, 1);
-      return TRUE;
-    }
-  }
-}
-
-STATIC
-BOOLEAN
-RtcTrigger (
-  VOID
-  )
-{
-  UINT32  Bbpu;
-  UINTN   Spin;
-
-  if (!Wacs (TRUE, RTC_WRTGR, 1, NULL)) {
-    return FALSE;
-  }
-
-  for (Spin = 0; Spin < 100000; Spin++) {
-    Bbpu = 0;
-    if (!Wacs (FALSE, RTC_BBPU, 0, &Bbpu)) {
-      return FALSE;
-    }
-
-    if ((Bbpu & RTC_BBPU_CBUSY) == 0) {
-      return TRUE;
-    }
-  }
-
-  return FALSE;
-}
-
-STATIC
-BOOLEAN
-SetFastbootFlag (
-  VOID
-  )
-{
-  UINT32  Pdn1;
-  UINT32  Check;
-
-  Pdn1 = 0;
-  if (!Wacs (TRUE, RTC_PROT, 0x586A, NULL) || !RtcTrigger () ||
-      !Wacs (TRUE, RTC_PROT, 0x9136, NULL) || !RtcTrigger () ||
-      !Wacs (FALSE, RTC_PDN1, 0, &Pdn1) ||
-      !Wacs (TRUE, RTC_PDN1, (Pdn1 & 0xFFFF) | RTC_PDN1_FASTBOOT, NULL) || !RtcTrigger ())
-  {
-    return FALSE;
-  }
-
-  Check = 0;
-  return Wacs (FALSE, RTC_PDN1, 0, &Check) && ((Check & RTC_PDN1_FASTBOOT) != 0);
-}
-
-STATIC
-VOID
-WatchdogArm (
-  IN UINT32  Seconds
-  )
-{
-  UINT32  Mode;
-
-  Write32 (TOPRGU_LENGTH, ((Seconds << 6) << 5) | 0x08);
-  Write32 (TOPRGU_RESTART, TOPRGU_RESTART_KEY);
-  // Enable; no interrupt, no dual mode (Linux mtk_wdt_start).
-  Mode = (MmioRead32 (TOPRGU_MODE) & 0x00FFFFFFU & ~0x08U & ~0x40U) | 0x22000001U;
-  Write32 (TOPRGU_MODE, Mode);
-}
-
-STATIC
-VOID
-WatchdogKick (
-  VOID
-  )
-{
-  Write32 (TOPRGU_RESTART, TOPRGU_RESTART_KEY);  // Linux mtk_wdt_ping
-}
+STATIC BOOLEAN    mFlagSet;
 
 STATIC
 VOID
@@ -268,7 +107,20 @@ OnKickTimer (
     return;
   }
 
-  WatchdogKick ();
+  // A driver that writes TOPRGU MODE (for example to disable the watchdog)
+  // must not end the test cycle: arm it again.
+  if (!A04BR3WatchdogEnabled ()) {
+    DEBUG ((DEBUG_ERROR, "A04BR3TestCycleDxe: watchdog found disabled, armed again\n"));
+    A04BR3WatchdogArm (WATCHDOG_SECONDS);
+  }
+
+  // Without the flag a watchdog reset would boot the same image again.
+  if (!mFlagSet) {
+    mFlagSet = A04BR3SetFastbootFlag ();
+    DEBUG ((DEBUG_ERROR, "A04BR3TestCycleDxe: fastboot flag retry: %a\n", mFlagSet ? "set" : "NOT set"));
+  }
+
+  A04BR3WatchdogKick ();
 }
 
 STATIC
@@ -283,8 +135,8 @@ OnExitBootServices (
 
   // The kernel takes the watchdog over in bsd_init (A04BR3AutoReset.cpp).
   StopKicking ();
-  Flag = SetFastbootFlag ();
-  WatchdogArm (WATCHDOG_SECONDS);
+  Flag = A04BR3SetFastbootFlag ();
+  A04BR3WatchdogArm (WATCHDOG_SECONDS);
   DEBUG ((
     DEBUG_ERROR,
     "A04BR3TestCycleDxe: ExitBootServices: fastboot flag %a, watchdog re-armed for %u s\n",
@@ -305,8 +157,9 @@ A04BR3TestCycleDxeEntry (
 
   // Fastboot first: from here on any reset, including the watchdog's, must
   // return to LK fastboot.
-  Flag = SetFastbootFlag ();
-  WatchdogArm (WATCHDOG_SECONDS);
+  Flag     = A04BR3SetFastbootFlag ();
+  mFlagSet = Flag;
+  A04BR3WatchdogArm (WATCHDOG_SECONDS);
 
   Status = gBS->CreateEvent (EVT_TIMER | EVT_NOTIFY_SIGNAL, TPL_CALLBACK, OnKickTimer, NULL, &mKickEvent);
   if (!EFI_ERROR (Status)) {

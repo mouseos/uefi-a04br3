@@ -39,10 +39,10 @@
 
   #
   # Unattended test cycle (UniXNU board.toml [firmware.defines]
-  # A04BR3_TEST_CYCLE = "1"): from early DXE on, A04BR3TestCycleDxe makes
-  # every reset return to the stock LK fastboot mode and keeps the watchdog
-  # armed (kicked until ExitBootServices, at most 120 s), so a firmware or
-  # kernel that stops anywhere still returns to fastboot. Off by default;
+  # A04BR3_TEST_CYCLE = "1"): from SEC on (A04BR3PlatformSecBoardLib) every
+  # reset returns to the stock LK fastboot mode and the watchdog is armed;
+  # A04BR3TestCycleDxe kicks it until ExitBootServices (at most 120 s), so a
+  # firmware or kernel that stops anywhere still returns to fastboot. Off by default;
   # release images must not include it.
   #
 !ifndef A04BR3_TEST_CYCLE
@@ -112,6 +112,13 @@
   # Input Libraries
   #
   KeypadDeviceLib|a04br3Pkg/Library/KeypadDeviceLib/KeypadDeviceLib.inf
+  A04BR3TestCycleLib|a04br3Pkg/Library/A04BR3TestCycleLib/A04BR3TestCycleLib.inf
+
+!if $(A04BR3_TEST_CYCLE) == 1
+  # Unattended test cycle from SEC on: LK fastboot flag and 31 s watchdog
+  # (replaces the empty MT8167Pkg PlatformSecBoardLibNull).
+  PlatformSecBoardLib|a04br3Pkg/Library/A04BR3PlatformSecBoardLib/A04BR3PlatformSecBoardLib.inf
+!endif
 
   #
   # UniXNU Libraries

@@ -21,7 +21,9 @@
   ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
   SiliciumPkg/SiliciumPkg.dec
+  MT8167Pkg/MT8167Pkg.dec
 
 [LibraryClasses]
   IoLib
   MemoryMapHelperLib
+  PlatformSecBoardLib
