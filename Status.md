@@ -556,6 +556,53 @@
 <br>
 
 <details>
+<summary><b><strong>MediaTek MT8167 Devices</strong></b></summary>
+
+<br>
+
+<details>
+<summary><b><strong>Benesse Devices</strong></b></summary>
+
+## Benesse TAB-A04-BR3
+
+<table>
+<tr><td>
+
+> [!IMPORTANT]
+> Not tested on hardware yet. The display, eMMC, SD card and UART drivers are ported from the
+> [edk2-mtk](https://github.com/mouseos/edk2-mtk) A04BR3 port, where they work on this tablet.
+> The firmware embeds [UniXNU](https://github.com/UniXNU/UniXNU) and DarwinBoot and publishes the
+> boot image ramdisk as a read-only block device for the UniXNU payload.
+
+</td></tr>
+</table>
+
+**State:** Active <br>
+**Codename:** a04br3
+
+**Contributors:** [mouseos](https://github.com/mouseos/)
+
+### UEFI Status
+
+| Feature            | Description                          | State |
+|:-------------------|:-------------------------------------|:-----:|
+| Display            | Ported from edk2-mtk                 | ❔    |
+| Internal Storage   | Read-only, ported from edk2-mtk      | ❔    |
+| Side Buttons       | Volume Up, Home, Power               | ❔    |
+| USB Host Mode      |                                      | ❌    |
+| USB Device Mode    |                                      | ❌    |
+| USB Power Delivery |                                      | ❌    |
+| SD Card            | Read-only, ported from edk2-mtk      | ❔    |
+| Windows Boot       | No ACPI tables                       | ❌    |
+| Linux Boot         |                                      | ❔    |
+
+</details>
+
+---
+
+</details>
+
+<details>
 <summary><b><strong>MediaTek G99 Devices</strong></b></summary>
 
 <br>

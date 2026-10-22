@@ -1,0 +1,26 @@
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = KeypadDeviceLib
+  FILE_GUID                      = 0B6D4E0A-1F3C-4C8B-A2E5-7A04B3816703
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = KeypadDeviceLib
+  CONSTRUCTOR                    = KeypadDeviceConstructor
+
+[Sources.common]
+  KeypadDeviceLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  SiliciumPkg/SiliciumPkg.dec
+  MediaTekPkg/MediaTekPkg.dec
+
+[LibraryClasses]
+  BaseMemoryLib
+  DebugLib
+  IoLib
+  MemoryMapHelperLib
+  UefiBootServicesTableLib
+
+[Protocols]
+  gMediaTekPmicWrapperProtocolGuid

@@ -1,0 +1,40 @@
+## @file
+#  A04BR3 AUO WXGA panel and MT8167 display pipeline initialization.
+#
+#  Ported from mouseos/edk2-mtk (Platform/Benesse/A04BR3Pkg/Drivers/
+#  DisplayInitDxe, commit 1982d888c765).
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = A04Br3DisplayInitDxe
+  FILE_GUID                      = E16DB11D-D53A-4F72-8FD7-086E56EC907C
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = A04Br3DisplayInitDxeEntryPoint
+
+[Sources]
+  DisplayInitDxe.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  SiliciumPkg/SiliciumPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  IoLib
+  MemoryMapHelperLib
+  PcdLib
+  TimerLib
+  UefiDriverEntryPoint
+
+[FixedPcd]
+  gSiliciumPkgTokenSpaceGuid.PcdFrameBufferWidth
+  gSiliciumPkgTokenSpaceGuid.PcdFrameBufferHeight
+
+[Depex]
+  TRUE

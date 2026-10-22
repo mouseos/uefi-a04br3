@@ -1,0 +1,45 @@
+## @file
+#  Read-only MT8167 MSDC1 SD card Block I/O driver.
+#
+#  Ported from mouseos/edk2-mtk (Platform/Benesse/A04BR3Pkg/Drivers/
+#  SdCardBlockIoDxe, commit 1982d888c765).
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001c
+  BASE_NAME                      = SdCardBlockIoDxe
+  FILE_GUID                      = 9CD8E4EB-4DFC-486E-9F14-3279F67B5127
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 0.1
+  ENTRY_POINT                    = SdCardBlockIoDxeEntryPoint
+
+[Sources]
+  SdCardBlockIoDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MT8167Pkg/MT8167Pkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  CacheMaintenanceLib
+  DebugLib
+  IoLib
+  PcdLib
+  TimerLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Protocols]
+  gEfiBlockIoProtocolGuid
+  gEfiDevicePathProtocolGuid
+
+[FixedPcd]
+  gMt8167TokenSpaceGuid.PcdMt8167SdCardBase
+  gMt8167TokenSpaceGuid.PcdMt8167SdCardBlockSize
+
+[Depex]
+  gEfiCpuArchProtocolGuid

@@ -1,0 +1,11 @@
+##
+#  Benesse TAB-A04-BR3 (MediaTek MT8167) platform package.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  DEC_SPECIFICATION                   = 0x00010005
+  PACKAGE_NAME                        = a04br3Pkg
+  PACKAGE_GUID                        = 0B6D4E0A-1F3C-4C8B-A2E5-7A04B3816701
+  PACKAGE_VERSION                     = 0.1

@@ -30,6 +30,9 @@ This Project focuses on Making ARM-Based Devices Boot Operating Systems like Win
 
 [sonic011gamer](https://github.com/sonic011gamer/) and [halal-beef](https://github.com/halal-beef/) for their Amazing Work on Exynos Related Stuff.
 
+[edk2-mtk](https://github.com/mouseos/edk2-mtk) (Benesse TAB-A04-BR3 port) for the MT8167 display, eMMC/SD and UART drivers and board values used by `a04br3Pkg` and `MT8167Pkg`. <br>
+[UniXNU](https://github.com/UniXNU/UniXNU) and its [uefi-sheng](https://github.com/UniXNU/uefi-sheng) firmware for the SEC entry argument, the BootShim header and the boot image ramdisk block device used by `a04br3Pkg`.
+
 ## License
 
 All code except drivers in `GPLDrivers` & `GPLApplications` & `GPLLibrary` directories are licensed under BSD-2-Clause. <br />

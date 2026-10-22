@@ -8,6 +8,7 @@ import sys
 import glob
 import gzip
 import shutil
+import struct
 import subprocess
 import coloredlogs
 import argparse
@@ -37,6 +38,18 @@ RESOURCE_SCRIPTS_PATH = Path ("Resources/Scripts")
 MU_PATH            = Path ("Common/Mu")
 MU_OEM_SAMPLE_PATH = Path ("Common/Mu_OEM_Sample")
 MU_BASECORE_PATH   = Path ("Mu_Basecore")
+
+#
+# MediaTek LK Image Header
+#
+# 512-byte header MediaTek LK expects in front of the kernel ("KERNEL") and
+# ramdisk ("ROOTFS") of a boot image: magic, payload length, 32-byte name,
+# rest filled with 0xFF. Layout of the stock Benesse TAB-A04-BR3 boot image,
+# also produced by edk2-mtk A04BR3Pkg/package_boot_image.py.
+#
+MTK_HEADER_MAGIC     = 0x58881688
+MTK_HEADER_SIZE      = 512
+MTK_HEADER_ALIGNMENT = 512
 
 @dataclass
 class BuildContext:
@@ -199,6 +212,13 @@ def compile_boot_shim (boot_shim_config: dict, fd_config: dict) -> bool:
     # Compile Boot Shim
     return subprocess.run (cmd, cwd=BOOT_SHIM_PATH).returncode == 0
 
+def mtk_image_section (name: bytes, payload: bytes) -> bytes:
+    # Build MediaTek Image Header
+    header = struct.pack ("<II32s", MTK_HEADER_MAGIC, len (payload), name)
+    header = header.ljust (MTK_HEADER_SIZE, b"\xff")
+
+    return header + payload
+
 def prepare_uefi_environment (script_path: Path, build_mode: str, update: bool) -> bool:
     # Skip UEFI Env Setup
     if not update and os.path.isdir (BUILD_PATH):
@@ -315,6 +335,32 @@ def create_android_boot_img (ctx: BuildContext, image_kernel_config: dict, image
         # Copy UEFI FD File
         shutil.copy (uefi_fd, android_kernel)
 
+    # Set Ramdisk Path
+    android_ramdisk = Path ("Resources/ramdisk")
+
+    # Check MediaTek Header Flag
+    if image_kernel_config.get ("mtk_header"):
+        # Set MediaTek Ramdisk Path
+        android_ramdisk = device_pkg_path / f"{ctx.device}-ramdisk"
+
+        try:
+            # Get Compressed UEFI FD Size
+            kernel_data = android_kernel.read_bytes ()
+            fd_data     = uefi_fd.read_bytes ()
+
+            # Align the Appended DTB to the MediaTek Header Alignment
+            if image_kernel_config.get ("append_dtb"):
+                padding     = b"\x00" * (-len (fd_data) % MTK_HEADER_ALIGNMENT)
+                kernel_data = fd_data + padding + kernel_data[len (fd_data):]
+
+            # Add MediaTek Headers
+            android_kernel.write_bytes (mtk_image_section (b"KERNEL", kernel_data))
+            android_ramdisk.write_bytes (mtk_image_section (b"ROOTFS", Path ("Resources/ramdisk").read_bytes ()))
+        except Exception as e:
+            logger.error ("Failed to Add MediaTek Image Headers!")
+            logger.error (e)
+            return False
+
     # Set "mkbootimg.py" Script Path
     mkbootimg = RESOURCE_SCRIPTS_PATH / "mkbootimg.py"
     if not mkbootimg.is_file ():
@@ -328,7 +374,7 @@ def create_android_boot_img (ctx: BuildContext, image_kernel_config: dict, image
     cmd = [
         sys.executable, str (mkbootimg),
         "--kernel",     str (android_kernel),
-        "--ramdisk",    "Resources/ramdisk",
+        "--ramdisk",    str (android_ramdisk),
         "-o",           output_file_name
     ]
 
@@ -342,6 +388,7 @@ def create_android_boot_img (ctx: BuildContext, image_kernel_config: dict, image
         "kernel_offset":  "--kernel_offset",
         "os_patch_level": "--os_patch_level",
         "os_version":     "--os_version",
+        "pagesize":       "--pagesize",
         "ramdisk_offset": "--ramdisk_offset",
         "second_offset":  "--second_offset",
         "tags_offset":    "--tags_offset"

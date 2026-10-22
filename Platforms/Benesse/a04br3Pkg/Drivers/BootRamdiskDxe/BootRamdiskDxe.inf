@@ -1,0 +1,45 @@
+##
+#  Boot image ramdisk of TAB-A04-BR3 as a read-only Block I/O device.
+#
+#  Derived from UniXNU/uefi-sheng Platforms/Xiaomi/shengPkg/Drivers/
+#  ShengBootMemoryDxe (initrd part).
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = BootRamdiskDxe
+  FILE_GUID                      = 0B6D4E0A-1F3C-4C8B-A2E5-7A04B3816704
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = BootRamdiskDxeEntry
+
+[Sources]
+  BootRamdiskDxe.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  SiliciumPkg/SiliciumPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  FdtLib
+  HobLib
+  MemoryMapHelperLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Guids]
+  gSiliciumEntryArgHobGuid                      ## CONSUMES
+
+[Protocols]
+  gEfiBlockIoProtocolGuid                       ## PRODUCES
+  gEfiDevicePathProtocolGuid                    ## PRODUCES
+
+[Depex]
+  TRUE

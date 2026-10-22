@@ -1,0 +1,44 @@
+## @file
+#  Read-only A04BR3 eMMC Block I/O driver for the MT8167 MSDC0 host.
+#
+#  Ported from mouseos/edk2-mtk (Platform/Benesse/A04BR3Pkg/Drivers/
+#  EmmcBlockIoDxe, commit 1982d888c765).
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001c
+  BASE_NAME                      = EmmcBlockIoDxe
+  FILE_GUID                      = 8D71B670-A9EF-4D82-A4CB-22A25B87FDD9
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 0.1
+  ENTRY_POINT                    = SdCardBlockIoDxeEntryPoint
+
+[Sources]
+  EmmcBlockIoDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MT8167Pkg/MT8167Pkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  CacheMaintenanceLib
+  DebugLib
+  IoLib
+  PcdLib
+  TimerLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Protocols]
+  gEfiBlockIoProtocolGuid
+  gEfiDevicePathProtocolGuid
+
+[FixedPcd]
+  gMt8167TokenSpaceGuid.PcdMt8167SdCardBlockSize
+
+[Depex]
+  gEfiCpuArchProtocolGuid

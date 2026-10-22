@@ -1,0 +1,25 @@
+##
+#  MediaTek MT8167 SoC package.
+#
+#  The token space and the SD card PCDs are ported from mouseos/edk2-mtk
+#  (Silicon/MediaTek/MT8167Pkg/MT8167.dec, commit 1982d888c765).
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  DEC_SPECIFICATION                   = 0x00010005
+  PACKAGE_NAME                        = MT8167Pkg
+  PACKAGE_GUID                        = 8F169043-4634-42B9-ADAB-5040F633596C
+  PACKAGE_VERSION                     = 0.1
+
+[Guids]
+  gMt8167TokenSpaceGuid               = { 0x8F60DCFF, 0x621F, 0x4F92, { 0x96, 0xB7, 0x4D, 0x44, 0xB7, 0x31, 0x95, 0x1E } }
+
+[PcdsFixedAtBuild]
+  #
+  # MSDC1 (SD card slot): "mmc@11130000" of the A04BR3 device tree. 512-byte
+  # blocks as in edk2-mtk A04BR3Pkg.
+  #
+  gMt8167TokenSpaceGuid.PcdMt8167SdCardBase|0x11130000|UINT64|0x00000001
+  gMt8167TokenSpaceGuid.PcdMt8167SdCardBlockSize|512|UINT32|0x00000002
