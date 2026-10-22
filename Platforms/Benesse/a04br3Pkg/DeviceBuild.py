@@ -163,6 +163,9 @@ class PlatformBuilder (UefiBuilder, BuildSettingsManager):
         self.env.SetValue ("BLD_*_FD_BASE", self.env.GetValue("FD_BASE"), "Default")
         self.env.SetValue ("BLD_*_FD_SIZE", self.env.GetValue("FD_SIZE"), "Default")
         self.env.SetValue ("BLD_*_FD_BLOCKS", self.env.GetValue("FD_BLOCKS"), "Default")
+        # Unattended test cycle (A04BR3TestCycleDxe), off by default: A04BR3_TEST_CYCLE=1 on the stuart command line
+        # or in the environment of build_uefi.py.
+        self.env.SetValue ("BLD_*_A04BR3_TEST_CYCLE", self.env.GetValue("A04BR3_TEST_CYCLE", os.environ.get("A04BR3_TEST_CYCLE", "0")), "Default")
 
         return 0
 

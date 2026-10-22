@@ -38,6 +38,11 @@
   # Boot image ramdisk as a read-only block device (UniXNU payload volume)
   INF a04br3Pkg/Drivers/BootRamdiskDxe/BootRamdiskDxe.inf
 
+!if $(A04BR3_TEST_CYCLE) == 1
+  # Unattended test cycle: fastboot return and watchdog at ExitBootServices
+  INF a04br3Pkg/Drivers/A04BR3TestCycleDxe/A04BR3TestCycleDxe.inf
+!endif
+
   # The XNU loader is part of the firmware volume (UniXNU "loader = firmware").
   INF DarwinBootPkg/Driver/DarwinBoot.inf
 

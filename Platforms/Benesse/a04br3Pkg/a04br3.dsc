@@ -37,6 +37,16 @@
   DEFINE ENABLE_SECUREBOOT       = 0
 !endif
 
+  #
+  # Unattended test cycle (UniXNU board.toml [firmware.defines]
+  # A04BR3_TEST_CYCLE = "1"): A04BR3TestCycleDxe makes every reset after
+  # ExitBootServices return to the stock LK fastboot mode and arms the
+  # watchdog. Off by default; release images must not include it.
+  #
+!ifndef A04BR3_TEST_CYCLE
+  DEFINE A04BR3_TEST_CYCLE       = 0
+!endif
+
 !include MT8167Pkg/MT8167Pkg.dsc.inc
 
 [PcdsFixedAtBuild]
@@ -118,6 +128,13 @@
   # Boot image ramdisk (UniXNU payload volume)
   #
   a04br3Pkg/Drivers/BootRamdiskDxe/BootRamdiskDxe.inf
+
+!if $(A04BR3_TEST_CYCLE) == 1
+  #
+  # Unattended test cycle (fastboot return at ExitBootServices)
+  #
+  a04br3Pkg/Drivers/A04BR3TestCycleDxe/A04BR3TestCycleDxe.inf
+!endif
 
   #
   # Serial I/O
