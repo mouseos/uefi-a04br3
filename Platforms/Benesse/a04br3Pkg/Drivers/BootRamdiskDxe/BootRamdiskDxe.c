@@ -2,19 +2,36 @@
   Boot image ramdisk of TAB-A04-BR3 as a read-only Block I/O device.
 
   UniXNU ships its payload (configuration, kernel, ADT, trust cache) as a FAT
-  volume in the ramdisk of the Android boot image. The A04BR3 LK copies the
-  ramdisk to 0x44000000 (ramdisk_offset), copies the device tree to
-  0x4E000000 (tags_offset), writes /chosen linux,initrd-start/-end and enters
-  the kernel slot with the device tree address in x0. SEC keeps x0 in the
-  gSiliciumEntryArgHobGuid HOB.
+  volume in the ramdisk of the Android boot image.
 
-  This driver reads the initrd range from that device tree and publishes it
-  as a read-only, 512-byte-sector Block I/O device, so Partition/Fat drivers
-  mount the payload volume.
+  What the stock A04BR3 LK (CT3-01.06.000, unixnu/_research/lk/lk.elf) does
+  with the ramdisk, from REA of its boot path:
+   - FUN_41e03ea4 reads the boot image and checks the ramdisk for a MediaTek
+     "ROOTFS" header (FUN_41e03880: magic 0x58881688, name at +8, payload
+     size at +4). When present it moves the ramdisk pointer past the 512-byte
+     header and takes the size from the header ("mkimg header exist in
+     ramdisk image"); otherwise it uses the boot image ramdisk_size.
+   - FUN_41e1b804 copies that payload to the ramdisk_addr of the boot image
+     header (offset 0x14). Only without a boot image header does it fall back
+     to 0x44000000, the ramdisk_addr of the stock Android boot image.
+   - FUN_41e1a804 writes /chosen linux,initrd-start = ramdisk_addr and
+     linux,initrd-end = ramdisk_addr + payload size, copies the device tree
+     to tags_addr (0x4E000000) and enters the kernel slot with it in x0.
+  The a04br3 boot image (Resources/Configs/a04br3.toml) has base 0x40000000
+  and ramdisk_offset 0x40000000, so the payload lies at 0x80000000, the
+  start of the "Boot Ramdisk" region of MemoryMapLib.
+
+  SEC keeps x0 in the gSiliciumEntryArgHobGuid HOB. This driver takes the
+  initrd range from /chosen of that device tree, the address the loader
+  actually used, and publishes it as a read-only, 512-byte-sector Block I/O
+  device, so Partition/Fat drivers mount the payload volume. If the range
+  still starts with a MediaTek header (a loader that does not strip it), the
+  512-byte header is skipped.
 
   Both the device tree and the initrd must lie inside the "LK DTB" and
   "Boot Ramdisk" regions of the a04br3 memory map; these are reserved, so no
-  firmware allocation can overwrite them.
+  firmware allocation can overwrite them. A range elsewhere is not published:
+  firmware allocations may already have overwritten it.
 
   Derived from UniXNU/uefi-sheng shengPkg ShengBootMemoryDxe (initrd part).
 
@@ -33,6 +50,14 @@
 #include <Protocol/DevicePath.h>
 
 #define RAM_BLOCK_SIZE  512
+
+//
+// MediaTek image header in front of the boot image ramdisk: checked by LK
+// FUN_41e03880, written by build_uefi.py mtk_image_section (magic, payload
+// size, 32-byte name "ROOTFS", 0xFF padding to 512 bytes).
+//
+#define MTK_HEADER_MAGIC  0x58881688U
+#define MTK_HEADER_SIZE   512
 
 #pragma pack(1)
 typedef struct {
@@ -192,13 +217,27 @@ PublishInitrd (
 
   Start = ReadCells (StartProp, StartLength / 4);
   End   = ReadCells (EndProp, EndLength / 4);
-  if ((End <= Start) || (((End - Start) % RAM_BLOCK_SIZE) != 0)) {
-    DEBUG ((DEBUG_ERROR, "A04BR3RD: initrd 0x%lx-0x%lx is not a whole number of sectors\n", Start, End));
+  if ((End <= Start) || !InsideRegion ("Boot Ramdisk", Start, End - Start)) {
+    DEBUG ((DEBUG_ERROR, "A04BR3RD: initrd 0x%lx-0x%lx is outside the reserved \"Boot Ramdisk\" region\n", Start, End));
     return;
   }
 
-  if (!InsideRegion ("Boot Ramdisk", Start, End - Start)) {
-    DEBUG ((DEBUG_ERROR, "A04BR3RD: initrd 0x%lx-0x%lx is outside the reserved \"Boot Ramdisk\" region\n", Start, End));
+  // The stock LK already strips the header; skip one left in place.
+  if ((End - Start > MTK_HEADER_SIZE) &&
+      (ReadUnaligned32 ((VOID *)(UINTN)Start) == MTK_HEADER_MAGIC))
+  {
+    UINT32  PayloadSize;
+
+    PayloadSize = ReadUnaligned32 ((VOID *)(UINTN)(Start + 4));
+    DEBUG ((DEBUG_ERROR, "A04BR3RD: skipping MediaTek header at 0x%lx (payload 0x%x bytes)\n", Start, PayloadSize));
+    Start += MTK_HEADER_SIZE;
+    if ((PayloadSize != 0) && (PayloadSize < End - Start)) {
+      End = Start + PayloadSize;
+    }
+  }
+
+  if (((End - Start) % RAM_BLOCK_SIZE) != 0) {
+    DEBUG ((DEBUG_ERROR, "A04BR3RD: initrd 0x%lx-0x%lx is not a whole number of sectors\n", Start, End));
     return;
   }
 

@@ -11,6 +11,13 @@
 #   kernel = MediaTek "KERNEL" header + gzip(BootShim + FD) padded to 512
 #   bytes + appended DTB, ramdisk = MediaTek "ROOTFS" header + payload.
 #
+# The stock LK strips the "ROOTFS" header, copies the payload to the header
+# ramdisk_addr (base + ramdisk_offset = 0x80000000) and reports that range in
+# /chosen linux,initrd-start/-end (REA notes in BootRamdiskDxe.c). The
+# "Boot Ramdisk" region of a04br3Pkg MemoryMapLib reserves
+# 0x80000000-0x88000000 for it: keep ramdisk_offset and that region in step,
+# and the payload at most 128 MiB.
+#
 
 #
 # Boot Shim Configs

@@ -15,6 +15,10 @@
     0x80000000  boot image ramdisk (ramdisk_addr of the XNU device repository,
                 which carries payloads up to the 128 MiB boot partition).
                 With UniXNU this is the payload FAT volume.
+                The LK copies the ramdisk, without its MediaTek header, to
+                the boot image ramdisk_addr (a04br3.toml base +
+                ramdisk_offset) and passes that range in /chosen;
+                BootRamdiskDxe publishes it only inside this region.
     0xBE9C0000  LK frame buffer, 16 MiB (DT framebuffer@be9c0000).
     0xBF9C0000  MBlock gap up to 0xC0000000 (edk2-mtk A04BR3).
 
