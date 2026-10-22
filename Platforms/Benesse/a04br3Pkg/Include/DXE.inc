@@ -39,7 +39,7 @@
   INF a04br3Pkg/Drivers/BootRamdiskDxe/BootRamdiskDxe.inf
 
 !if $(A04BR3_TEST_CYCLE) == 1
-  # Unattended test cycle: fastboot return and watchdog at ExitBootServices
+  # Unattended test cycle: fastboot return and watchdog from DXE entry on
   INF a04br3Pkg/Drivers/A04BR3TestCycleDxe/A04BR3TestCycleDxe.inf
 !endif
 

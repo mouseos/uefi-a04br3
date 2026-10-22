@@ -39,9 +39,11 @@
 
   #
   # Unattended test cycle (UniXNU board.toml [firmware.defines]
-  # A04BR3_TEST_CYCLE = "1"): A04BR3TestCycleDxe makes every reset after
-  # ExitBootServices return to the stock LK fastboot mode and arms the
-  # watchdog. Off by default; release images must not include it.
+  # A04BR3_TEST_CYCLE = "1"): from early DXE on, A04BR3TestCycleDxe makes
+  # every reset return to the stock LK fastboot mode and keeps the watchdog
+  # armed (kicked until ExitBootServices, at most 120 s), so a firmware or
+  # kernel that stops anywhere still returns to fastboot. Off by default;
+  # release images must not include it.
   #
 !ifndef A04BR3_TEST_CYCLE
   DEFINE A04BR3_TEST_CYCLE       = 0
@@ -131,7 +133,7 @@
 
 !if $(A04BR3_TEST_CYCLE) == 1
   #
-  # Unattended test cycle (fastboot return at ExitBootServices)
+  # Unattended test cycle (fastboot return and watchdog from DXE entry on)
   #
   a04br3Pkg/Drivers/A04BR3TestCycleDxe/A04BR3TestCycleDxe.inf
 !endif

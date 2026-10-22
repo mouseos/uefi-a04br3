@@ -1,8 +1,10 @@
 ##
-#  Benesse TAB-A04-BR3 unattended test cycle: at ExitBootServices, make the
-#  next reset enter the stock LK fastboot mode and arm the TOPRGU watchdog.
+#  Benesse TAB-A04-BR3 unattended test cycle: from its entry on, make every
+#  reset enter the stock LK fastboot mode and keep the TOPRGU watchdog armed,
+#  kicked until ExitBootServices or for at most 120 s.
 #
-#  Built only with -D A04BR3_TEST_CYCLE=1 (see a04br3.dsc, Include/DXE.inc).
+#  Built only with -D A04BR3_TEST_CYCLE=1 (see a04br3.dsc, Include/DXE.inc,
+#  Include/APRIORI.inc).
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 ##
