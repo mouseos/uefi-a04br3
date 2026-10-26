@@ -135,4 +135,4 @@
   #
   UniXNUPkg/Application/UniXNU/UniXNU.inf
   UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
-  DarwinBootPkg/Driver/DarwinBoot.inf
+!include DarwinBootPkg/Driver/DarwinBoot.dsc.inc
