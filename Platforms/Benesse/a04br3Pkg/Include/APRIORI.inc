@@ -12,6 +12,13 @@ APRIORI DXE {
 
   INF MediaTekPkg/Drivers/PmicWrapperDxe/PmicWrapperDxe.inf
 
+!if $(A04BR3_TEST_CYCLE) == 1
+  # Unattended test cycle: SEC stopped the watchdog. Re-arm it and set the
+  # LK fastboot flag as early as possible, once the timer driver can run the
+  # kick event, so a hang in the rest of DXE also resets into fastboot.
+  INF a04br3Pkg/Drivers/A04BR3TestCycleDxe/A04BR3TestCycleDxe.inf
+!endif
+
   # Panel and scan-out before the GOP is published (edk2-mtk A04BR3 APRIORI
   # order: DisplayInitDxe before the frame buffer driver).
   INF a04br3Pkg/Drivers/DisplayInitDxe/DisplayInitDxe.inf

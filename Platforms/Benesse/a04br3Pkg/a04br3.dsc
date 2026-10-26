@@ -37,7 +37,33 @@
   DEFINE ENABLE_SECUREBOOT       = 0
 !endif
 
+  #
+  # Unattended test cycle (UniXNU board.toml [firmware.defines]
+  # A04BR3_TEST_CYCLE = "1"): from SEC on (A04BR3PlatformSecBoardLib) every
+  # reset returns to the stock LK fastboot mode and the watchdog is armed;
+  # A04BR3TestCycleDxe kicks it until ExitBootServices (at most 120 s), so a
+  # firmware or kernel that stops anywhere still returns to fastboot. Off by default;
+  # release images must not include it.
+  #
+!ifndef A04BR3_TEST_CYCLE
+  DEFINE A04BR3_TEST_CYCLE       = 0
+!endif
+
+!ifndef A04BR3_EARLY_FAULT
+  DEFINE A04BR3_EARLY_FAULT      = 0
+!endif
+!if $(A04BR3_EARLY_FAULT) != 0 && $(A04BR3_TEST_CYCLE) != 1
+  !error A04BR3_EARLY_FAULT requires A04BR3_TEST_CYCLE=1
+!endif
+!if $(A04BR3_EARLY_FAULT) != 0 && $(A04BR3_EARLY_FAULT) != 1 && $(A04BR3_EARLY_FAULT) != 2
+  !error A04BR3_EARLY_FAULT must be 0, 1 (SEC), or 2 (DXE)
+!endif
+
 !include MT8167Pkg/MT8167Pkg.dsc.inc
+
+[BuildOptions]
+  # Board-only smoke: 1 halts after SEC RTC verification; 2 halts with DXE timer live.
+  GCC:*_*_AARCH64_CC_FLAGS = -DA04BR3_EARLY_FAULT=$(A04BR3_EARLY_FAULT)
 
 [PcdsFixedAtBuild]
   #
@@ -100,6 +126,13 @@
   # Input Libraries
   #
   KeypadDeviceLib|a04br3Pkg/Library/KeypadDeviceLib/KeypadDeviceLib.inf
+  A04BR3TestCycleLib|a04br3Pkg/Library/A04BR3TestCycleLib/A04BR3TestCycleLib.inf
+
+!if $(A04BR3_TEST_CYCLE) == 1
+  # Unattended test cycle from SEC on: LK fastboot flag and 31 s watchdog
+  # (replaces the empty MT8167Pkg PlatformSecBoardLibNull).
+  PlatformSecBoardLib|a04br3Pkg/Library/A04BR3PlatformSecBoardLib/A04BR3PlatformSecBoardLib.inf
+!endif
 
   #
   # UniXNU Libraries
@@ -118,6 +151,13 @@
   # Boot image ramdisk (UniXNU payload volume)
   #
   a04br3Pkg/Drivers/BootRamdiskDxe/BootRamdiskDxe.inf
+
+!if $(A04BR3_TEST_CYCLE) == 1
+  #
+  # Unattended test cycle (fastboot return and watchdog from DXE entry on)
+  #
+  a04br3Pkg/Drivers/A04BR3TestCycleDxe/A04BR3TestCycleDxe.inf
+!endif
 
   #
   # Serial I/O

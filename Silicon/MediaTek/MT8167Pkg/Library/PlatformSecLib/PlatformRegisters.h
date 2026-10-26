@@ -7,5 +7,6 @@
 // (DisableWDT: 0x10007000 <- 0x22000000) used on A04BR3.
 //
 #define WDT_MODE_KEY                   0x22000000
+#define WDT_MODE_REGISTER              0x10007000U
 
 #endif /* _PLATFORM_REGISTERS_H_ */

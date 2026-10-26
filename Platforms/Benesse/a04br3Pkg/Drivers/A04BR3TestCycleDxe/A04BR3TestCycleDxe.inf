@@ -1,0 +1,39 @@
+##
+#  Benesse TAB-A04-BR3 unattended test cycle: from its entry on, make every
+#  reset enter the stock LK fastboot mode and keep the TOPRGU watchdog armed,
+#  kicked until ExitBootServices or for at most 120 s.
+#
+#  Built only with -D A04BR3_TEST_CYCLE=1 (see a04br3.dsc, Include/DXE.inc,
+#  Include/APRIORI.inc).
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = A04BR3TestCycleDxe
+  FILE_GUID                      = 0B6D4E0A-1F3C-4C8B-A2E5-7A04B3816705
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = A04BR3TestCycleDxeEntry
+
+[Sources]
+  A04BR3TestCycleDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  a04br3Pkg/a04br3.dec
+
+[LibraryClasses]
+  A04BR3TestCycleLib
+  BaseLib
+  DebugLib
+  TimerLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Guids]
+  gEfiEventExitBootServicesGuid                 ## CONSUMES ## Event
+
+[Depex]
+  TRUE

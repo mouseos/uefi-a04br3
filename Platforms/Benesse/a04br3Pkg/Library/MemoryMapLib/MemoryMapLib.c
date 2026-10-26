@@ -12,9 +12,13 @@
     0x43000000  ATF reservation, 0x30000 bytes (DT atf-reserved-memory).
     0x44400000  ram_console, pstore and minirdump (DT reserved-memory).
     0x4E000000  DTB copied by LK (tags_addr; ATF passes it in x0).
-    0x80000000  boot image ramdisk (ramdisk_addr of the XNU device repository,
+    0x60000000  boot image ramdisk (ramdisk_addr of the XNU device repository,
                 which carries payloads up to the 128 MiB boot partition).
                 With UniXNU this is the payload FAT volume.
+                The LK copies the ramdisk, without its MediaTek header, to
+                the boot image ramdisk_addr (a04br3.toml base +
+                ramdisk_offset) and passes that range in /chosen;
+                BootRamdiskDxe publishes it only inside this region.
     0xBE9C0000  LK frame buffer, 16 MiB (DT framebuffer@be9c0000).
     0xBF9C0000  MBlock gap up to 0xC0000000 (edk2-mtk A04BR3).
 
@@ -49,9 +53,9 @@ gMemoryDescriptor[] = {
   {"LK DTB",             0x4E000000, 0x00200000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK},
   {"UEFI Stack",         0x4E200000, 0x00040000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
   {"DXE Heap",           0x4E240000, 0x03DC0000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK},
-  {"DDR Mid 2",          0x52000000, 0x2E000000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK_XN},
-  {"Boot Ramdisk",       0x80000000, 0x08000000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK},
-  {"DDR High",           0x88000000, 0x369C0000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK_XN},
+  {"DDR Mid 2",          0x52000000, 0x0E000000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK_XN},
+  {"Boot Ramdisk",       0x60000000, 0x08000000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK},
+  {"DDR High",           0x68000000, 0x569C0000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK_XN},
   {"Display Reserved",   0xBE9C0000, 0x01000000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_THROUGH_XN},
   {"MBlock Gap",         0xBF9C0000, 0x00640000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK},
 

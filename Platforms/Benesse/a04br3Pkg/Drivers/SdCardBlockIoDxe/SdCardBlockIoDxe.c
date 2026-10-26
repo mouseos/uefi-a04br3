@@ -118,9 +118,6 @@
 #define MSDC_DEFAULT_TRANSFER_HZ    25000000U
 #define MSDC_HIGH_SPEED_HZ          50000000U
 
-#define MTK_WDT_BASE                0x10007000U
-#define MTK_WDT_MODE                0x000U
-#define MTK_WDT_MODE_KEY            0x22000000U
 
 #define MSDC_RESP_NONE              0U
 #define MSDC_RESP_R1                1U
@@ -289,15 +286,6 @@ SdBase (
 #else
   return (UINTN)FixedPcdGet64 (PcdMt8167SdCardBase);
 #endif
-}
-
-STATIC
-VOID
-SdDisableWatchdog (
-  VOID
-  )
-{
-  MmioWrite32 (MTK_WDT_BASE + MTK_WDT_MODE, MTK_WDT_MODE_KEY);
 }
 
 STATIC
@@ -1910,7 +1898,8 @@ SdCardBlockIoDxeEntryPoint (
   EFI_STATUS  Status;
   UINT64      SectorCount;
 
-  SdDisableWatchdog ();
+  // The watchdog is owned by SEC (MT8167Pkg PlatformSecLib) and, with the
+  // unattended test cycle, by A04BR3TestCycleDxe; this driver leaves it alone.
 
   Status = SdPrepareHost ();
   if (EFI_ERROR (Status)) {
