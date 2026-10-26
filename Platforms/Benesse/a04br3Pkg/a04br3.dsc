@@ -49,6 +49,13 @@
   DEFINE A04BR3_TEST_CYCLE       = 0
 !endif
 
+!ifndef A04BR3_CHARGER_OWNER
+  DEFINE A04BR3_CHARGER_OWNER = 0
+!endif
+!if $(A04BR3_CHARGER_OWNER) != 0 && $(A04BR3_CHARGER_OWNER) != 1
+  !error A04BR3_CHARGER_OWNER must be 0 or 1
+!endif
+
 !ifndef A04BR3_EARLY_FAULT
   DEFINE A04BR3_EARLY_FAULT      = 0
 !endif
@@ -58,6 +65,8 @@
 !if $(A04BR3_EARLY_FAULT) != 0 && $(A04BR3_EARLY_FAULT) != 1 && $(A04BR3_EARLY_FAULT) != 2
   !error A04BR3_EARLY_FAULT must be 0, 1 (SEC), or 2 (DXE)
 !endif
+
+DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
 
 !include MT8167Pkg/MT8167Pkg.dsc.inc
 
@@ -140,6 +149,9 @@
   UniXNULib|UniXNUPkg/Library/UniXNULib/UniXNULib.inf
 
 [Components]
+!if $(A04BR3_CHARGER_OWNER) == 1
+  a04br3Pkg/Drivers/A04BR3ChargerDxe/A04BR3ChargerDxe.inf
+!endif
   #
   # Board Drivers (ported from edk2-mtk A04BR3Pkg)
   #

@@ -10,6 +10,11 @@ APRIORI DXE {
   INF EmbeddedPkg/MetronomeDxe/MetronomeDxe.inf
   INF ArmPkg/Drivers/TimerDxe/TimerDxe.inf
 
+!if $(A04BR3_CHARGER_OWNER) == 1
+  # First board consumer after timer: establish periodic owner before any BQ read.
+  INF a04br3Pkg/Drivers/A04BR3ChargerDxe/A04BR3ChargerDxe.inf
+!endif
+
   INF MediaTekPkg/Drivers/PmicWrapperDxe/PmicWrapperDxe.inf
 
 !if $(A04BR3_TEST_CYCLE) == 1

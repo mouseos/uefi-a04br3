@@ -167,6 +167,11 @@ class PlatformBuilder (UefiBuilder, BuildSettingsManager):
         # or in the environment of build_uefi.py.
         self.env.SetValue ("BLD_*_A04BR3_TEST_CYCLE", self.env.GetValue("A04BR3_TEST_CYCLE", os.environ.get("A04BR3_TEST_CYCLE", "0")), "Default")
 
+        charger = self.env.GetValue("A04BR3_CHARGER_OWNER", os.environ.get("A04BR3_CHARGER_OWNER", "0"))
+        if charger not in ("0", "1"):
+            raise ValueError("A04BR3_CHARGER_OWNER must be 0 or 1")
+        self.env.SetValue("BLD_*_A04BR3_CHARGER_OWNER", charger, "Explicit board opt-in")
+
         return 0
 
     def PlatformPreBuild (self):

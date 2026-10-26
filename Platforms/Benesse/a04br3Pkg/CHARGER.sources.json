@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "purpose": "Charger source/host承認済み組合せ。SDK/runtime/給電改善は未検証。",
+  "loader": {
+    "repository": "https://github.com/mouseos/DarwinBoot.git",
+    "ref": "b9063ad22903288df989c3449621b7eb97de7dd2",
+    "branch": "feat/board-handoff",
+    "generic_hook_default": 0
+  },
+  "device": {
+    "repository": "https://github.com/mouseos/UniXNU-a04br3.git",
+    "ref": "46d183ef9bcf6a7a4a01912132b9417480af9334",
+    "branch": "wip/display",
+    "kernel_argument_default": "absent"
+  },
+  "firmware_define": {
+    "A04BR3_CHARGER_OWNER": "0 by default; explicit 1 only for matched runtime integration"
+  },
+  "source_role": "UEFIは外部base checkoutのloaderを使用する。base gitlink/.gitmodulesは主担当が上記loader fork/refへ固定する。ここでは取得先を勝手に変更しない。"
+}

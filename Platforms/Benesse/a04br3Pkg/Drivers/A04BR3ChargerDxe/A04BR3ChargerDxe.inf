@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: MIT
+[Defines]
+  INF_VERSION = 0x0001001B
+  BASE_NAME = A04BR3ChargerDxe
+  FILE_GUID = 883871EE-1C91-47A5-B291-A04B34160001
+  MODULE_TYPE = DXE_DRIVER
+  VERSION_STRING = 1.0
+  ENTRY_POINT = A04BR3ChargerDxeEntry
+[Sources]
+  A04BR3ChargerDxe.cpp
+[Packages]
+  MdePkg/MdePkg.dec
+  a04br3Pkg/a04br3.dec
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  IoLib
+  TimerLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+[Guids]
+  gEfiEventExitBootServicesGuid
+[Depex]
+  TRUE
+[BuildOptions]
+  GCC:*_*_AARCH64_CXX_FLAGS = -fno-exceptions -fno-rtti -std=c++11

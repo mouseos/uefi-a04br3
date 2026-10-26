@@ -22,6 +22,11 @@
   INF MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
   INF ArmPkg/Drivers/ArmGicDxe/ArmGicDxe.inf
   INF ArmPkg/Drivers/TimerDxe/TimerDxe.inf
+
+!if $(A04BR3_CHARGER_OWNER) == 1
+  # First board consumer after timer: establish periodic owner before any BQ read.
+  INF a04br3Pkg/Drivers/A04BR3ChargerDxe/A04BR3ChargerDxe.inf
+!endif
   INF MdeModulePkg/Universal/Disk/DiskIoDxe/DiskIoDxe.inf
   INF MdeModulePkg/Universal/Disk/PartitionDxe/PartitionDxe.inf
   INF FatPkg/EnhancedFatDxe/Fat.inf
