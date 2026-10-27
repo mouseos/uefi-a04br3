@@ -166,6 +166,7 @@ class PlatformBuilder (UefiBuilder, BuildSettingsManager):
         # Unattended test cycle (A04BR3TestCycleDxe), off by default: A04BR3_TEST_CYCLE=1 on the stuart command line
         # or in the environment of build_uefi.py.
         self.env.SetValue ("BLD_*_A04BR3_TEST_CYCLE", self.env.GetValue("A04BR3_TEST_CYCLE", os.environ.get("A04BR3_TEST_CYCLE", "0")), "Default")
+        self.env.SetValue ("BLD_*_A04BR3_CPU_STAGE_DIAG", self.env.GetValue("A04BR3_CPU_STAGE_DIAG", os.environ.get("A04BR3_CPU_STAGE_DIAG", "0")), "Default")
 
         charger = self.env.GetValue("A04BR3_CHARGER_OWNER", os.environ.get("A04BR3_CHARGER_OWNER", "0"))
         if charger not in ("0", "1"):
