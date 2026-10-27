@@ -16,7 +16,7 @@
 #include <Library/A04BR3TestCycleLib.h>
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
-#if A04BR3_CPU_STAGE_DIAG == 1
+#if A04BR3_CPU_STAGE_DIAG == 1 && !defined(MDEPKG_NDEBUG)
 #include <Library/IoLib.h>
 #include <A04BR3CpuStage.h>
 #endif
@@ -33,8 +33,10 @@ PlatformSecBoardInitialize (
 
   // Arm first: a PMIC wrapper access that stalls still ends in a reset.
   A04BR3WatchdogArm (A04BR3_WATCHDOG_SECONDS);
-#if A04BR3_CPU_STAGE_DIAG == 1
-  {
+
+  Flag = A04BR3SetFastbootFlag ();
+#if A04BR3_CPU_STAGE_DIAG == 1 && !defined(MDEPKG_NDEBUG)
+  if (Flag) {
     CONST CHAR8 *Stage = "SEC";
     A04BR3_CPU_STAGE Cpu = A04BR3CpuStageRead (MmioRead32);
     DEBUG ((DEBUG_ERROR, "A04BR3 cpu-stage %a: mux=%08x dcm=%08x pll0=%08x pll1=%08x pwr=%08x busctl=%08x bus0=%08x bus1=%08x (non-atomic)\n",
@@ -42,7 +44,6 @@ PlatformSecBoardInitialize (
             Cpu.BusDcmControl, Cpu.BusDcm0, Cpu.BusDcm1));
   }
 #endif
-  Flag = A04BR3SetFastbootFlag ();
   DEBUG ((
     DEBUG_ERROR,
     "A04BR3 SEC: test cycle: fastboot flag %a, watchdog armed for %u s\n",

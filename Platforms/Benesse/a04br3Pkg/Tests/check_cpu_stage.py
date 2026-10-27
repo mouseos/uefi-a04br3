@@ -5,8 +5,9 @@ import re,subprocess,tempfile
 root=Path(__file__).resolve().parents[1];h=(root/'Include/A04BR3CpuStage.h').read_text();sec=(root/'Library/A04BR3PlatformSecBoardLib/A04BR3PlatformSecBoardLib.c').read_text();dxe=(root/'Drivers/A04BR3TestCycleDxe/A04BR3TestCycleDxe.c').read_text();dsc=(root/'a04br3.dsc').read_text()
 assert 'MmioWrite' not in h and 'A04BR3_CPU_STAGE_DIAG = 0' in dsc and 'A04BR3_CPU_STAGE_DIAG requires A04BR3_TEST_CYCLE=1' in dsc
 for source,stage in ((sec,'SEC'),(dxe,'EBS')):
- assert re.search(r'#if A04BR3_CPU_STAGE_DIAG == 1\s*\{\s*CONST CHAR8 \*Stage = "'+stage+r'";',source)
+ assert re.search(r'#if A04BR3_CPU_STAGE_DIAG == 1 && !defined\(MDEPKG_NDEBUG\)\s*if \(Flag\) \{\s*CONST CHAR8 \*Stage = "'+stage+r'";',source)
  assert source.count('A04BR3CpuStageRead (MmioRead32)')==1
+ assert source.index('Flag = A04BR3SetFastbootFlag ();') < source.index('A04BR3CpuStageRead (MmioRead32)')
 code='''#include <stdint.h>\n#include <assert.h>\ntypedef uint32_t UINT32;typedef uintptr_t UINTN;\n#define STATIC static\n#define EFIAPI\n'''+h+r'''
 static UINTN seen[8];static unsigned count;
 static UINT32 fake(UINTN a){assert(count<8);seen[count++]=a;return (UINT32)a ^ 0x12345678U;}
