@@ -28,6 +28,7 @@
   A04BR3TestCycleLib
   BaseLib
   DebugLib
+  IoLib
   TimerLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint

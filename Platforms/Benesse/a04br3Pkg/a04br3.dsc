@@ -66,13 +66,23 @@
   !error A04BR3_EARLY_FAULT must be 0, 1 (SEC), or 2 (DXE)
 !endif
 
+!ifndef A04BR3_CPU_STAGE_DIAG
+  DEFINE A04BR3_CPU_STAGE_DIAG = 0
+!endif
+!if $(A04BR3_CPU_STAGE_DIAG) != 0 && $(A04BR3_CPU_STAGE_DIAG) != 1
+  !error A04BR3_CPU_STAGE_DIAG must be 0 or 1
+!endif
+!if $(A04BR3_CPU_STAGE_DIAG) == 1 && $(A04BR3_TEST_CYCLE) != 1
+  !error A04BR3_CPU_STAGE_DIAG requires A04BR3_TEST_CYCLE=1
+!endif
+
 DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
 
 !include MT8167Pkg/MT8167Pkg.dsc.inc
 
 [BuildOptions]
   # Board-only smoke: 1 halts after SEC RTC verification; 2 halts with DXE timer live.
-  GCC:*_*_AARCH64_CC_FLAGS = -DA04BR3_EARLY_FAULT=$(A04BR3_EARLY_FAULT)
+  GCC:*_*_AARCH64_CC_FLAGS = -DA04BR3_EARLY_FAULT=$(A04BR3_EARLY_FAULT) -DA04BR3_CPU_STAGE_DIAG=$(A04BR3_CPU_STAGE_DIAG)
 
 [PcdsFixedAtBuild]
   #
