@@ -50,7 +50,15 @@ def main():
  if prior_diff and patched_tree(base,False)!=patched_tree(base,True):
   raise RuntimeError('Mu_Basecore differs from recorded patches')
  stamp=git(ROOT,'log','-1','--format=%ct')
- env=dict(os.environ,UNIXNU_ROOT=str(u),SOURCE_DATE_EPOCH=stamp,A04BR3_TEST_CYCLE='1',A04BR3_CPU_STAGE_DIAG='1',A04BR3_CHARGER_OWNER='1')
+ compiler=shutil.which('clang')
+ if not compiler:raise RuntimeError('clang is unavailable')
+ tool_dir=pathlib.Path(compiler).resolve().parent
+ tools={}
+ for name in ('clang','lld-link','llvm-lib','llvm-rc','llvm-objcopy'):
+  path=tool_dir/name
+  if not path.is_file():raise RuntimeError('missing toolchain binary: '+str(path))
+  tools[name]={'path':str(path.resolve()),'sha256':sha(path)}
+ env=dict(os.environ,UNIXNU_ROOT=str(u),SOURCE_DATE_EPOCH=stamp,CLANG_BIN=str(tool_dir)+'/',A04BR3_TEST_CYCLE='1',A04BR3_CPU_STAGE_DIAG='1',A04BR3_CHARGER_OWNER='1')
  cmd=[sys.executable,str(ROOT/'build_uefi.py'),'-d','a04br3','-r','DEBUG','-c']
  try:
   subprocess.run(cmd,cwd=ROOT,env=env,check=True)
@@ -69,7 +77,7 @@ def main():
  if prior_diff and command('git','-C',base,'diff','--binary')!=prior_diff:
   raise RuntimeError('preexisting Mu_Basecore patch state changed')
  shutil.copyfile(fd,out/'SILICIUM_UEFI.fd')
- manifest={'schema':1,'uefi_commit':source,'unixnu_commit':unixnu,'darwinboot_commit':darwin_rev,'submodules':refs,'unused_submodules':['Silicium-ACPI','Binaries','Silicon/Silicium/OpensslPkg/Library/OpensslLib/openssl'],'mu_basecore_patched_tree':actual,'patch_sha256':patch_hash,'source_date_epoch':stamp,'target':'DEBUG','toolchain':'CLANGPDB','defines':{'A04BR3_TEST_CYCLE':'1','A04BR3_CPU_STAGE_DIAG':'1','A04BR3_CHARGER_OWNER':'1'},'command':['python3','build_uefi.py','-d','a04br3','-r','DEBUG','-c'],'fd_sha256':sha(out/'SILICIUM_UEFI.fd'),'fd_bytes':fd.stat().st_size,'clang_version':command('clang','--version').splitlines()[0]}
+ manifest={'schema':1,'uefi_commit':source,'uefi_repository':'https://github.com/mouseos/uefi-a04br3','unixnu_commit':unixnu,'darwinboot_commit':darwin_rev,'submodules':refs,'unused_submodules':['Silicium-ACPI','Binaries','Silicon/Silicium/OpensslPkg/Library/OpensslLib/openssl'],'mu_basecore_patched_tree':actual,'patch_sha256':patch_hash,'source_date_epoch':stamp,'target':'DEBUG','toolchain':'CLANGPDB','tool_binaries':tools,'clang_version':command(tool_dir/'clang','--version').splitlines()[0],'defines':{'A04BR3_TEST_CYCLE':'1','A04BR3_CPU_STAGE_DIAG':'1','A04BR3_CHARGER_OWNER':'1'},'command':['python3','build_uefi.py','-d','a04br3','-r','DEBUG','-c'],'fd_sha256':sha(out/'SILICIUM_UEFI.fd'),'fd_bytes':fd.stat().st_size}
  (out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
  print('recorded FD:',out/'SILICIUM_UEFI.fd')
 if __name__=='__main__':main()
