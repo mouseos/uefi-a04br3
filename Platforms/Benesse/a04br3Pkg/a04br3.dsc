@@ -85,6 +85,15 @@
   # tuning after the High Speed checks, and returns to High Speed when tuning
   # or verification fails. Off by default.
   #
+  # Boot Ramdisk (MemoryMapLib): A04BR3_RAMDISK_RECLAIMABLE=1 describes the payload FAT as boot services data instead of
+  # reserved memory: still never allocated by UEFI, but memory the OS may take after ExitBootServices (DarwinBoot
+  # darwinboot-memory-floor). Default 0 keeps it reserved.
+!ifndef A04BR3_RAMDISK_RECLAIMABLE
+  DEFINE A04BR3_RAMDISK_RECLAIMABLE = 0
+!endif
+!if $(A04BR3_RAMDISK_RECLAIMABLE) != 0 && $(A04BR3_RAMDISK_RECLAIMABLE) != 1
+  !error A04BR3_RAMDISK_RECLAIMABLE must be 0 or 1
+!endif
 !ifndef A04BR3_EMMC_HS200
   DEFINE A04BR3_EMMC_HS200 = 0
 !endif
@@ -98,7 +107,7 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
 
 [BuildOptions]
   # Board-only smoke: 1 halts after SEC RTC verification; 2 halts with DXE timer live.
-  GCC:*_*_AARCH64_CC_FLAGS = -DA04BR3_EARLY_FAULT=$(A04BR3_EARLY_FAULT) -DA04BR3_CPU_STAGE_DIAG=$(A04BR3_CPU_STAGE_DIAG) -DA04BR3_EMMC_HS200=$(A04BR3_EMMC_HS200)
+  GCC:*_*_AARCH64_CC_FLAGS = -DA04BR3_EARLY_FAULT=$(A04BR3_EARLY_FAULT) -DA04BR3_CPU_STAGE_DIAG=$(A04BR3_CPU_STAGE_DIAG) -DA04BR3_EMMC_HS200=$(A04BR3_EMMC_HS200) -DA04BR3_RAMDISK_RECLAIMABLE=$(A04BR3_RAMDISK_RECLAIMABLE)
 
 [PcdsFixedAtBuild]
   #

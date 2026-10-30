@@ -172,6 +172,16 @@ class PlatformBuilder (UefiBuilder, BuildSettingsManager):
         if emmc_hs200 not in ("0", "1"):
             raise ValueError("A04BR3_EMMC_HS200 must be 0 or 1")
         self.env.SetValue ("BLD_*_A04BR3_EMMC_HS200", emmc_hs200, "Default")
+        # Payload FAT as boot services data (MemoryMapLib "Boot Ramdisk"), off by default: A04BR3_RAMDISK_RECLAIMABLE=1.
+        reclaimable = self.env.GetValue("A04BR3_RAMDISK_RECLAIMABLE", os.environ.get("A04BR3_RAMDISK_RECLAIMABLE", "0"))
+        if reclaimable not in ("0", "1"):
+            raise ValueError("A04BR3_RAMDISK_RECLAIMABLE must be 0 or 1")
+        self.env.SetValue ("BLD_*_A04BR3_RAMDISK_RECLAIMABLE", reclaimable, "Default")
+        # DarwinBoot's raw memory map dump (DarwinBootPkg MemoryMapDiag.h), off by default: DARWINBOOT_MEMORY_MAP_DIAG=1.
+        mapdiag = self.env.GetValue("DARWINBOOT_MEMORY_MAP_DIAG", os.environ.get("DARWINBOOT_MEMORY_MAP_DIAG", "0"))
+        if mapdiag not in ("0", "1"):
+            raise ValueError("DARWINBOOT_MEMORY_MAP_DIAG must be 0 or 1")
+        self.env.SetValue ("BLD_*_DARWINBOOT_MEMORY_MAP_DIAG", mapdiag, "Default")
 
         charger = self.env.GetValue("A04BR3_CHARGER_OWNER", os.environ.get("A04BR3_CHARGER_OWNER", "0"))
         if charger not in ("0", "1"):

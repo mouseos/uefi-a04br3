@@ -31,6 +31,10 @@
 #include <Library/DebugLib.h>
 #include <Library/MemoryMapLib.h>
 
+#ifndef A04BR3_RAMDISK_RECLAIMABLE
+#define A04BR3_RAMDISK_RECLAIMABLE 0
+#endif
+
 #define A04BR3_BOOT_PAYLOAD_BASE  0x40080000ULL
 #define A04BR3_ATF_RESERVED_BASE  0x43000000ULL
 
@@ -54,7 +58,12 @@ gMemoryDescriptor[] = {
   {"UEFI Stack",         0x4E200000, 0x00040000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
   {"DXE Heap",           0x4E240000, 0x03DC0000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK},
   {"DDR Mid 2",          0x52000000, 0x0E000000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK_XN},
+#if A04BR3_RAMDISK_RECLAIMABLE
+  // Boot services data: never allocated by UEFI, the OS's after ExitBootServices (DarwinBoot darwinboot-memory-floor).
+  {"Boot Ramdisk",       0x60000000, 0x08000000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
+#else
   {"Boot Ramdisk",       0x60000000, 0x08000000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK},
+#endif
   {"DDR High",           0x68000000, 0x569C0000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK_XN},
   {"Display Reserved",   0xBE9C0000, 0x01000000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_THROUGH_XN},
   {"MBlock Gap",         0xBF9C0000, 0x00640000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK},
