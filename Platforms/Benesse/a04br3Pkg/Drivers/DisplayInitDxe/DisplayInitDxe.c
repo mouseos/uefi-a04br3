@@ -209,8 +209,9 @@
 #define A04BR3_OVL_LAYER_CON         0x000021FFU
 //
 // OVL_CON bits (Linux drivers/gpu/drm/mediatek/mtk_disp_ovl.c): CLRFMT [15:12]
-// (2 = RGBA8888), AEN bit 8 (use the per-pixel alpha byte), ALPHA [7:0]
-// (constant alpha). The GOP published on layer 0 is
+// (2 = OVL_CON_CLRFMT_ARGB8888, bytes B,G,R,A in memory), AEN bit 8 (use the
+// per-pixel alpha byte), ALPHA [7:0] (constant alpha). The GOP published on
+// layer 0 is
 // PixelBlueGreenRedReserved8BitPerColor: the fourth byte is reserved and UEFI
 // drawing code writes 0 there (UniXNU menu, console), so with AEN the whole
 // GOP surface is transparent and only the OVL background is scanned out.
