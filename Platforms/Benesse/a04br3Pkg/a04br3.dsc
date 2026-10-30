@@ -96,7 +96,8 @@
   # CPU 1300 MHz (A04BR3PlatformSecBoardLib): A04BR3_CPU_1300=1 in the build
   # environment raises VPROC to 1.30 V and then ARMPLL from the LK 1001 MHz to
   # the stock maximum OPP 1300 MHz once in SEC, after the recovery watchdog and
-  # fastboot flag. Off by default.
+  # fastboot flag. Without A04BR3_TEST_CYCLE it arms the watchdog only around
+  # the switch and stops it again. Off by default.
   #
 !ifndef A04BR3_CPU_1300
   DEFINE A04BR3_CPU_1300 = 0
@@ -111,7 +112,7 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
 
 [BuildOptions]
   # Board-only smoke: 1 halts after SEC RTC verification; 2 halts with DXE timer live.
-  GCC:*_*_AARCH64_CC_FLAGS = -DA04BR3_EARLY_FAULT=$(A04BR3_EARLY_FAULT) -DA04BR3_CPU_STAGE_DIAG=$(A04BR3_CPU_STAGE_DIAG) -DA04BR3_EMMC_HS200=$(A04BR3_EMMC_HS200) -DA04BR3_CPU_1300=$(A04BR3_CPU_1300)
+  GCC:*_*_AARCH64_CC_FLAGS = -DA04BR3_EARLY_FAULT=$(A04BR3_EARLY_FAULT) -DA04BR3_CPU_STAGE_DIAG=$(A04BR3_CPU_STAGE_DIAG) -DA04BR3_EMMC_HS200=$(A04BR3_EMMC_HS200) -DA04BR3_CPU_1300=$(A04BR3_CPU_1300) -DA04BR3_TEST_CYCLE=$(A04BR3_TEST_CYCLE)
 
 [PcdsFixedAtBuild]
   #
@@ -176,9 +177,10 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
   KeypadDeviceLib|a04br3Pkg/Library/KeypadDeviceLib/KeypadDeviceLib.inf
   A04BR3TestCycleLib|a04br3Pkg/Library/A04BR3TestCycleLib/A04BR3TestCycleLib.inf
 
-!if $(A04BR3_TEST_CYCLE) == 1
+!if $(A04BR3_TEST_CYCLE) == 1 || $(A04BR3_CPU_1300) == 1
   # Unattended test cycle from SEC on: LK fastboot flag and 31 s watchdog
-  # (replaces the empty MT8167Pkg PlatformSecBoardLibNull).
+  # (replaces the empty MT8167Pkg PlatformSecBoardLibNull). Without the test
+  # cycle, A04BR3_CPU_1300=1 alone maps it for the CPU switch only.
   PlatformSecBoardLib|a04br3Pkg/Library/A04BR3PlatformSecBoardLib/A04BR3PlatformSecBoardLib.inf
 !endif
 

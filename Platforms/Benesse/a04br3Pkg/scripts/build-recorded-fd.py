@@ -62,7 +62,10 @@ def main():
  if emmc_hs200 not in ('0','1'):raise RuntimeError('A04BR3_EMMC_HS200 must be 0 or 1')
  cpu_1300=os.environ.get('A04BR3_CPU_1300','0')
  if cpu_1300 not in ('0','1'):raise RuntimeError('A04BR3_CPU_1300 must be 0 or 1')
- defines={'A04BR3_TEST_CYCLE':'1','A04BR3_CPU_STAGE_DIAG':'1','A04BR3_CHARGER_OWNER':'1','A04BR3_EMMC_HS200':emmc_hs200,'A04BR3_CPU_1300':cpu_1300}
+ # Release image (A04BR3_TEST_CYCLE=0): no fastboot flag/recovery watchdog cycle; CPU stage diagnostics need it.
+ test_cycle=os.environ.get('A04BR3_TEST_CYCLE','1')
+ if test_cycle not in ('0','1'):raise RuntimeError('A04BR3_TEST_CYCLE must be 0 or 1')
+ defines={'A04BR3_TEST_CYCLE':test_cycle,'A04BR3_CPU_STAGE_DIAG':test_cycle,'A04BR3_CHARGER_OWNER':'1','A04BR3_EMMC_HS200':emmc_hs200,'A04BR3_CPU_1300':cpu_1300}
  env=dict(os.environ,UNIXNU_ROOT=str(u),SOURCE_DATE_EPOCH=stamp,CLANG_BIN=str(tool_dir)+'/',**defines)
  cmd=[sys.executable,str(ROOT/'build_uefi.py'),'-d','a04br3','-r','DEBUG','-c']
  try:

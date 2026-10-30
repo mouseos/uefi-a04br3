@@ -220,6 +220,7 @@ PlatformSecBoardInitialize (
   VOID
   )
 {
+#if A04BR3_TEST_CYCLE == 1
   BOOLEAN  Flag;
 
   // Arm first: a PMIC wrapper access that stalls still ends in a reset.
@@ -261,5 +262,22 @@ PlatformSecBoardInitialize (
     DEBUG ((DEBUG_ERROR, "A04BR3 RECOVERY SMOKE: SEC armed/RTC verified; deadloop without feeding\n"));
     CpuDeadLoop ();
   }
+#endif
+#elif A04BR3_CPU_1300 == 1
+  BOOLEAN  WasEnabled;
+
+  // Image without the unattended test cycle: no fastboot flag. The watchdog
+  // only bounds the switch, so that a stalled PMIC wrapper or PLL access ends
+  // in a reset, and is then returned to the state SEC left (stopped by
+  // MT8167Pkg PlatformSec), as nothing feeds it afterwards.
+  WasEnabled = A04BR3WatchdogEnabled ();
+  A04BR3WatchdogArm (A04BR3_WATCHDOG_SECONDS);
+  A04BR3Cpu1300 ();
+  if (!WasEnabled) {
+    A04BR3WatchdogDisable ();
+  }
+
+  DEBUG ((DEBUG_ERROR, "A04BR3 SEC: cpu-1300 done without test cycle; watchdog %a\n",
+          A04BR3WatchdogEnabled () ? "enabled" : "stopped"));
 #endif
 }

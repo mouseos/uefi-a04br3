@@ -36,6 +36,13 @@ A04BR3WatchdogKick (
   VOID
   );
 
+/** Stop the TOPRGU watchdog as MT8167Pkg PlatformSec does (MODE <- key, enable clear). **/
+VOID
+EFIAPI
+A04BR3WatchdogDisable (
+  VOID
+  );
+
 /** TRUE when the TOPRGU watchdog is enabled (MODE bit 0). **/
 BOOLEAN
 EFIAPI

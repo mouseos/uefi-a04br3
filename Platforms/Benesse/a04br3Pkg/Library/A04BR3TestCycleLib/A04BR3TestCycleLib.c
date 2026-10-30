@@ -207,6 +207,16 @@ A04BR3WatchdogKick (
   Write32 (TOPRGU_RESTART, TOPRGU_RESTART_KEY);  // Linux mtk_wdt_ping
 }
 
+VOID
+EFIAPI
+A04BR3WatchdogDisable (
+  VOID
+  )
+{
+  // MT8167Pkg PlatformRegisters.h DisableWDT: 0x10007000 <- 0x22000000.
+  Write32 (TOPRGU_MODE, 0x22000000U);
+}
+
 BOOLEAN
 EFIAPI
 A04BR3WatchdogEnabled (
