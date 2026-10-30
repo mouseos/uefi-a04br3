@@ -207,6 +207,18 @@
 #define A04BR3_COLOR_CFG_WRITE       0x200032BCU
 #define A04BR3_COLOR_CFG_READBACK    0x0000209CU
 #define A04BR3_OVL_LAYER_CON         0x000021FFU
+//
+// OVL_CON bits (Linux drivers/gpu/drm/mediatek/mtk_disp_ovl.c): CLRFMT [15:12]
+// (2 = RGBA8888), AEN bit 8 (use the per-pixel alpha byte), ALPHA [7:0]
+// (constant alpha). The GOP published on layer 0 is
+// PixelBlueGreenRedReserved8BitPerColor: the fourth byte is reserved and UEFI
+// drawing code writes 0 there (UniXNU menu, console), so with AEN the whole
+// GOP surface is transparent and only the OVL background is scanned out.
+// Layer 0 therefore uses the constant alpha 0xFF without AEN, as Linux does
+// for the X (no alpha) formats. Layer 3 keeps the stock per-pixel alpha.
+//
+#define A04BR3_OVL_CON_AEN           BIT8
+#define A04BR3_OVL_GOP_LAYER_CON     (A04BR3_OVL_LAYER_CON & ~A04BR3_OVL_CON_AEN)
 #define A04BR3_OVL_LAYER_PITCH       0x00FF0C80U
 #define A04BR3_OVL_ACTIVE_LAYERS     (BIT0 | BIT3)
 #define A04BR3_MUTEX_MODULES         0x0002F940U
@@ -912,7 +924,7 @@ ConfigureA04Br3Scanout (
   MmioWrite32 (OVL_DATAPATH_CON, 0x60000001U);
   MmioWrite32 (OVL_ROI_BGCLR, 0xFF000000U);
 
-  MmioWrite32 (OVL_L0_CON, A04BR3_OVL_LAYER_CON);
+  MmioWrite32 (OVL_L0_CON, A04BR3_OVL_GOP_LAYER_CON);
   MmioWrite32 (OVL_L0_SRC_SIZE, A04BR3_FRAME_SIZE_REG);
   MmioWrite32 (OVL_L0_OFFSET, 0U);
   MmioWrite32 (OVL_L0_ADDR, FrameBuffer);
@@ -1017,6 +1029,13 @@ A04Br3DisplayInitDxeEntryPoint (
     MmioRead32 (MIPITX_PLL_CON0),
     MmioRead32 (MIPITX_PLL_PWR),
     MmioRead16 (GPIO_DOUT_BASE + ((GPIO_LCD_RESET / 16U) * 0x10U))
+    ));
+  DEBUG ((
+    DEBUG_ERROR,
+    "[A04BR3 DISP] layer con l0=%08x (want %08x) l3=%08x\n",
+    MmioRead32 (OVL_L0_CON),
+    A04BR3_OVL_GOP_LAYER_CON,
+    MmioRead32 (OVL_L0_CON + (3U * OVL_LAYER_STRIDE))
     ));
   return EFI_SUCCESS;
 }
