@@ -66,6 +66,11 @@ def main():
  test_cycle=os.environ.get('A04BR3_TEST_CYCLE','1')
  if test_cycle not in ('0','1'):raise RuntimeError('A04BR3_TEST_CYCLE must be 0 or 1')
  defines={'A04BR3_TEST_CYCLE':test_cycle,'A04BR3_CPU_STAGE_DIAG':test_cycle,'A04BR3_CHARGER_OWNER':'1','A04BR3_EMMC_HS200':emmc_hs200,'A04BR3_CPU_1300':cpu_1300}
+ # Test only: stop the CPU 1300 MHz switch after the VPROC raise to exercise the re-entry guard.
+ cpu_1300_fault=os.environ.get('A04BR3_CPU_1300_FAULT','0')
+ if cpu_1300_fault not in ('0','1'):raise RuntimeError('A04BR3_CPU_1300_FAULT must be 0 or 1')
+ if cpu_1300_fault=='1' and (cpu_1300!='1' or test_cycle!='1'):raise RuntimeError('A04BR3_CPU_1300_FAULT requires A04BR3_CPU_1300=1 and A04BR3_TEST_CYCLE=1')
+ defines['A04BR3_CPU_1300_FAULT']=cpu_1300_fault
  env=dict(os.environ,UNIXNU_ROOT=str(u),SOURCE_DATE_EPOCH=stamp,CLANG_BIN=str(tool_dir)+'/',**defines)
  cmd=[sys.executable,str(ROOT/'build_uefi.py'),'-d','a04br3','-r','DEBUG','-c']
  try:

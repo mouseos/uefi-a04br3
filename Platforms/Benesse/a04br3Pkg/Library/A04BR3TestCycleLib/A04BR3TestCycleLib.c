@@ -39,6 +39,7 @@
 #define RTC_PDN1                0x802C
 #define RTC_PDN1_FASTBOOT       BIT13
 #define RTC_PROT                0x8036
+#define RTC_SPAR0               0x8030
 #define RTC_WRTGR               0x803C
 
 #define TOPRGU_BASE             0x10007000U
@@ -178,6 +179,44 @@ A04BR3SetFastbootFlag (
 
   Check = 0;
   return Wacs (FALSE, RTC_PDN1, 0, &Check) && ((Check & RTC_PDN1_FASTBOOT) != 0);
+}
+
+BOOLEAN
+EFIAPI
+A04BR3RtcSpare0Update (
+  IN  UINT32  Clear,
+  IN  UINT32  Set,
+  OUT UINT32  *Value
+  )
+{
+  UINT32  Spare;
+  UINT32  Wanted;
+
+  Spare = 0;
+  if (!Wacs (FALSE, RTC_SPAR0, 0, &Spare)) {
+    return FALSE;
+  }
+
+  *Value = Spare & 0xFFFF;
+  if ((Clear == 0) && (Set == 0)) {
+    return TRUE;
+  }
+
+  Wanted = ((Spare & ~Clear) | Set) & 0xFFFF;
+  if (!Wacs (TRUE, RTC_PROT, 0x586A, NULL) || !RtcTrigger () ||
+      !Wacs (TRUE, RTC_PROT, 0x9136, NULL) || !RtcTrigger () ||
+      !Wacs (TRUE, RTC_SPAR0, Wanted, NULL) || !RtcTrigger ())
+  {
+    return FALSE;
+  }
+
+  Spare = 0;
+  if (!Wacs (FALSE, RTC_SPAR0, 0, &Spare)) {
+    return FALSE;
+  }
+
+  *Value = Spare & 0xFFFF;
+  return (Spare & 0xFFFF) == Wanted;
 }
 
 VOID

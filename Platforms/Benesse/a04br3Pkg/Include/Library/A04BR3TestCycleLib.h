@@ -51,6 +51,23 @@ A04BR3WatchdogEnabled (
   );
 
 /**
+  Read PMIC RTC_SPAR0 (0x8030) and, unless Clear and Set are both 0, write
+  (value & ~Clear) | Set through the RTC unlock and write trigger, then read it
+  back. Linux rtc-mt6397.c keeps bits [5:0] and 8 there, the vendor RTC HAL
+  bits 6 and 7, and the stock LK tests bit 15; the a04br3 firmware uses only
+  bit 12.
+  @param[out] Value  The value read (before the write, or after it when written).
+  @retval FALSE  The PMIC wrapper or the RTC did not respond, or the readback differs.
+**/
+BOOLEAN
+EFIAPI
+A04BR3RtcSpare0Update (
+  IN  UINT32  Clear,
+  IN  UINT32  Set,
+  OUT UINT32  *Value
+  );
+
+/**
   One PMIC register read through PWRAP WACS2 (bounded).
   @retval FALSE  The wrapper did not finish or return data.
 **/
