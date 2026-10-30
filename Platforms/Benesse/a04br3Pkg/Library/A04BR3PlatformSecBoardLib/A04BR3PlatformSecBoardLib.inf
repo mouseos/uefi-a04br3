@@ -23,6 +23,7 @@
 
 [LibraryClasses]
   A04BR3TestCycleLib
+  ArmLib
   BaseLib
   DebugLib
   IoLib

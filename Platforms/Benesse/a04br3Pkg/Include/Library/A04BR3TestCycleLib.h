@@ -43,4 +43,27 @@ A04BR3WatchdogEnabled (
   VOID
   );
 
+/**
+  One PMIC register read through PWRAP WACS2 (bounded).
+  @retval FALSE  The wrapper did not finish or return data.
+**/
+BOOLEAN
+EFIAPI
+A04BR3PmicRead (
+  IN  UINT32  Address,
+  OUT UINT32  *Value
+  );
+
+/**
+  One PMIC register write through PWRAP WACS2. As the stock LK the command is
+  issued after the FSM is idle; the next transaction waits for its completion,
+  so callers verify the effect by reading the register back.
+**/
+BOOLEAN
+EFIAPI
+A04BR3PmicWrite (
+  IN UINT32  Address,
+  IN UINT32  Value
+  );
+
 #endif

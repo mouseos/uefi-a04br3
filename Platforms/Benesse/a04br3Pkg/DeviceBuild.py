@@ -172,6 +172,11 @@ class PlatformBuilder (UefiBuilder, BuildSettingsManager):
         if emmc_hs200 not in ("0", "1"):
             raise ValueError("A04BR3_EMMC_HS200 must be 0 or 1")
         self.env.SetValue ("BLD_*_A04BR3_EMMC_HS200", emmc_hs200, "Default")
+        # CPU 1300 MHz at 1.30 V once in SEC (A04BR3PlatformSecBoardLib), off by default: A04BR3_CPU_1300=1.
+        cpu_1300 = self.env.GetValue("A04BR3_CPU_1300", os.environ.get("A04BR3_CPU_1300", "0"))
+        if cpu_1300 not in ("0", "1"):
+            raise ValueError("A04BR3_CPU_1300 must be 0 or 1")
+        self.env.SetValue ("BLD_*_A04BR3_CPU_1300", cpu_1300, "Default")
 
         charger = self.env.GetValue("A04BR3_CHARGER_OWNER", os.environ.get("A04BR3_CHARGER_OWNER", "0"))
         if charger not in ("0", "1"):

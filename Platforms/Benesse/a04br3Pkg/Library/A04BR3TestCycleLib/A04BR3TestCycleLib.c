@@ -111,6 +111,26 @@ Wacs (
   }
 }
 
+BOOLEAN
+EFIAPI
+A04BR3PmicRead (
+  IN  UINT32  Address,
+  OUT UINT32  *Value
+  )
+{
+  return Wacs (FALSE, Address, 0, Value);
+}
+
+BOOLEAN
+EFIAPI
+A04BR3PmicWrite (
+  IN UINT32  Address,
+  IN UINT32  Value
+  )
+{
+  return Wacs (TRUE, Address, Value, NULL);
+}
+
 STATIC
 BOOLEAN
 RtcTrigger (
