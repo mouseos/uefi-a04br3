@@ -167,6 +167,11 @@ class PlatformBuilder (UefiBuilder, BuildSettingsManager):
         # or in the environment of build_uefi.py.
         self.env.SetValue ("BLD_*_A04BR3_TEST_CYCLE", self.env.GetValue("A04BR3_TEST_CYCLE", os.environ.get("A04BR3_TEST_CYCLE", "0")), "Default")
         self.env.SetValue ("BLD_*_A04BR3_CPU_STAGE_DIAG", self.env.GetValue("A04BR3_CPU_STAGE_DIAG", os.environ.get("A04BR3_CPU_STAGE_DIAG", "0")), "Default")
+        # eMMC HS200 (SdCardBlockIoDxe EmmcSelectHs200), off by default: A04BR3_EMMC_HS200=1.
+        emmc_hs200 = self.env.GetValue("A04BR3_EMMC_HS200", os.environ.get("A04BR3_EMMC_HS200", "0"))
+        if emmc_hs200 not in ("0", "1"):
+            raise ValueError("A04BR3_EMMC_HS200 must be 0 or 1")
+        self.env.SetValue ("BLD_*_A04BR3_EMMC_HS200", emmc_hs200, "Default")
 
         charger = self.env.GetValue("A04BR3_CHARGER_OWNER", os.environ.get("A04BR3_CHARGER_OWNER", "0"))
         if charger not in ("0", "1"):

@@ -79,13 +79,26 @@
   !error A04BR3_CPU_STAGE_DIAG requires TARGET=DEBUG
 !endif
 
+  #
+  # eMMC HS200 (EmmcBlockIoDxe): A04BR3_EMMC_HS200=1 in the build environment
+  # switches the eMMC from High Speed (47 MHz) to HS200 (188 MHz) with CMD21
+  # tuning after the High Speed checks, and returns to High Speed when tuning
+  # or verification fails. Off by default.
+  #
+!ifndef A04BR3_EMMC_HS200
+  DEFINE A04BR3_EMMC_HS200 = 0
+!endif
+!if $(A04BR3_EMMC_HS200) != 0 && $(A04BR3_EMMC_HS200) != 1
+  !error A04BR3_EMMC_HS200 must be 0 or 1
+!endif
+
 DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
 
 !include MT8167Pkg/MT8167Pkg.dsc.inc
 
 [BuildOptions]
   # Board-only smoke: 1 halts after SEC RTC verification; 2 halts with DXE timer live.
-  GCC:*_*_AARCH64_CC_FLAGS = -DA04BR3_EARLY_FAULT=$(A04BR3_EARLY_FAULT) -DA04BR3_CPU_STAGE_DIAG=$(A04BR3_CPU_STAGE_DIAG)
+  GCC:*_*_AARCH64_CC_FLAGS = -DA04BR3_EARLY_FAULT=$(A04BR3_EARLY_FAULT) -DA04BR3_CPU_STAGE_DIAG=$(A04BR3_CPU_STAGE_DIAG) -DA04BR3_EMMC_HS200=$(A04BR3_EMMC_HS200)
 
 [PcdsFixedAtBuild]
   #

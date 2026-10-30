@@ -25,6 +25,23 @@
 #include <Protocol/BlockIo.h>
 #include <Protocol/DevicePath.h>
 
+//
+// HS200 for the internal eMMC (EmmcBlockIoDxe only), off by default:
+// A04BR3_EMMC_HS200=1 in the build environment (a04br3.dsc, DeviceBuild.py).
+// After the High Speed (52 MHz class) bring-up and the GPT and DMA checks the
+// driver switches the card to HS200, tunes the sampling as the MT8167 Linux
+// driver does and verifies the result against data read at High Speed. Any
+// failure returns the controller and the card to the High Speed state.
+//
+#ifndef A04BR3_EMMC_HS200
+#define A04BR3_EMMC_HS200  0
+#endif
+#if defined (A04BR3_EMMC_BUILD) && (A04BR3_EMMC_HS200 != 0)
+#define A04BR3_HS200_PATH  1
+#else
+#define A04BR3_HS200_PATH  0
+#endif
+
 #define MSDC_CFG                    0x000
 #define MSDC_IOCON                  0x004
 #define MSDC_PS                     0x008
@@ -249,6 +266,21 @@ STATIC UINT8                    mSdDmaProbeResult[SD_DMA_PROBE_BLOCKS * 512U];
 STATIC UINT8                    mEmmcExtCsd[MMC_EXT_CSD_SIZE];
 STATIC UINT8                    mEmmcGptProbe[2U * 512U];
 #endif
+
+//
+// TRUE while HS200 tuning probes delay settings that are expected to fail:
+// the per-command error lines of SdSendCommand and SdReadData are then
+// dropped, and the tuning result is reported in one line instead.
+//
+STATIC BOOLEAN                  mSdQuiet;
+
+#define SD_LOG_ERROR(Arguments)  \
+  do {                           \
+    if (!mSdQuiet) {             \
+      DEBUG (Arguments);         \
+    }                            \
+  } while (FALSE)
+
 STATIC MT8167_SD_DEVICE_PATH    mSdDevicePath = {
   {
     {
@@ -550,7 +582,7 @@ SdSendCommand (
 
   Status = SdWaitNotBusy (Opcode == SD_CMD_APP_CMD);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "[Mt8167Pkg] SD CMD%u busy timeout\n", Opcode));
+    SD_LOG_ERROR ((DEBUG_ERROR, "[Mt8167Pkg] SD CMD%u busy timeout\n", Opcode));
     return Status;
   }
 
@@ -582,7 +614,7 @@ SdSendCommand (
       if (ResponseType == MSDC_RESP_R1B) {
         Status = SdWaitSet (MSDC_PS, MSDC_PS_DAT0, SD_DATA_WAIT_LOOPS);
         if (EFI_ERROR (Status)) {
-          DEBUG ((DEBUG_ERROR, "[Mt8167Pkg] CMD%u R1b DAT0 busy timeout\n", Opcode));
+          SD_LOG_ERROR ((DEBUG_ERROR, "[Mt8167Pkg] CMD%u R1b DAT0 busy timeout\n", Opcode));
           return Status;
         }
       }
@@ -591,17 +623,17 @@ SdSendCommand (
     }
 
     if ((Ints & MSDC_INT_CMDTMO) != 0) {
-      DEBUG ((DEBUG_ERROR, "[Mt8167Pkg] SD CMD%u timeout arg=0x%08x\n", Opcode, Argument));
+      SD_LOG_ERROR ((DEBUG_ERROR, "[Mt8167Pkg] SD CMD%u timeout arg=0x%08x\n", Opcode, Argument));
       return EFI_TIMEOUT;
     }
 
     if ((Ints & MSDC_INT_RSPCRCERR) != 0) {
-      DEBUG ((DEBUG_ERROR, "[Mt8167Pkg] SD CMD%u response CRC error arg=0x%08x\n", Opcode, Argument));
+      SD_LOG_ERROR ((DEBUG_ERROR, "[Mt8167Pkg] SD CMD%u response CRC error arg=0x%08x\n", Opcode, Argument));
       return EFI_CRC_ERROR;
     }
   }
 
-  DEBUG ((DEBUG_ERROR, "[Mt8167Pkg] SD CMD%u software timeout arg=0x%08x\n", Opcode, Argument));
+  SD_LOG_ERROR ((DEBUG_ERROR, "[Mt8167Pkg] SD CMD%u software timeout arg=0x%08x\n", Opcode, Argument));
   return EFI_TIMEOUT;
 }
 
@@ -656,22 +688,22 @@ SdReadData (
     if (Ints != 0) {
       SdWrite32 (MSDC_INT, Ints);
       if ((Ints & MSDC_INT_DATTMO) != 0) {
-        DEBUG ((DEBUG_ERROR, "[Mt8167Pkg] SD data timeout\n"));
+        SD_LOG_ERROR ((DEBUG_ERROR, "[Mt8167Pkg] SD data timeout\n"));
         return EFI_TIMEOUT;
       }
 
       if ((Ints & MSDC_INT_DATCRCERR) != 0) {
-        DEBUG ((DEBUG_ERROR, "[Mt8167Pkg] SD data CRC error\n"));
+        SD_LOG_ERROR ((DEBUG_ERROR, "[Mt8167Pkg] SD data CRC error\n"));
         return EFI_CRC_ERROR;
       }
 
       if ((Ints & MSDC_INT_ACMDTMO) != 0) {
-        DEBUG ((DEBUG_ERROR, "[Mt8167Pkg] SD auto-CMD timeout\n"));
+        SD_LOG_ERROR ((DEBUG_ERROR, "[Mt8167Pkg] SD auto-CMD timeout\n"));
         return EFI_TIMEOUT;
       }
 
       if ((Ints & MSDC_INT_ACMDCRCERR) != 0) {
-        DEBUG ((DEBUG_ERROR, "[Mt8167Pkg] SD auto-CMD CRC error\n"));
+        SD_LOG_ERROR ((DEBUG_ERROR, "[Mt8167Pkg] SD auto-CMD CRC error\n"));
         return EFI_CRC_ERROR;
       }
 
@@ -699,7 +731,7 @@ SdReadData (
     }
   }
 
-  DEBUG ((
+  SD_LOG_ERROR ((
     DEBUG_ERROR,
     "[Mt8167Pkg] SD data software timeout original=0x%lx remaining=0x%lx int=0x%08x fifocs=0x%08x sdc_sts=0x%08x sdc_cmd=0x%08x blk_num=0x%08x\n",
     (UINT64)OriginalSize,
@@ -1888,6 +1920,783 @@ STATIC EFI_BLOCK_IO_PROTOCOL  mSdBlockIo = {
   SdFlushBlocks
 };
 
+#if A04BR3_HS200_PATH
+//
+// HS200 (JEDEC eMMC 5.0 HS200, 8-bit SDR) for the MT8167 MSDC0 host.
+//
+// The sequence follows the MT8167 Linux driver that runs this eMMC in HS200
+// (CT3_GPL_LGPL_Src/kernel-4.4/drivers/mmc/host/mtk-sd.c, mt8167_compat:
+// pad_tune0, async_fifo, data_tune, busy_check, stop_clk_fix) and the stock
+// A04BR3 device tree (mmc@11120000: bus-width 8, mmc-hs200-1_8v,
+// max-frequency 200 MHz, vqmmc vio18 fixed at 1.8 V, pinctrl state_uhs):
+//   - msdc_init_hw: PATCH_BIT0/1/2, SDC_FIFO_CFG, EMMC50_CFG0, PAD_TUNE0
+//     RD_SEL | CMD_SEL, IOCON 0;
+//   - msdc_ops_switch_volt: state_uhs (CMD/DAT 6 mA pull-up R1R0=01, CLK 8 mA
+//     pull-down R1R0=10, pinctrl-mt8167.c register layout);
+//   - mmc_select_hs200: EXT_CSD HS_TIMING = 2, then the clock: CKMOD 1 (no
+//     divider) on the 188 MHz MSDC0 source (msdc0_sel = mainpll_d8);
+//   - msdc_execute_tuning: CMD21, response then data delay sweeps of 32 cells
+//     on the rising edge and, only without enough margin, the falling edge,
+//     get_best_delay; no internal delay scan (async_fifo).
+// The stock Linux boot of this tablet logged phase map ffffffff, final 10 for
+// both the command and the data line.
+//
+#define MSDC_PATCH_BIT0                   0x0b0
+#define MSDC_PATCH_BIT1                   0x0b4
+#define MSDC_PATCH_BIT2                   0x0b8
+#define MSDC_PAD_TUNE0                    0x0f0
+#define EMMC50_CFG0                       0x208
+#define SDC_FIFO_CFG                      0x228
+
+#define MSDC_IOCON_RSPL                   BIT1
+#define MSDC_IOCON_DSPL                   BIT2
+#define MSDC_IOCON_W_DSPL                 BIT8
+
+#define PAD_TUNE_DATWRDLY_MASK            (0x1fU << 0)
+#define PAD_TUNE_DATRRDLY_SHIFT           8U
+#define PAD_TUNE_DATRRDLY_MASK            (0x1fU << PAD_TUNE_DATRRDLY_SHIFT)
+#define PAD_TUNE_RD_SEL                   BIT13
+#define PAD_TUNE_CMDRDLY_SHIFT            16U
+#define PAD_TUNE_CMDRDLY_MASK             (0x1fU << PAD_TUNE_CMDRDLY_SHIFT)
+#define PAD_TUNE_CMD_SEL                  BIT21
+#define PAD_TUNE_CMDRRDLY_MASK            (0x1fU << 22)
+
+#define PATCH_BIT0_LINUX                  0x403c0046U
+#define PATCH_BIT1_LINUX                  0xffff0089U
+#define PATCH_BIT1_BUSY_CHECK             BIT7
+#define PATCH_BIT1_STOP_DLY_MASK          (0xfU << 8)
+#define PATCH_BIT1_STOP_DLY_6             (0x6U << 8)
+#define PATCH_BIT2_RESPWAIT_MASK          (0x3U << 2)
+#define PATCH_BIT2_RESPWAIT_3             (0x3U << 2)
+#define PATCH_BIT2_CFGRESP                BIT15
+#define PATCH_BIT2_RESPSTSENSEL_MASK      (0x7U << 16)
+#define PATCH_BIT2_RESPSTSENSEL_2         (0x2U << 16)
+#define PATCH_BIT2_POPENCNT_MASK          (0xfU << 20)
+#define PATCH_BIT2_CFGCRCSTS              BIT28
+#define PATCH_BIT2_CRCSTSENSEL_MASK       (0x7U << 29)
+#define PATCH_BIT2_CRCSTSENSEL_2          (0x2U << 29)
+#define SDC_FIFO_CFG_WRVALIDSEL           BIT24
+#define SDC_FIFO_CFG_RDVALIDSEL           BIT25
+#define EMMC50_CFG_CFCSTS_SEL             BIT4
+// Linux default data timeout (msdc_init_hw DTOC 3, 4 x 2^20 clocks, 22 ms at
+// 188 MHz) while tuning, so that a wrong data delay fails quickly.
+#define SDC_CFG_DTOC_TUNING               (0x3U << 24)
+
+#define MMC_CMD_SEND_TUNING_BLOCK_HS200   21U
+#define MMC_TUNING_BLOCK_BYTES            128U
+#define MMC_EXT_CSD_HS_TIMING_HS200       2U
+#define MMC_EXT_CSD_CARD_TYPE_HS200_1_8V  BIT4
+#define MMC_PAD_DELAY_MAX                 32U
+#define MMC_TUNING_RESPONSE_TRIES         3U
+
+#define A04BR3_HS200_VERIFY_BLOCKS        64U
+#define A04BR3_HS200_VERIFY_BYTES         (A04BR3_HS200_VERIFY_BLOCKS * 512U)
+#define A04BR3_HS200_VERIFY_PAGES         EFI_SIZE_TO_PAGES (4U * A04BR3_HS200_VERIFY_BYTES)
+#define A04BR3_HS200_PIO_BLOCKS           4U
+
+// pinctrl-mt8167.c: drive groups (E8E4E2, value = mA / 2 - 1) and the
+// spec pull registers (PUPD, R1, R0 in one 4-bit slot per pin).
+#define MT8167_GPIO_BASE                  0x10005000U
+#define MT8167_GPIO_DRV_D60               (MT8167_GPIO_BASE + 0xd60U) // pin 115 [14:12], pin 116 [10:8]
+#define MT8167_GPIO_DRV_D70               (MT8167_GPIO_BASE + 0xd70U) // pins 110-113, 117-120 [2:0]
+#define MT8167_GPIO_PUPD_E00              (MT8167_GPIO_BASE + 0xe00U) // pins 117-120
+#define MT8167_GPIO_PUPD_E10              (MT8167_GPIO_BASE + 0xe10U) // pins 110-113
+#define MT8167_GPIO_PUPD_E20              (MT8167_GPIO_BASE + 0xe20U) // pin 115 [2:0], 116 [6:4], 114 [10:8]
+#define MSDC0_UHS_DRV_D60_MASK            0x7700U
+#define MSDC0_UHS_DRV_D60_VALUE           0x2300U  // CMD 6 mA, CLK 8 mA
+#define MSDC0_UHS_DRV_D70_MASK            0x0007U
+#define MSDC0_UHS_DRV_D70_VALUE           0x0002U  // DAT0-7 6 mA
+#define MSDC0_UHS_PUPD_DAT_MASK           0x7777U
+#define MSDC0_UHS_PUPD_DAT_VALUE          0x1111U  // pull-up, R1R0 = 01
+#define MSDC0_UHS_PUPD_E20_MASK           0x0077U
+#define MSDC0_UHS_PUPD_E20_VALUE          0x0061U  // CMD pull-up R1R0 = 01, CLK pull-down R1R0 = 10
+
+STATIC CONST UINTN  mHs200GpioRegisters[] = {
+  MT8167_GPIO_DRV_D60,
+  MT8167_GPIO_DRV_D70,
+  MT8167_GPIO_PUPD_E00,
+  MT8167_GPIO_PUPD_E10,
+  MT8167_GPIO_PUPD_E20
+};
+
+typedef struct {
+  UINT32  Iocon;
+  UINT32  PadTune0;
+  UINT32  PatchBit0;
+  UINT32  PatchBit1;
+  UINT32  PatchBit2;
+  UINT32  FifoCfg;
+  UINT32  Emmc50Cfg0;
+  UINT32  SdcCfg;
+  UINT32  Gpio[ARRAY_SIZE (mHs200GpioRegisters)];
+} A04BR3_HS52_STATE;
+
+typedef struct {
+  UINT32  Map;
+  UINT8   Start;
+  UINT8   Length;
+  UINT8   Final;
+} A04BR3_DELAY_PHASE;
+
+typedef struct {
+  A04BR3_DELAY_PHASE  Rise;
+  A04BR3_DELAY_PHASE  Fall;
+  BOOLEAN             FallScanned;
+  BOOLEAN             UseFall;
+  UINT8               Final;
+} A04BR3_EDGE_TUNING;
+
+// Linux drivers/mmc/core/mmc_ops.c tuning_blk_pattern_8bit.
+STATIC CONST UINT8  mEmmcTuningPattern8Bit[MMC_TUNING_BLOCK_BYTES] = {
+  0xff, 0xff, 0x00, 0xff, 0xff, 0xff, 0x00, 0x00, 0xff, 0xff, 0xcc, 0xcc, 0xcc, 0x33, 0xcc, 0xcc,
+  0xcc, 0x33, 0x33, 0xcc, 0xcc, 0xcc, 0xff, 0xff, 0xff, 0xee, 0xff, 0xff, 0xff, 0xee, 0xee, 0xff,
+  0xff, 0xff, 0xdd, 0xff, 0xff, 0xff, 0xdd, 0xdd, 0xff, 0xff, 0xff, 0xbb, 0xff, 0xff, 0xff, 0xbb,
+  0xbb, 0xff, 0xff, 0xff, 0x77, 0xff, 0xff, 0xff, 0x77, 0x77, 0xff, 0x77, 0xbb, 0xdd, 0xee, 0xff,
+  0xff, 0xff, 0xff, 0x00, 0xff, 0xff, 0xff, 0x00, 0x00, 0xff, 0xff, 0xcc, 0xcc, 0xcc, 0x33, 0xcc,
+  0xcc, 0xcc, 0x33, 0x33, 0xcc, 0xcc, 0xcc, 0xff, 0xff, 0xff, 0xee, 0xff, 0xff, 0xff, 0xee, 0xee,
+  0xff, 0xff, 0xff, 0xdd, 0xff, 0xff, 0xff, 0xdd, 0xdd, 0xff, 0xff, 0xff, 0xbb, 0xff, 0xff, 0xff,
+  0xbb, 0xbb, 0xff, 0xff, 0xff, 0x77, 0xff, 0xff, 0xff, 0x77, 0x77, 0xff, 0x77, 0xbb, 0xdd, 0xee
+};
+
+STATIC UINT8  mEmmcTuningBlock[MMC_TUNING_BLOCK_BYTES];
+STATIC UINT8  mEmmcHs200ExtCsd[MMC_EXT_CSD_SIZE];
+
+STATIC
+VOID
+EmmcHs200SaveState (
+  OUT A04BR3_HS52_STATE  *State
+  )
+{
+  UINTN  Index;
+
+  State->Iocon      = SdRead32 (MSDC_IOCON);
+  State->PadTune0   = SdRead32 (MSDC_PAD_TUNE0);
+  State->PatchBit0  = SdRead32 (MSDC_PATCH_BIT0);
+  State->PatchBit1  = SdRead32 (MSDC_PATCH_BIT1);
+  State->PatchBit2  = SdRead32 (MSDC_PATCH_BIT2);
+  State->FifoCfg    = SdRead32 (SDC_FIFO_CFG);
+  State->Emmc50Cfg0 = SdRead32 (EMMC50_CFG0);
+  State->SdcCfg     = SdRead32 (SDC_CFG);
+  for (Index = 0; Index < ARRAY_SIZE (mHs200GpioRegisters); ++Index) {
+    State->Gpio[Index] = MmioRead32 (mHs200GpioRegisters[Index]);
+  }
+}
+
+STATIC
+VOID
+EmmcHs200RestoreState (
+  IN CONST A04BR3_HS52_STATE  *State
+  )
+{
+  UINTN  Index;
+
+  SdWrite32 (MSDC_IOCON, State->Iocon);
+  SdWrite32 (MSDC_PAD_TUNE0, State->PadTune0);
+  SdWrite32 (MSDC_PATCH_BIT0, State->PatchBit0);
+  SdWrite32 (MSDC_PATCH_BIT1, State->PatchBit1);
+  SdWrite32 (MSDC_PATCH_BIT2, State->PatchBit2);
+  SdWrite32 (SDC_FIFO_CFG, State->FifoCfg);
+  SdWrite32 (EMMC50_CFG0, State->Emmc50Cfg0);
+  SdWrite32 (SDC_CFG, State->SdcCfg);
+  mSdBusWidth = State->SdcCfg & SDC_CFG_BUSWIDTH_MASK;
+  for (Index = 0; Index < ARRAY_SIZE (mHs200GpioRegisters); ++Index) {
+    MmioWrite32 (mHs200GpioRegisters[Index], State->Gpio[Index]);
+  }
+}
+
+STATIC
+VOID
+EmmcHs200Modify (
+  IN UINTN   Address,
+  IN UINT32  Mask,
+  IN UINT32  Value
+  )
+{
+  MmioWrite32 (Address, (MmioRead32 (Address) & ~Mask) | Value);
+}
+
+// msdc_init_hw (mt8167_compat) and the state_uhs pin configuration.
+STATIC
+VOID
+EmmcHs200ApplyHost (
+  VOID
+  )
+{
+  UINT32  Value;
+
+  SdWrite32 (MSDC_PAD_TUNE0, PAD_TUNE_RD_SEL | PAD_TUNE_CMD_SEL);
+  SdWrite32 (MSDC_IOCON, 0);
+  SdWrite32 (MSDC_PATCH_BIT0, PATCH_BIT0_LINUX);
+
+  Value  = PATCH_BIT1_LINUX;
+  Value &= ~(PATCH_BIT1_STOP_DLY_MASK | PATCH_BIT1_BUSY_CHECK);
+  Value |= PATCH_BIT1_STOP_DLY_6;
+  SdWrite32 (MSDC_PATCH_BIT1, Value);
+
+  Value  = SdRead32 (MSDC_PATCH_BIT2);
+  Value &= ~(PATCH_BIT2_POPENCNT_MASK | PATCH_BIT2_RESPWAIT_MASK | PATCH_BIT2_RESPSTSENSEL_MASK |
+             PATCH_BIT2_CRCSTSENSEL_MASK | PATCH_BIT2_CFGRESP);
+  Value |= PATCH_BIT2_RESPWAIT_3 | PATCH_BIT2_RESPSTSENSEL_2 | PATCH_BIT2_CRCSTSENSEL_2 |
+           PATCH_BIT2_CFGCRCSTS;
+  SdWrite32 (MSDC_PATCH_BIT2, Value);
+
+  SdClearBits (SDC_FIFO_CFG, SDC_FIFO_CFG_WRVALIDSEL | SDC_FIFO_CFG_RDVALIDSEL);
+  SdSetBits (EMMC50_CFG0, EMMC50_CFG_CFCSTS_SEL);
+
+  EmmcHs200Modify (MT8167_GPIO_DRV_D60, MSDC0_UHS_DRV_D60_MASK, MSDC0_UHS_DRV_D60_VALUE);
+  EmmcHs200Modify (MT8167_GPIO_DRV_D70, MSDC0_UHS_DRV_D70_MASK, MSDC0_UHS_DRV_D70_VALUE);
+  EmmcHs200Modify (MT8167_GPIO_PUPD_E00, MSDC0_UHS_PUPD_DAT_MASK, MSDC0_UHS_PUPD_DAT_VALUE);
+  EmmcHs200Modify (MT8167_GPIO_PUPD_E10, MSDC0_UHS_PUPD_DAT_MASK, MSDC0_UHS_PUPD_DAT_VALUE);
+  EmmcHs200Modify (MT8167_GPIO_PUPD_E20, MSDC0_UHS_PUPD_E20_MASK, MSDC0_UHS_PUPD_E20_VALUE);
+}
+
+STATIC
+VOID
+EmmcTuningRecover (
+  VOID
+  )
+{
+  // msdc_reset_hw after a failed tuning command; the card returns to the
+  // transfer state on its own once its block (if any) is sent.
+  gBS->Stall (50);
+  (VOID)SdResetHost ();
+  (VOID)SdWaitNotBusy (FALSE);
+}
+
+// mmc_send_tuning: CMD21, one 128-byte block compared with the pattern.
+// CommandError reports a command (response) failure, as Linux cmd_err.
+STATIC
+EFI_STATUS
+EmmcSendTuning (
+  OUT BOOLEAN  *CommandError
+  )
+{
+  UINT32      Response[4];
+  EFI_STATUS  Status;
+
+  *CommandError = FALSE;
+  SdWrite32 (SDC_BLK_NUM, 1);
+  Status = SdClearFifo ();
+  if (EFI_ERROR (Status)) {
+    EmmcTuningRecover ();
+    *CommandError = TRUE;
+    return Status;
+  }
+
+  Status = SdSendCommand (
+             MMC_CMD_SEND_TUNING_BLOCK_HS200,
+             0,
+             MSDC_RESP_R1,
+             MSDC_DTYPE_SINGLE,
+             MMC_TUNING_BLOCK_BYTES,
+             Response
+             );
+  if (EFI_ERROR (Status)) {
+    *CommandError = TRUE;
+    EmmcTuningRecover ();
+    return Status;
+  }
+
+  ZeroMem (mEmmcTuningBlock, sizeof (mEmmcTuningBlock));
+  Status = SdReadData (mEmmcTuningBlock, sizeof (mEmmcTuningBlock));
+  if (!EFI_ERROR (Status) &&
+      (CompareMem (mEmmcTuningBlock, mEmmcTuningPattern8Bit, sizeof (mEmmcTuningBlock)) != 0))
+  {
+    Status = EFI_CRC_ERROR;
+  }
+
+  if (!EFI_ERROR (Status)) {
+    Status = SdWaitNotBusy (FALSE);
+  }
+
+  if (EFI_ERROR (Status)) {
+    EmmcTuningRecover ();
+  }
+
+  return Status;
+}
+
+// get_best_delay of mtk-sd.c.
+STATIC
+UINT32
+EmmcDelayLength (
+  IN UINT32  Map,
+  IN UINT32  Start
+  )
+{
+  UINT32  Index;
+
+  for (Index = 0; Index < (MMC_PAD_DELAY_MAX - Start); ++Index) {
+    if ((Map & (1U << (Start + Index))) == 0) {
+      return Index;
+    }
+  }
+
+  return MMC_PAD_DELAY_MAX - Start;
+}
+
+STATIC
+A04BR3_DELAY_PHASE
+EmmcBestDelay (
+  IN UINT32  Map
+  )
+{
+  A04BR3_DELAY_PHASE  Phase;
+  UINT32              Start;
+  UINT32              Length;
+  UINT32              StartFinal;
+  UINT32              LengthFinal;
+
+  Phase.Map    = Map;
+  Phase.Start  = 0;
+  Phase.Length = 0;
+  Phase.Final  = 0xff;
+  if (Map == 0) {
+    return Phase;
+  }
+
+  Start       = 0;
+  StartFinal  = 0;
+  LengthFinal = 0;
+  while (Start < MMC_PAD_DELAY_MAX) {
+    Length = EmmcDelayLength (Map, Start);
+    if (LengthFinal < Length) {
+      StartFinal  = Start;
+      LengthFinal = Length;
+    }
+
+    Start += (Length != 0) ? Length : 1U;
+    if ((Length >= 12U) && (StartFinal < 4U)) {
+      break;
+    }
+  }
+
+  // The rule is to find the smallest delay cell.
+  if (StartFinal == 0) {
+    Phase.Final = (UINT8)((StartFinal + LengthFinal / 3U) % MMC_PAD_DELAY_MAX);
+  } else {
+    Phase.Final = (UINT8)((StartFinal + LengthFinal / 2U) % MMC_PAD_DELAY_MAX);
+  }
+
+  Phase.Start  = (UINT8)StartFinal;
+  Phase.Length = (UINT8)LengthFinal;
+  return Phase;
+}
+
+STATIC
+BOOLEAN
+EmmcEnoughMargin (
+  IN CONST A04BR3_DELAY_PHASE  *Phase
+  )
+{
+  return (Phase->Length >= 12U) || ((Phase->Start == 0) && (Phase->Length >= 4U));
+}
+
+STATIC
+VOID
+EmmcSetPadDelay (
+  IN UINT32  Mask,
+  IN UINT32  Shift,
+  IN UINT32  Delay
+  )
+{
+  UINT32  Value;
+
+  Value  = SdRead32 (MSDC_PAD_TUNE0);
+  Value &= ~Mask;
+  Value |= (Delay << Shift) & Mask;
+  SdWrite32 (MSDC_PAD_TUNE0, Value);
+}
+
+STATIC
+UINT32
+EmmcScanResponse (
+  IN BOOLEAN  FallingEdge
+  )
+{
+  UINT32   Map;
+  UINT32   Delay;
+  UINT32   Try;
+  BOOLEAN  CommandError;
+
+  if (FallingEdge) {
+    SdSetBits (MSDC_IOCON, MSDC_IOCON_RSPL);
+  } else {
+    SdClearBits (MSDC_IOCON, MSDC_IOCON_RSPL);
+  }
+
+  Map = 0;
+  for (Delay = 0; Delay < MMC_PAD_DELAY_MAX; ++Delay) {
+    EmmcSetPadDelay (PAD_TUNE_CMDRDLY_MASK, PAD_TUNE_CMDRDLY_SHIFT, Delay);
+    for (Try = 0; Try < MMC_TUNING_RESPONSE_TRIES; ++Try) {
+      (VOID)EmmcSendTuning (&CommandError);
+      if (CommandError) {
+        Map &= ~(1U << Delay);
+        break;
+      }
+
+      Map |= 1U << Delay;
+    }
+  }
+
+  return Map;
+}
+
+// msdc_tune_response (hs200_cmd_int_delay 0, async_fifo: no internal scan).
+STATIC
+EFI_STATUS
+EmmcTuneResponse (
+  OUT A04BR3_EDGE_TUNING  *Result
+  )
+{
+  ZeroMem (Result, sizeof (*Result));
+  EmmcSetPadDelay (PAD_TUNE_CMDRRDLY_MASK, 22U, 0);
+  Result->Rise = EmmcBestDelay (EmmcScanResponse (FALSE));
+  Result->Fall.Final = 0xff;
+  if (!EmmcEnoughMargin (&Result->Rise)) {
+    Result->FallScanned = TRUE;
+    Result->Fall        = EmmcBestDelay (EmmcScanResponse (TRUE));
+  }
+
+  Result->UseFall = Result->FallScanned && (Result->Fall.Length > Result->Rise.Length);
+  if (Result->UseFall) {
+    SdSetBits (MSDC_IOCON, MSDC_IOCON_RSPL);
+    Result->Final = Result->Fall.Final;
+  } else {
+    SdClearBits (MSDC_IOCON, MSDC_IOCON_RSPL);
+    Result->Final = Result->Rise.Final;
+  }
+
+  if (Result->Final == 0xff) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  EmmcSetPadDelay (PAD_TUNE_CMDRDLY_MASK, PAD_TUNE_CMDRDLY_SHIFT, Result->Final);
+  return EFI_SUCCESS;
+}
+
+STATIC
+UINT32
+EmmcScanData (
+  IN BOOLEAN  FallingEdge
+  )
+{
+  A04BR3_EDGE_TUNING  Response;
+  UINT32              Map;
+  UINT32              Delay;
+  BOOLEAN             CommandError;
+  EFI_STATUS          Status;
+
+  if (FallingEdge) {
+    SdSetBits (MSDC_IOCON, MSDC_IOCON_DSPL | MSDC_IOCON_W_DSPL);
+  } else {
+    SdClearBits (MSDC_IOCON, MSDC_IOCON_DSPL | MSDC_IOCON_W_DSPL);
+  }
+
+  Map = 0;
+  for (Delay = 0; Delay < MMC_PAD_DELAY_MAX; ++Delay) {
+    EmmcSetPadDelay (PAD_TUNE_DATRRDLY_MASK, PAD_TUNE_DATRRDLY_SHIFT, Delay);
+    Status = EmmcSendTuning (&CommandError);
+    if (!EFI_ERROR (Status)) {
+      Map |= 1U << Delay;
+    } else if (CommandError) {
+      // As msdc_tune_data: the response needs tuning again.
+      if (EFI_ERROR (EmmcTuneResponse (&Response))) {
+        break;
+      }
+    }
+  }
+
+  return Map;
+}
+
+// msdc_tune_data (hs200_write_int_delay 0).
+STATIC
+EFI_STATUS
+EmmcTuneData (
+  OUT A04BR3_EDGE_TUNING  *Result
+  )
+{
+  ZeroMem (Result, sizeof (*Result));
+  Result->Rise       = EmmcBestDelay (EmmcScanData (FALSE));
+  Result->Fall.Final = 0xff;
+  if (!EmmcEnoughMargin (&Result->Rise)) {
+    Result->FallScanned = TRUE;
+    Result->Fall        = EmmcBestDelay (EmmcScanData (TRUE));
+  }
+
+  Result->UseFall = Result->FallScanned && (Result->Fall.Length > Result->Rise.Length);
+  if (Result->UseFall) {
+    SdSetBits (MSDC_IOCON, MSDC_IOCON_DSPL | MSDC_IOCON_W_DSPL);
+    Result->Final = Result->Fall.Final;
+  } else {
+    SdClearBits (MSDC_IOCON, MSDC_IOCON_DSPL | MSDC_IOCON_W_DSPL);
+    Result->Final = Result->Rise.Final;
+  }
+
+  if (Result->Final == 0xff) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  EmmcSetPadDelay (PAD_TUNE_DATRRDLY_MASK, PAD_TUNE_DATRRDLY_SHIFT, Result->Final);
+  EmmcSetPadDelay (PAD_TUNE_DATWRDLY_MASK, 0, 0);
+  return EFI_SUCCESS;
+}
+
+// Reads the two verification regions by descriptor DMA into Buffer.
+STATIC
+EFI_STATUS
+EmmcHs200ReadRegions (
+  IN  CONST EFI_LBA  Lba[2],
+  OUT UINT8          *Buffer
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       Index;
+
+  for (Index = 0; Index < 2; ++Index) {
+    ZeroMem (Buffer + Index * A04BR3_HS200_VERIFY_BYTES, A04BR3_HS200_VERIFY_BYTES);
+    Status = SdReadDmaBlocks (Lba[Index], A04BR3_HS200_VERIFY_BLOCKS, Buffer + Index * A04BR3_HS200_VERIFY_BYTES);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+// Same card timing, same data as read at High Speed: EXT_CSD, both DMA
+// regions and a PIO read of the first blocks.
+STATIC
+EFI_STATUS
+EmmcHs200Verify (
+  IN  CONST EFI_LBA  Lba[2],
+  IN  CONST UINT8    *Reference,
+  IN  UINT8          *Scratch,
+  IN  UINT8          Timing,
+  OUT CONST CHAR8    **Stage
+  )
+{
+  EFI_STATUS  Status;
+
+  *Stage = "ext-csd";
+  Status = EmmcReadExtCsd (mEmmcHs200ExtCsd);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  if (((mEmmcHs200ExtCsd[MMC_EXT_CSD_HS_TIMING] & 0xfU) != Timing) ||
+      (CompareMem (&mEmmcHs200ExtCsd[MMC_EXT_CSD_SEC_COUNT], &mEmmcExtCsd[MMC_EXT_CSD_SEC_COUNT], 4) != 0))
+  {
+    return EFI_DEVICE_ERROR;
+  }
+
+  *Stage = "dma-verify";
+  Status = EmmcHs200ReadRegions (Lba, Scratch);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  if (CompareMem (Scratch, Reference, 2U * A04BR3_HS200_VERIFY_BYTES) != 0) {
+    return EFI_CRC_ERROR;
+  }
+
+  *Stage = "pio-verify";
+  ZeroMem (Scratch, A04BR3_HS200_PIO_BLOCKS * 512U);
+  Status = SdReadMultipleBlocks (Lba[0], A04BR3_HS200_PIO_BLOCKS, Scratch);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  if (CompareMem (Scratch, Reference, A04BR3_HS200_PIO_BLOCKS * 512U) != 0) {
+    return EFI_CRC_ERROR;
+  }
+
+  *Stage = "verified";
+  return EFI_SUCCESS;
+}
+
+// Back to the High Speed state of SdTuneTransferMode: host and pins as they
+// were, 47 MHz, card HS_TIMING 1. If that cannot be verified, the card is
+// enumerated again from CMD0 (SdInitializeCard ends in SdTuneTransferMode).
+STATIC
+EFI_STATUS
+EmmcHs200Revert (
+  IN  CONST A04BR3_HS52_STATE  *State,
+  IN  CONST EFI_LBA            Lba[2],
+  IN  CONST UINT8              *Reference,
+  IN  UINT8                    *Scratch,
+  OUT CONST CHAR8              **Revert
+  )
+{
+  CONST CHAR8  *Stage;
+  EFI_STATUS   Status;
+  UINT64       Sectors;
+
+  mSdQuiet = FALSE;
+  (VOID)SdStopDma ();
+  (VOID)SdResetHost ();
+  EmmcHs200RestoreState (State);
+  SdSetBits (MSDC_CFG, MSDC_CFG_MODE | MSDC_CFG_PIO);
+  Status = SdSetClock (MSDC_HIGH_SPEED_HZ);
+  if (!EFI_ERROR (Status)) {
+    Status = EmmcSwitchByte (MMC_EXT_CSD_HS_TIMING, MMC_EXT_CSD_HS_TIMING_HS);
+  }
+
+  if (!EFI_ERROR (Status)) {
+    Status = EmmcHs200Verify (Lba, Reference, Scratch, MMC_EXT_CSD_HS_TIMING_HS, &Stage);
+  }
+
+  if (!EFI_ERROR (Status)) {
+    mSdHighSpeed = TRUE;
+    *Revert      = "hs52";
+    return EFI_SUCCESS;
+  }
+
+  DEBUG ((DEBUG_ERROR, "[A04BR3 eMMC] HS200 revert to High Speed failed=%r; enumerating from CMD0\n", Status));
+  (VOID)SdStopDma ();
+  EmmcHs200RestoreState (State);
+  Status = SdPrepareHost ();
+  if (!EFI_ERROR (Status)) {
+    Status = SdInitializeCard (&Sectors);
+  }
+
+  if (!EFI_ERROR (Status)) {
+    Status = EmmcHs200Verify (Lba, Reference, Scratch, MMC_EXT_CSD_HS_TIMING_HS, &Stage);
+  }
+
+  *Revert = EFI_ERROR (Status) ? "failed" : "reinit-hs52";
+  return Status;
+}
+
+STATIC
+EFI_STATUS
+EmmcSelectHs200 (
+  IN UINT64  SectorCount
+  )
+{
+  A04BR3_HS52_STATE     State;
+  A04BR3_EDGE_TUNING    CommandTuning;
+  A04BR3_EDGE_TUNING    DataTuning;
+  EFI_PHYSICAL_ADDRESS  Pages;
+  EFI_LBA               Lba[2];
+  UINT8                 *Reference;
+  UINT8                 *Scratch;
+  CONST CHAR8           *Stage;
+  CONST CHAR8           *Revert;
+  EFI_STATUS            Status;
+  EFI_STATUS            RevertStatus;
+
+  if ((mEmmcExtCsd[MMC_EXT_CSD_CARD_TYPE] & MMC_EXT_CSD_CARD_TYPE_HS200_1_8V) == 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "[A04BR3 eMMC] mode=hs52 clk=%u hs200=unsupported CARD_TYPE=0x%02x\n",
+      mSdClockHz,
+      mEmmcExtCsd[MMC_EXT_CSD_CARD_TYPE]
+      ));
+    return EFI_SUCCESS;
+  }
+
+  Pages  = MAX_UINT32;
+  Status = gBS->AllocatePages (AllocateMaxAddress, EfiBootServicesData, A04BR3_HS200_VERIFY_PAGES, &Pages);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "[A04BR3 eMMC] mode=hs52 clk=%u hs200=skipped stage=alloc status=%r\n", mSdClockHz, Status));
+    return EFI_SUCCESS;
+  }
+
+  Reference = (UINT8 *)(UINTN)Pages;
+  Scratch   = Reference + 2U * A04BR3_HS200_VERIFY_BYTES;
+  Lba[0]    = 0;
+  Lba[1]    = (SectorCount / 2U) & ~(EFI_LBA)(A04BR3_HS200_VERIFY_BLOCKS - 1U);
+
+  Status = EmmcHs200ReadRegions (Lba, Reference);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "[A04BR3 eMMC] mode=hs52 clk=%u hs200=skipped stage=baseline status=%r\n", mSdClockHz, Status));
+    (VOID)gBS->FreePages (Pages, A04BR3_HS200_VERIFY_PAGES);
+    return EFI_SUCCESS;
+  }
+
+  ZeroMem (&CommandTuning, sizeof (CommandTuning));
+  ZeroMem (&DataTuning, sizeof (DataTuning));
+  CommandTuning.Final = 0xff;
+  DataTuning.Final    = 0xff;
+
+  EmmcHs200SaveState (&State);
+  EmmcHs200ApplyHost ();
+
+  Stage  = "switch";
+  Status = EmmcSwitchByte (MMC_EXT_CSD_HS_TIMING, MMC_EXT_CSD_HS_TIMING_HS200);
+  if (!EFI_ERROR (Status)) {
+    Stage  = "clock";
+    Status = SdSetClock (MSDC1_SOURCE_CLOCK_HZ);
+  }
+
+  if (!EFI_ERROR (Status)) {
+    SdWrite32 (SDC_CFG, (SdRead32 (SDC_CFG) & ~SDC_CFG_DTOC_MASK) | SDC_CFG_DTOC_TUNING);
+    mSdQuiet = TRUE;
+    Stage    = "cmd-tune";
+    Status   = EmmcTuneResponse (&CommandTuning);
+    if (!EFI_ERROR (Status)) {
+      Stage  = "data-tune";
+      Status = EmmcTuneData (&DataTuning);
+    }
+
+    mSdQuiet = FALSE;
+    SdWrite32 (SDC_CFG, (SdRead32 (SDC_CFG) & ~SDC_CFG_DTOC_MASK) | SDC_CFG_DTOC_MAX);
+  }
+
+  if (!EFI_ERROR (Status)) {
+    Status = EmmcHs200Verify (Lba, Reference, Scratch, MMC_EXT_CSD_HS_TIMING_HS200, &Stage);
+  }
+
+  if (!EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "[A04BR3 eMMC] mode=hs200 clk=%u width=8 cmd=%a:%u map=%08x/%08x data=%a:%u map=%08x/%08x iocon=%08x pad=%08x pb=%08x/%08x/%08x verify=ok\n",
+      mSdClockHz,
+      CommandTuning.UseFall ? "fall" : "rise",
+      CommandTuning.Final,
+      CommandTuning.Rise.Map,
+      CommandTuning.Fall.Map,
+      DataTuning.UseFall ? "fall" : "rise",
+      DataTuning.Final,
+      DataTuning.Rise.Map,
+      DataTuning.Fall.Map,
+      SdRead32 (MSDC_IOCON),
+      SdRead32 (MSDC_PAD_TUNE0),
+      SdRead32 (MSDC_PATCH_BIT0),
+      SdRead32 (MSDC_PATCH_BIT1),
+      SdRead32 (MSDC_PATCH_BIT2)
+      ));
+    (VOID)gBS->FreePages (Pages, A04BR3_HS200_VERIFY_PAGES);
+    return EFI_SUCCESS;
+  }
+
+  RevertStatus = EmmcHs200Revert (&State, Lba, Reference, Scratch, &Revert);
+  DEBUG ((
+    DEBUG_ERROR,
+    "[A04BR3 eMMC] mode=%a clk=%u width=8 hs200=fail stage=%a status=%r cmd=%a:%u map=%08x/%08x data=%a:%u map=%08x/%08x revert=%a/%r\n",
+    EFI_ERROR (RevertStatus) ? "none" : "hs52",
+    mSdClockHz,
+    Stage,
+    Status,
+    CommandTuning.UseFall ? "fall" : "rise",
+    CommandTuning.Final,
+    CommandTuning.Rise.Map,
+    CommandTuning.Fall.Map,
+    DataTuning.UseFall ? "fall" : "rise",
+    DataTuning.Final,
+    DataTuning.Rise.Map,
+    DataTuning.Fall.Map,
+    Revert,
+    RevertStatus
+    ));
+  (VOID)gBS->FreePages (Pages, A04BR3_HS200_VERIFY_PAGES);
+  return RevertStatus;
+}
+#endif
+
+
 EFI_STATUS
 EFIAPI
 SdCardBlockIoDxeEntryPoint (
@@ -1959,6 +2768,14 @@ SdCardBlockIoDxeEntryPoint (
     ReadUnaligned64 ((UINT64 *)&mEmmcGptProbe[512 + 32]),
     ReadUnaligned64 ((UINT64 *)&mEmmcGptProbe[512 + 72])
     ));
+
+#if A04BR3_HS200_PATH
+  Status = EmmcSelectHs200 (SectorCount);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "[A04BR3 eMMC] no verified transfer mode after HS200 fallback=%r; BlockIo disabled\n", Status));
+    return Status;
+  }
+#endif
 #endif
 
   mSdHandle = NULL;
