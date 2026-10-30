@@ -192,6 +192,7 @@ A04BR3RtcSpare0Update (
   UINT32  Spare;
   UINT32  Wanted;
 
+  *Value = 0;
   Spare = 0;
   if (!Wacs (FALSE, RTC_SPAR0, 0, &Spare)) {
     return FALSE;

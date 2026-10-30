@@ -177,6 +177,11 @@ class PlatformBuilder (UefiBuilder, BuildSettingsManager):
         if cpu_1300 not in ("0", "1"):
             raise ValueError("A04BR3_CPU_1300 must be 0 or 1")
         self.env.SetValue ("BLD_*_A04BR3_CPU_1300", cpu_1300, "Default")
+        # Test only: stop the CPU 1300 MHz switch after the VPROC raise (re-entry guard test). Needs CPU_1300 and TEST_CYCLE.
+        cpu_1300_fault = self.env.GetValue("A04BR3_CPU_1300_FAULT", os.environ.get("A04BR3_CPU_1300_FAULT", "0"))
+        if cpu_1300_fault not in ("0", "1"):
+            raise ValueError("A04BR3_CPU_1300_FAULT must be 0 or 1")
+        self.env.SetValue ("BLD_*_A04BR3_CPU_1300_FAULT", cpu_1300_fault, "Default")
 
         charger = self.env.GetValue("A04BR3_CHARGER_OWNER", os.environ.get("A04BR3_CHARGER_OWNER", "0"))
         if charger not in ("0", "1"):

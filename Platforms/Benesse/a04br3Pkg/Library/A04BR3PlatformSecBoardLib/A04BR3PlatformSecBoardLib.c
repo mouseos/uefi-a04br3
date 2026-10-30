@@ -76,6 +76,25 @@
 #ifndef A04BR3_CPU_1300_FAULT
 #define A04BR3_CPU_1300_FAULT    0
 #endif
+#define A04BR3_GUARD_CLEAR_TRIES 3
+
+// Clear the re-entry guard, retrying a transient RTC write failure. Spare receives the last value read.
+STATIC
+BOOLEAN
+A04BR3Cpu1300GuardClear (
+  OUT UINT32  *Spare
+  )
+{
+  UINTN  Try;
+
+  for (Try = 0; Try < A04BR3_GUARD_CLEAR_TRIES; Try++) {
+    if (A04BR3RtcSpare0Update (A04BR3_CPU_1300_PENDING, 0, Spare)) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
 
 STATIC
 UINT32
@@ -139,6 +158,7 @@ A04BR3Cpu1300 (
   UINT32  Spare;
   BOOLEAN Cleared;
 
+  Spare = 0;
   Mux  = MmioRead32 (A04BR3_INFRA_MUX);
   FhEn = MmioRead32 (A04BR3_FHCTL_HP_EN);
   Con0 = MmioRead32 (A04BR3_ARMPLL_CON0);
@@ -146,7 +166,10 @@ A04BR3Cpu1300 (
   if ((((Mux >> 2) & 3) != 1) || ((Con0 & BIT0) == 0) ||
       ((Con1 & (A04BR3_ARMPLL_PD_MASK | A04BR3_ARMPLL_PCW_MASK)) != A04BR3_ARMPLL_PCW_1001))
   {
-    DEBUG ((DEBUG_ERROR, "A04BR3 SEC: cpu-1300 refused: unexpected clock mux=%08x pll0=%08x pll1=%08x\n", Mux, Con0, Con1));
+    // Nothing changes here; report the guard for diagnosis (an ARMPLL already at 1300 MHz also lands here).
+    Cleared = A04BR3RtcSpare0Update (0, 0, &Spare);
+    DEBUG ((DEBUG_ERROR, "A04BR3 SEC: cpu-1300 refused: unexpected clock mux=%08x pll0=%08x pll1=%08x (spar0=%04x%a)\n",
+            Mux, Con0, Con1, Spare, Cleared ? "" : " unreadable"));
     return;
   }
 
@@ -170,12 +193,13 @@ A04BR3Cpu1300 (
   if ((Spare & A04BR3_CPU_1300_PENDING) != 0) {
  #if A04BR3_TEST_CYCLE == 1
     // Unattended test cycle: report, clear, and let the next boot try again (a hang returns to fastboot anyway).
-    Cleared = A04BR3RtcSpare0Update (A04BR3_CPU_1300_PENDING, 0, &Spare);
+    Cleared = A04BR3Cpu1300GuardClear (&Spare);
     DEBUG ((DEBUG_ERROR, "A04BR3 SEC: cpu-1300 skipped: the previous switch did not finish (RTC_SPAR0 bit 12); staying at 1001 MHz this boot; guard %a (spar0=%04x)\n",
             Cleared ? "cleared, next boot retries" : "NOT cleared", Spare));
  #else
-    // Without the test cycle the guard stays set: every later boot keeps 1001 MHz instead of risking a reset loop.
-    DEBUG ((DEBUG_ERROR, "A04BR3 SEC: cpu-1300 skipped: the previous switch did not finish (RTC_SPAR0 bit 12, kept); staying at 1001 MHz (spar0=%04x)\n", Spare));
+    // Without the test cycle the guard stays set: every later boot keeps 1001 MHz instead of risking a hang or reset
+    // loop. One boot of a test-cycle image (A04BR3_TEST_CYCLE=1, A04BR3_CPU_1300=1) clears it; so does losing RTC power.
+    DEBUG ((DEBUG_ERROR, "A04BR3 SEC: cpu-1300 skipped: the previous switch did not finish (RTC_SPAR0 bit 12, kept); staying at 1001 MHz; one boot of a test-cycle image clears it (spar0=%04x)\n", Spare));
  #endif
     return;
   }
@@ -205,7 +229,10 @@ A04BR3Cpu1300 (
 
   // 0. Mark the switch as pending before anything changes; without the mark the switch is not attempted.
   if (!A04BR3RtcSpare0Update (0, A04BR3_CPU_1300_PENDING, &Spare)) {
-    DEBUG ((DEBUG_ERROR, "A04BR3 SEC: cpu-1300 refused: RTC_SPAR0 guard not set (spar0=%04x)\n", Spare));
+    // VPROC is untouched: drop a half-written mark so that later boots are not held at 1001 MHz.
+    Cleared = A04BR3Cpu1300GuardClear (&Spare);
+    DEBUG ((DEBUG_ERROR, "A04BR3 SEC: cpu-1300 refused: RTC_SPAR0 guard not set; guard %a (spar0=%04x)\n",
+            Cleared ? "clear" : "NOT cleared", Spare));
     return;
   }
 
@@ -219,12 +246,17 @@ A04BR3Cpu1300 (
   {
     A04BR3PmicWrite (Other, OtherOrig);
     A04BR3PmicWrite (Reg, Orig);
-    A04BR3RtcSpare0Update (A04BR3_CPU_1300_PENDING, 0, &Spare);
     Check = OtherCheck = 0xFFFFFFFF;
     A04BR3PmicRead (Reg, &Check);
     A04BR3PmicRead (Other, &OtherCheck);
-    DEBUG ((DEBUG_ERROR, "A04BR3 SEC: cpu-1300 refused: VPROC did not read back 1300 mV; restored active=%04x other=%04x, read %04x %04x\n",
-            Orig, OtherOrig, Check, OtherCheck));
+    // Clear the guard only when both selectors read back their original values; otherwise the next boot skips.
+    Cleared = FALSE;
+    if ((Check == Orig) && (OtherCheck == OtherOrig)) {
+      Cleared = A04BR3Cpu1300GuardClear (&Spare);
+    }
+
+    DEBUG ((DEBUG_ERROR, "A04BR3 SEC: cpu-1300 refused: VPROC did not read back 1300 mV; restored active=%04x other=%04x, read %04x %04x; guard %a (spar0=%04x)\n",
+            Orig, OtherOrig, Check, OtherCheck, Cleared ? "cleared" : "kept", Spare));
     return;
   }
 
@@ -248,9 +280,16 @@ A04BR3Cpu1300 (
   Check = OtherCheck = 0xFFFFFFFF;
   A04BR3PmicRead (Reg, &Check);
   A04BR3PmicRead (Other, &OtherCheck);
-  // 3. The switch finished: clear the guard.
-  Cleared = A04BR3RtcSpare0Update (A04BR3_CPU_1300_PENDING, 0, &Spare);
-  DEBUG ((DEBUG_ERROR, "A04BR3 SEC: cpu-1300 guard %a (spar0=%04x)\n", Cleared ? "cleared" : "NOT cleared", Spare));
+  // 3. The switch finished: clear the guard, but only when ARMPLL reads back the 1300 MHz PCW and VPROC 1.30 V.
+  Cleared = FALSE;
+  if (((Con1 & (A04BR3_ARMPLL_PD_MASK | A04BR3_ARMPLL_PCW_MASK)) == A04BR3_ARMPLL_PCW_1300) &&
+      ((Check & A04BR3_VPROC_CODE_MASK) == A04BR3_VPROC_CODE_1300))
+  {
+    Cleared = A04BR3Cpu1300GuardClear (&Spare);
+  }
+
+  DEBUG ((DEBUG_ERROR, "A04BR3 SEC: cpu-1300 guard %a (spar0=%04x)\n", Cleared ? "cleared" : "kept (readback mismatch or RTC write failed)", Spare));
+  (VOID)Cleared;
   DEBUG ((
     DEBUG_ERROR,
     "A04BR3 SEC: cpu-1300 after: armpll pll1=%08x pcw=%05x (%u MHz) vproc %a=%04x %u mV other=%04x hp_en=%08x (register values; measure the clock with the PMU)\n",
