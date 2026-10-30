@@ -1,12 +1,17 @@
 /** @file
   Benesse TAB-A04-BR3 board hook of the SEC phase, only mapped with the
-  unattended test cycle (-D A04BR3_TEST_CYCLE=1, see a04br3.dsc).
+  unattended test cycle (-D A04BR3_TEST_CYCLE=1) or the CPU 1300 MHz switch
+  (-D A04BR3_CPU_1300=1), see a04br3.dsc.
 
-  Sets the LK fastboot flag and arms the TOPRGU watchdog for 31 s right after
+  Test cycle: sets the LK fastboot flag and arms the TOPRGU watchdog for 31 s right after
   SEC stopped the watchdog LK left running. A hang in SEC, PrePi, DxeCore or
   the APRIORI drivers before A04BR3TestCycleDxe takes over (it kicks the
   watchdog from a timer event) then resets into LK fastboot instead of
   booting the same image again.
+
+  CPU 1300 MHz without the test cycle: no fastboot flag; the watchdog is armed
+  only around the switch and stopped again. A hang during the switch resets
+  into a normal boot of the same image, which repeats the switch.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/

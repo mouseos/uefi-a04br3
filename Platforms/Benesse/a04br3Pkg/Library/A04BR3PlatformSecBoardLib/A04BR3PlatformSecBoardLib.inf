@@ -1,6 +1,7 @@
 ##
-#  Benesse TAB-A04-BR3 SEC board hook for the unattended test cycle: LK
-#  fastboot flag and 31 s watchdog from SEC on.
+#  Benesse TAB-A04-BR3 SEC board hook for the unattended test cycle (LK
+#  fastboot flag and 31 s watchdog from SEC on) and the optional CPU 1300 MHz
+#  switch.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 ##
