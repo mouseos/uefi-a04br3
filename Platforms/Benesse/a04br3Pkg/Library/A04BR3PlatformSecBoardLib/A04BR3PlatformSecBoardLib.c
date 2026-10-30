@@ -61,6 +61,10 @@
 #define A04BR3_VPROC_CODE_MASK   0x7FU
 #define A04BR3_VPROC_CODE_1150   0x48U        // (1150 - 700) / 6.25 = 72
 #define A04BR3_VPROC_CODE_1300   0x60U        // (1300 - 700) / 6.25 = 96
+// FHCTL (CT3 mach/mtk_fhreg.h REG_FHCTL_HP_EN = APMIXED + 0x14; mtk_freqhopping.c
+// pll_id_to_fhctl_id(FH_ARMCA7_PLLID 0) = 0): bit 0 set means hopping owns ARMPLL.
+#define A04BR3_FHCTL_HP_EN       0x10018014U
+#define A04BR3_DELAY_MAX_POLLS   10000000U
 
 STATIC
 UINT32
@@ -80,6 +84,7 @@ A04BR3DelayUs (
   UINT64  Frequency;
   UINT64  Start;
   UINT64  Now;
+  UINT32  Polls;
 
   __asm__ volatile ("mrs %0, cntfrq_el0" : "=r" (Frequency));
   if (Frequency == 0) {
@@ -87,11 +92,15 @@ A04BR3DelayUs (
   }
 
   __asm__ volatile ("isb\n\tmrs %0, cntpct_el0" : "=r" (Start) :: "memory");
-  do {
+  for (Polls = 0; Polls < A04BR3_DELAY_MAX_POLLS; Polls++) {
     __asm__ volatile ("isb\n\tmrs %0, cntpct_el0" : "=r" (Now) :: "memory");
-  } while ((Now - Start) * 1000000 < (UINT64)Microseconds * Frequency);
+    if ((Now - Start) * 1000000 >= (UINT64)Microseconds * Frequency) {
+      return TRUE;
+    }
+  }
 
-  return TRUE;
+  // The counter did not advance far enough: bounded, reported as failure.
+  return FALSE;
 }
 
 STATIC
@@ -112,14 +121,30 @@ A04BR3Cpu1300 (
   UINT32  Code;
   UINT32  Check;
   UINT32  Pcw;
+  UINT32  FhEn;
+  UINT32  Other;
+  UINT32  OtherOrig;
+  UINT32  OtherCheck;
 
   Mux  = MmioRead32 (A04BR3_INFRA_MUX);
+  FhEn = MmioRead32 (A04BR3_FHCTL_HP_EN);
   Con0 = MmioRead32 (A04BR3_ARMPLL_CON0);
   Con1 = MmioRead32 (A04BR3_ARMPLL_CON1);
   if ((((Mux >> 2) & 3) != 1) || ((Con0 & BIT0) == 0) ||
       ((Con1 & (A04BR3_ARMPLL_PD_MASK | A04BR3_ARMPLL_PCW_MASK)) != A04BR3_ARMPLL_PCW_1001))
   {
     DEBUG ((DEBUG_ERROR, "A04BR3 SEC: cpu-1300 refused: unexpected clock mux=%08x pll0=%08x pll1=%08x\n", Mux, Con0, Con1));
+    return;
+  }
+
+  if ((FhEn & BIT0) != 0) {
+    DEBUG ((DEBUG_ERROR, "A04BR3 SEC: cpu-1300 refused: FHCTL owns ARMPLL (hp_en=%08x)\n", FhEn));
+    return;
+  }
+
+  // The delay must work before VPROC is touched.
+  if (!A04BR3DelayUs (1)) {
+    DEBUG ((DEBUG_ERROR, "A04BR3 SEC: cpu-1300 refused: generic timer not running\n"));
     return;
   }
 
@@ -133,6 +158,8 @@ A04BR3Cpu1300 (
   Reg  = ((Ctrl & BIT1) != 0) ? A04BR3_VPROC_VOSEL_ON : A04BR3_VPROC_VOSEL;
   Orig = (Reg == A04BR3_VPROC_VOSEL_ON) ? VoselOn : Vosel;
   Code = Orig & A04BR3_VPROC_CODE_MASK;
+  Other     = (Reg == A04BR3_VPROC_VOSEL_ON) ? A04BR3_VPROC_VOSEL : A04BR3_VPROC_VOSEL_ON;
+  OtherOrig = (Reg == A04BR3_VPROC_VOSEL_ON) ? Vosel : VoselOn;
   DEBUG ((
     DEBUG_ERROR,
     "A04BR3 SEC: cpu-1300 before: armpll pcw=%05x (%u MHz) vproc ctrl=%04x en=%04x vosel=%04x vosel_on=%04x active=%a %u mV\n",
@@ -144,16 +171,22 @@ A04BR3Cpu1300 (
     return;
   }
 
-  // 1. Voltage first.
-  if (Code != A04BR3_VPROC_CODE_1300) {
-    if (!A04BR3PmicWrite (Reg, (Orig & ~A04BR3_VPROC_CODE_MASK) | A04BR3_VPROC_CODE_1300) ||
-        !A04BR3DelayUs (100) ||
-        !A04BR3PmicRead (Reg, &Check) || ((Check & A04BR3_VPROC_CODE_MASK) != A04BR3_VPROC_CODE_1300))
-    {
-      A04BR3PmicWrite (Reg, Orig);
-      DEBUG ((DEBUG_ERROR, "A04BR3 SEC: cpu-1300 refused: VPROC did not read back 1300 mV; restored %04x\n", Orig));
-      return;
-    }
+  // 1. Voltage first: the active selector, then the other one, so that a later
+  //    VOSEL_CTRL change cannot select a lower voltage at 1300 MHz.
+  if (!A04BR3PmicWrite (Reg, (Orig & ~A04BR3_VPROC_CODE_MASK) | A04BR3_VPROC_CODE_1300) ||
+      !A04BR3DelayUs (100) ||
+      !A04BR3PmicRead (Reg, &Check) || ((Check & A04BR3_VPROC_CODE_MASK) != A04BR3_VPROC_CODE_1300) ||
+      !A04BR3PmicWrite (Other, (OtherOrig & ~A04BR3_VPROC_CODE_MASK) | A04BR3_VPROC_CODE_1300) ||
+      !A04BR3PmicRead (Other, &OtherCheck) || ((OtherCheck & A04BR3_VPROC_CODE_MASK) != A04BR3_VPROC_CODE_1300))
+  {
+    A04BR3PmicWrite (Other, OtherOrig);
+    A04BR3PmicWrite (Reg, Orig);
+    Check = OtherCheck = 0xFFFFFFFF;
+    A04BR3PmicRead (Reg, &Check);
+    A04BR3PmicRead (Other, &OtherCheck);
+    DEBUG ((DEBUG_ERROR, "A04BR3 SEC: cpu-1300 refused: VPROC did not read back 1300 mV; restored active=%04x other=%04x, read %04x %04x\n",
+            Orig, OtherOrig, Check, OtherCheck));
+    return;
   }
 
   // 2. Then the clock, as mtk_pll_set_rate_regs: PCW, then PCW_CHG, then 20 us.
@@ -162,15 +195,20 @@ A04BR3Cpu1300 (
   ArmDataSynchronizationBarrier ();
   MmioWrite32 (A04BR3_ARMPLL_CON1, MmioRead32 (A04BR3_ARMPLL_CON1) | A04BR3_ARMPLL_PCW_CHG);
   ArmDataSynchronizationBarrier ();
-  A04BR3DelayUs (20);
+  if (!A04BR3DelayUs (20)) {
+    DEBUG ((DEBUG_ERROR, "A04BR3 SEC: cpu-1300: 20 us delay incomplete after PCW_CHG\n"));
+  }
 
   Con1 = MmioRead32 (A04BR3_ARMPLL_CON1);
+  Check = OtherCheck = 0xFFFFFFFF;
   A04BR3PmicRead (Reg, &Check);
+  A04BR3PmicRead (Other, &OtherCheck);
   DEBUG ((
     DEBUG_ERROR,
-    "A04BR3 SEC: cpu-1300 after: armpll pll1=%08x pcw=%05x (%u MHz) vproc %a=%04x %u mV (register values; measure the clock with the PMU)\n",
+    "A04BR3 SEC: cpu-1300 after: armpll pll1=%08x pcw=%05x (%u MHz) vproc %a=%04x %u mV other=%04x hp_en=%08x (register values; measure the clock with the PMU)\n",
     Con1, Con1 & A04BR3_ARMPLL_PCW_MASK, (UINT32)(((UINT64)(Con1 & A04BR3_ARMPLL_PCW_MASK) * 26) >> 14),
-    (Reg == A04BR3_VPROC_VOSEL_ON) ? "VOSEL_ON" : "VOSEL", Check, A04BR3VprocMv (Check & A04BR3_VPROC_CODE_MASK)
+    (Reg == A04BR3_VPROC_VOSEL_ON) ? "VOSEL_ON" : "VOSEL", Check, A04BR3VprocMv (Check & A04BR3_VPROC_CODE_MASK),
+    OtherCheck, MmioRead32 (A04BR3_FHCTL_HP_EN)
     ));
 }
 #endif
