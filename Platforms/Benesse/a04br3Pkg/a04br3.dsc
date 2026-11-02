@@ -95,7 +95,7 @@
   !error A04BR3_RAMDISK_RECLAIMABLE must be 0 or 1
 !endif
   # Persistent boot log reader (A04BR3BootLogReaderDxe): A04BR3_LOG_READER=1 prints the previous kernel's boot log window
-  # (last 8 MiB of userdata, UniXNU-a04br3 package/A04BR3BootLog.c) on the serial port at ReadyToBoot. Read-only. Off by default.
+  # (last 8 MiB of userdata, UniXNU-a04br3 package/A04BR3BootLog.c, newest verified slot) on the serial port at ReadyToBoot. Read-only. Off by default.
 !ifndef A04BR3_LOG_READER
   DEFINE A04BR3_LOG_READER = 0
 !endif
