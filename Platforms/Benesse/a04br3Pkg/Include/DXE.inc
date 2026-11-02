@@ -43,6 +43,11 @@
   # Boot image ramdisk as a read-only block device (UniXNU payload volume)
   INF a04br3Pkg/Drivers/BootRamdiskDxe/BootRamdiskDxe.inf
 
+!if $(A04BR3_LOG_READER) == 1
+  # Persistent boot log reader: prints the previous kernel's boot log window on the serial port
+  INF a04br3Pkg/Drivers/A04BR3BootLogReaderDxe/A04BR3BootLogReaderDxe.inf
+!endif
+
 !if $(A04BR3_TEST_CYCLE) == 1
   # Unattended test cycle: fastboot return and watchdog from DXE entry on
   INF a04br3Pkg/Drivers/A04BR3TestCycleDxe/A04BR3TestCycleDxe.inf

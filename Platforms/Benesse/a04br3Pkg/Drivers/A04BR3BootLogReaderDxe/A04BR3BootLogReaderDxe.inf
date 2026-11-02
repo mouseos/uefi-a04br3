@@ -1,0 +1,43 @@
+##
+#  Benesse TAB-A04-BR3 persistent boot log reader: prints the previous kernel's boot log window (last 8 MiB of userdata)
+#  on the serial port at ReadyToBoot. Read-only.
+#
+#  Built only with -D A04BR3_LOG_READER=1 (see a04br3.dsc, Include/DXE.inc).
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = A04BR3BootLogReaderDxe
+  FILE_GUID                      = 6E1F0C2A-8B4D-4E57-9A3C-A04B3B0071D0
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = A04BR3BootLogReaderDxeEntry
+
+[Sources]
+  A04BR3BootLogReaderDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  a04br3Pkg/a04br3.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  PrintLib
+  SerialPortLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Protocols]
+  gEfiBlockIoProtocolGuid                       ## CONSUMES
+
+[Guids]
+  gEfiEventReadyToBootGuid                      ## CONSUMES ## Event
+
+[Depex]
+  TRUE
+

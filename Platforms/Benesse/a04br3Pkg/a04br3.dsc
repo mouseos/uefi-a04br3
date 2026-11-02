@@ -94,6 +94,15 @@
 !if $(A04BR3_RAMDISK_RECLAIMABLE) != 0 && $(A04BR3_RAMDISK_RECLAIMABLE) != 1
   !error A04BR3_RAMDISK_RECLAIMABLE must be 0 or 1
 !endif
+  # Persistent boot log reader (A04BR3BootLogReaderDxe): A04BR3_LOG_READER=1 prints the previous kernel's boot log window
+  # (last 8 MiB of userdata, UniXNU-a04br3 package/A04BR3BootLog.c) on the serial port at ReadyToBoot. Read-only. Off by default.
+!ifndef A04BR3_LOG_READER
+  DEFINE A04BR3_LOG_READER = 0
+!endif
+!if $(A04BR3_LOG_READER) != 0 && $(A04BR3_LOG_READER) != 1
+  !error A04BR3_LOG_READER must be 0 or 1
+!endif
+
 !ifndef A04BR3_EMMC_HS200
   DEFINE A04BR3_EMMC_HS200 = 0
 !endif
@@ -220,6 +229,13 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
   # Boot image ramdisk (UniXNU payload volume)
   #
   a04br3Pkg/Drivers/BootRamdiskDxe/BootRamdiskDxe.inf
+
+!if $(A04BR3_LOG_READER) == 1
+  #
+  # Persistent boot log reader (serial output at ReadyToBoot)
+  #
+  a04br3Pkg/Drivers/A04BR3BootLogReaderDxe/A04BR3BootLogReaderDxe.inf
+!endif
 
 !if $(A04BR3_TEST_CYCLE) == 1
   #
