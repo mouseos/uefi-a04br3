@@ -8,6 +8,7 @@
 #include <Library/PrePiHobListPointerLib.h>
 #include <Library/CacheMaintenanceLib.h>
 #include <Library/PlatformSecLib.h>
+#include <Library/BaseLib.h>
 #include <Library/SerialPortLib.h>
 #if defined (MDE_CPU_ARM)
 #include <Library/A04BR3TestCycleLib.h>
@@ -106,9 +107,16 @@ PrePiMain(
   // Declare UEFI region
   MemoryBase     = FixedPcdGet32(PcdSystemMemoryBase);
   MemorySize     = FixedPcdGet32(PcdSystemMemorySize);
-  UefiMemoryBase = FixedPcdGet32(PcdUefiMemPoolBase);
-  UefiMemorySize = FixedPcdGet32(PcdUefiMemPoolSize);
-  StackBase      = (VOID *)(UefiMemoryBase + UefiMemorySize - StackSize);
+  UefiMemoryBase = FixedPcdGet32(PcdA04WinHobBase);
+  UefiMemorySize = FixedPcdGet32(PcdA04WinHobSize);
+  // The actual SP is established by ModuleEntryPoint from the same stack
+  // PCDs. Never substitute a different address for the HOB boundary.
+  if (UefiMemorySize < StackSize || UefiMemoryBase == 0 ||
+      UefiMemoryBase + UefiMemorySize < UefiMemoryBase ||
+      (UINTN)StackBase != UefiMemoryBase + UefiMemorySize - StackSize) {
+    DEBUG ((DEBUG_ERROR, "A04 ARM32: inconsistent HOB/stack layout\n"));
+    CpuDeadLoop ();
+  }
 
   DEBUG(
       (EFI_D_INFO | EFI_D_LOAD,

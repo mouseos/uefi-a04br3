@@ -77,5 +77,5 @@
   gEmbeddedTokenSpaceGuid.PcdPrePiStackBase
   gEmbeddedTokenSpaceGuid.PcdPrePiStackSize
   gEmbeddedTokenSpaceGuid.PcdPrePiCpuIoSize
-  gMediaTekTokenSpaceGuid.PcdUefiMemPoolBase
-  gMediaTekTokenSpaceGuid.PcdUefiMemPoolSize
+  gA04BR3WindowsTokenSpaceGuid.PcdA04WinHobBase
+  gA04BR3WindowsTokenSpaceGuid.PcdA04WinHobSize

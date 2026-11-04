@@ -16,3 +16,11 @@
 [LibraryClasses]
   ## @libraryclass  LK fastboot flag and TOPRGU watchdog of the unattended test cycle
   A04BR3TestCycleLib|Include/Library/A04BR3TestCycleLib.h
+
+[Guids]
+  gA04BR3WindowsTokenSpaceGuid = { 0x4b106d23, 0xf96a, 0x48aa, { 0x81, 0x67, 0xa0, 0x4b, 0x33, 0x57, 0x49, 0x4e } }
+
+[PcdsFixedAtBuild]
+  ## Windows ARM32 candidate HOB pool; zero is invalid until platform config supplies it.
+  gA04BR3WindowsTokenSpaceGuid.PcdA04WinHobBase|0|UINT32|0x00000001
+  gA04BR3WindowsTokenSpaceGuid.PcdA04WinHobSize|0|UINT32|0x00000002
