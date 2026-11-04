@@ -24,6 +24,10 @@ def patched_tree(base, expected):
    for name in PATCHES:subprocess.run(['git','-C',str(base),'apply','--cached',str(ROOT/'Resources/MuPatches'/name)],env=env,check=True)
   else:subprocess.run(['git','-C',str(base),'add','-u'],env=env,check=True)
   return git(base,'write-tree',env=env)
+def validate_disk_servicing(servicing, test_cycle, cpu_1300):
+ if servicing not in ('0','1'):raise RuntimeError('A04BR3_DISK_SERVICING must be 0 or 1')
+ if servicing=='1' and (test_cycle!='0' or cpu_1300!='0'):raise RuntimeError('A04BR3_DISK_SERVICING forbids test cycle and CPU 1300')
+
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--unixnu',required=True,type=pathlib.Path);p.add_argument('--out',required=True,type=pathlib.Path);args=p.parse_args()
  u=args.unixnu.resolve(strict=True);out=args.out.resolve();out.mkdir(parents=True,exist_ok=True)
@@ -65,7 +69,9 @@ def main():
  # Release image (A04BR3_TEST_CYCLE=0): no fastboot flag/recovery watchdog cycle; CPU stage diagnostics need it.
  test_cycle=os.environ.get('A04BR3_TEST_CYCLE','1')
  if test_cycle not in ('0','1'):raise RuntimeError('A04BR3_TEST_CYCLE must be 0 or 1')
- defines={'A04BR3_TEST_CYCLE':test_cycle,'A04BR3_CPU_STAGE_DIAG':test_cycle,'A04BR3_CHARGER_OWNER':'1','A04BR3_EMMC_HS200':emmc_hs200,'A04BR3_CPU_1300':cpu_1300}
+ servicing=os.environ.get('A04BR3_DISK_SERVICING','0')
+ validate_disk_servicing(servicing,test_cycle,cpu_1300)
+ defines={'A04BR3_DISK_SERVICING':servicing,'A04BR3_TEST_CYCLE':test_cycle,'A04BR3_CPU_STAGE_DIAG':test_cycle,'A04BR3_CHARGER_OWNER':'1','A04BR3_EMMC_HS200':emmc_hs200,'A04BR3_CPU_1300':cpu_1300}
  # Test only: stop the CPU 1300 MHz switch after the VPROC raise to exercise the re-entry guard.
  cpu_1300_fault=os.environ.get('A04BR3_CPU_1300_FAULT','0')
  if cpu_1300_fault not in ('0','1'):raise RuntimeError('A04BR3_CPU_1300_FAULT must be 0 or 1')

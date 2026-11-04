@@ -49,6 +49,17 @@
   DEFINE A04BR3_TEST_CYCLE       = 0
 !endif
 
+# Build-time exclusion only: this is not proof that every reset source is off.
+!ifndef A04BR3_DISK_SERVICING
+  DEFINE A04BR3_DISK_SERVICING = 0
+!endif
+!if $(A04BR3_DISK_SERVICING) != 0 && $(A04BR3_DISK_SERVICING) != 1
+  !error A04BR3_DISK_SERVICING must be 0 or 1
+!endif
+!if $(A04BR3_DISK_SERVICING) == 1 && $(A04BR3_TEST_CYCLE) != 0
+  !error A04BR3_DISK_SERVICING forbids A04BR3_TEST_CYCLE
+!endif
+
 !ifndef A04BR3_CHARGER_OWNER
   DEFINE A04BR3_CHARGER_OWNER = 0
 !endif
@@ -110,6 +121,9 @@
   #
 !ifndef A04BR3_CPU_1300
   DEFINE A04BR3_CPU_1300 = 0
+!endif
+!if $(A04BR3_DISK_SERVICING) == 1 && $(A04BR3_CPU_1300) != 0
+  !error A04BR3_DISK_SERVICING forbids A04BR3_CPU_1300
 !endif
 !if $(A04BR3_CPU_1300) != 0 && $(A04BR3_CPU_1300) != 1
   !error A04BR3_CPU_1300 must be 0 or 1

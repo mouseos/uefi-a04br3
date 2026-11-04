@@ -150,7 +150,18 @@ with tempfile.TemporaryDirectory(prefix='a04br3-recovery-host-') as tmp:
         binary = Path(tmp) / f'recovery-{mode}'
         subprocess.run(['clang', '-std=c11', '-Wall', '-Wextra', '-Werror',
                         '-Wno-unused-parameter', '-Wno-unused-function',
-                        '-fsanitize=address,undefined', f'-DA04BR3_EARLY_FAULT={mode}',
+                        '-fsanitize=address,undefined', '-DA04BR3_TEST_CYCLE=1', f'-DA04BR3_EARLY_FAULT={mode}',
                         str(src), '-o', str(binary)], check=True)
         subprocess.run([str(binary)], check=True)
+    # The servicing profile rejects both WDT-arming board paths. Exercise the
+    # actual SEC C with both defines off, including the common SEC disable.
+    src.write_text(PREFIX + body + r'''
+int main(void) { PlatformInitialize(); assert(writes==1 && arms==0 && flag_calls==0); return 0; }
+''')
+    binary = Path(tmp) / 'recovery-servicing'
+    subprocess.run(['clang', '-std=c11', '-Wall', '-Wextra', '-Werror',
+                    '-Wno-unused-parameter', '-Wno-unused-function',
+                    '-fsanitize=address,undefined', '-DA04BR3_TEST_CYCLE=0',
+                    '-DA04BR3_CPU_1300=0', str(src), '-o', str(binary)], check=True)
+    subprocess.run([str(binary)], check=True)
 print('PASS actual SEC/DXE C: default/SEC/DXE smoke; arm-before-RTC; elapsed/late/wrap deadline; EBS ordering and timer race; registration failures/no feeding (ASan/UBSan). Hardware reset not tested.')
