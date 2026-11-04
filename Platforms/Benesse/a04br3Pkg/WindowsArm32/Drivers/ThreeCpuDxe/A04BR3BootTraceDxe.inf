@@ -25,6 +25,7 @@
   DevicePathLib
   IoLib
   HobLib
+  A04BR3TestCycleLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
 [Protocols]

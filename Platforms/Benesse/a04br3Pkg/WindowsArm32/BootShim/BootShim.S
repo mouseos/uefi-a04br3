@@ -5,6 +5,15 @@
 #ifndef A04BR3_WORKER_NO_UART_RESET
 #define A04BR3_WORKER_NO_UART_RESET 0
 #endif
+#ifndef A04BR3_WORKER_HEARTBEAT
+#define A04BR3_WORKER_HEARTBEAT A04BR3_WORKER_NO_UART_RESET
+#endif
+#if A04BR3_WORKER_HEARTBEAT != 0 && A04BR3_WORKER_HEARTBEAT != 1
+#error Invalid worker heartbeat option
+#endif
+#if A04BR3_WORKER_HEARTBEAT == 1 && A04BR3_A64_WDT_TEST != 1
+#error Worker heartbeat requires watchdog worker
+#endif
 #if A04BR3_WORKER_NO_UART_RESET != 0 && A04BR3_WORKER_NO_UART_RESET != 1
 #error Invalid worker UART reset option
 #endif
@@ -324,7 +333,7 @@ _A64SecondaryProbe:
 #endif
     str w8, [x7]
     dsb sy
-#if A04BR3_WORKER_NO_UART_RESET == 1
+#if A04BR3_WORKER_HEARTBEAT == 1
     // Reserved probe page, offset 44: completed feed writes, not proof that
     // the watchdog is enabled or that any other reset source is excluded.
     ldr w16, [x19, #44]

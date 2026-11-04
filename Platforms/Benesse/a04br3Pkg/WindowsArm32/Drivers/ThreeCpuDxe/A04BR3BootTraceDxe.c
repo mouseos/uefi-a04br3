@@ -6,6 +6,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/CacheMaintenanceLib.h>
 #include <Library/IoLib.h>
+#include <Library/A04BR3TestCycleLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Guid/EventGroup.h>
 #include <IndustryStandard/Acpi50.h>
@@ -19,6 +20,9 @@
 #define A04_SMP_FIRST_AP 2
 #ifndef A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT
 #define A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT 0
+#endif
+#ifndef A04BR3_BOOT_DIAGNOSTIC
+#define A04BR3_BOOT_DIAGNOSTIC 0
 #endif
 extern UINT32 A04RequestA64Probe (UINT32 Context);
 extern UINT32 A04RequestParkingProbe (UINT32 Context, UINT32 CpuId);
@@ -124,6 +128,10 @@ STATIC VOID EFIAPI A04PublishSmp (EFI_EVENT Event, VOID *Context)
     DEBUG ((DEBUG_ERROR, "A04SMP mailbox monitoring armed\n"));
 #endif
     mThreeCpuReady = TRUE;
+#if A04BR3_BOOT_DIAGNOSTIC == 1
+    DEBUG ((DEBUG_ERROR, "A04DIAG CPU0/2/3 tables installed; OS entry blocked; watchdog bounded\n"));
+    CpuDeadLoop ();
+#endif
   }
   if (EFI_ERROR (Status)) {
     Tables->UninstallAcpiTable (Tables, SsdtKey);
@@ -173,6 +181,21 @@ STATIC VOID ProbeSecondaryA64 (VOID)
       }
       if (Changes < 2) { DEBUG ((DEBUG_ERROR, "A04TRACE CPU1 feed counter stopped\n")); CpuDeadLoop (); }
       DEBUG ((DEBUG_ERROR, "A04TRACE CPU1 feed writes changed twice; TOPRGU mode=%08x\n", MmioRead32 (0x10007000)));
+#if A04BR3_BOOT_DIAGNOSTIC == 1
+      if (A04BR3WatchdogEnabled ()) { DEBUG ((DEBUG_ERROR, "A04DIAG watchdog already owned\n")); CpuDeadLoop (); }
+      if (!A04BR3SetFastbootFlag ()) { DEBUG ((DEBUG_ERROR, "A04DIAG RTC fastboot flag FAILED; watchdog not armed\n")); CpuDeadLoop (); }
+      A04BR3WatchdogArm (A04BR3_WATCHDOG_SECONDS);
+      if (!A04BR3WatchdogEnabled ()) { DEBUG ((DEBUG_ERROR, "A04DIAG watchdog enable FAILED\n")); CpuDeadLoop (); }
+      InvalidateDataCacheRange ((VOID *)Marker, 64);
+      Last = Marker[11]; Changes = 0;
+      for (Index = 0; Index < 12000 && Changes < 2; Index++) {
+        gBS->Stall (1000);
+        InvalidateDataCacheRange ((VOID *)Marker, 64);
+        if (Marker[11] != Last) { Last = Marker[11]; Changes++; }
+      }
+      if (Changes < 2 || !A04BR3WatchdogEnabled ()) { DEBUG ((DEBUG_ERROR, "A04DIAG armed watchdog/worker FAILED\n")); CpuDeadLoop (); }
+      DEBUG ((DEBUG_ERROR, "A04DIAG watchdog enabled, fastboot RTC verified, two subsequent feed writes\n"));
+#endif
     }
 #endif
 #if A04BR3_A64_WDT_TEST == 1
@@ -192,6 +215,10 @@ STATIC VOID ProbeSecondaryA64 (VOID)
 STATIC VOID EFIAPI A04BeforeExit(EFI_EVENT Event, VOID *Context)
 {
   (VOID)Event; (VOID)Context;
+#if A04BR3_BOOT_DIAGNOSTIC == 1
+  DEBUG ((DEBUG_ERROR, "A04DIAG ExitBootServices blocked\n"));
+  CpuDeadLoop ();
+#endif
   if (!mThreeCpuReady) CpuDeadLoop ();
 }
 EFI_STATUS EFIAPI A04BR3BootTraceEntry(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)

@@ -28,6 +28,11 @@ with tempfile.TemporaryDirectory(prefix='a04-worker-') as tmp:
     unbounded = compile_case({**flags,'A04BR3_OFFLINE_WDT_UNBOUNDED':'1'})
     assert 'cmp\tx10, x6' in bounded and 'cmp\tx10, x6' not in unbounded
     assert 'str\tw16, [x7, #12]' in bounded
+    diagnostic = compile_case({**flags, 'A04BR3_KERNEL_MARKER':'0', 'A04BR3_FB_MONITOR':'0',
+                               'A04BR3_A64_WDT_SECONDS':'120', 'A04BR3_OFFLINE_WDT_UNBOUNDED':'0',
+                               'A04BR3_WORKER_NO_UART_RESET':'0', 'A04BR3_WORKER_HEARTBEAT':'1'})
+    assert 'cmp\tx10, x6' in diagnostic and 'str\tw16, [x7, #12]' in diagnostic
+    assert 'str\tw16, [x19, #44]' in diagnostic
     quiet = compile_case({**flags, 'A04BR3_KERNEL_MARKER':'0', 'A04BR3_FB_MONITOR':'0',
                           'A04BR3_OFFLINE_WDT_UNBOUNDED':'1', 'A04BR3_WORKER_NO_UART_RESET':'1'})
     assert 'str\tw16, [x19, #44]' in quiet

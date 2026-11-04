@@ -1,0 +1,29 @@
+# ARM32 3 CPU有限時間起動診断
+
+`A04_DIAGNOSTIC_THREE_CPU=2` はディスク保守とは別の実験用設定。CPU1を
+workerに予約し、CPU0/2/3のMADT・SSDTとparkingを試す。旧edk2-mtkの
+実機WinPE実績はこの構成の証拠ではない。
+
+DXEはCPU1のfeed書込みカウンタの2回の変化を待ち、既存watchdogが有効なら
+停止する。RTCのfastbootフラグを設定・読戻しできた場合だけTOPRGUを31秒で
+有効化し、enable読戻しとさらに2回のfeed書込みを確認する。RTCフラグは実機の
+永続状態を変更する。workerのfeed期限はCPU_ONから120秒で、期限後は31秒以内
+を目安にwatchdogがresetし、RTC設定でfastbootに戻る設計である。許可された
+主担当のUART `A04BR3!RST` でも期限内にresetできる。これらは実機未検証。
+
+CPU2/3のparking応答後、ReadyToBoot時にACPIを公開してCPU0を停止する。
+ExitBootServicesにも停止ガードがある。自動でDISMを開始するESPやWindows本体の
+起動媒体は使わず、主担当が診断専用の媒体と外部リセット主体の排他を管理する。
+ReadyToBootが呼ばれない場合も、この経路のACPI公開は確認できない。
+
+RTC設定失敗、CPU1起動・カウンタ停止、TOPRGUの異常や電源断ではfastboot復帰を
+保証できない。RTC設定失敗はwatchdogを有効化せず停止するため、UART経由または
+主担当による物理復旧が必要になる可能性がある。ユーザーデータ領域の書込みや
+DISMをこの診断から開始しない。実機検証がない限り、watchdog給餌・ACPI・復旧を
+成功と扱わない。
+
+ビルダーの出力は実験FDであり、`package-boot-diagnostic.py` は入力されたstock
+bootとDTBを使ってAndroid boot imageを生成し、再抽出してkernelとramdiskを照合
+する。DTBは旧機種リポジトリ由来で、正本UEFIソースそのものではない。stock
+boot・DTBのハッシュと出自、メモリ配置の検査は別途確認が必要。作成済み
+`boot.img` も実機投入前の試作品として扱う。

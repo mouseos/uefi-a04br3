@@ -14,12 +14,15 @@ work=$(mktemp -d "${TMPDIR:-/tmp}/a04-libgcc-overlay.XXXXXXXX")
 trap 'rm -rf -- "$work"' EXIT
 base=gcc-arm-none-eabi-13.2.rel1
 tar -xjf "$archive" -C "$work" "$base/libgcc/libgcc2.c" "$base/libgcc/libgcc2.h" \
-  "$base/libgcc/config/arm/bpabi-lib.h" "$base/include/longlong.h"
+  "$base/libgcc/config/arm/bpabi-lib.h" "$base/include/longlong.h" \
+  "$base/gcc/mkconfig.sh" "$base/libgcc/mkheader.sh"
 mkdir "$work/headers" "$work/old" "$work/new"
-printf '#include <stddef.h>\n' > "$work/headers/tsystem.h"
-printf '#include "config/arm/bpabi-lib.h"\n' > "$work/headers/libgcc_tm.h"
-touch "$work/headers/tconfig.h" "$work/headers/coretypes.h" "$work/headers/tm.h"
 gcc="${prefix}gcc"; ar="${prefix}ar"
+plugin=$("$gcc" -print-file-name=plugin)/include
+[[ -f $plugin/tm.h && -f $plugin/tsystem.h && -f $plugin/config/arm/arm.h ]] || { echo 'GCC generated plugin headers missing' >&2; exit 2; }
+( cd "$work/headers" && TARGET_CPU_DEFAULT='' HEADERS='' DEFINES=USED_FOR_TARGET \
+    sh "$work/$base/gcc/mkconfig.sh" tconfig.h )
+DEFINES='' HEADERS='arm/bpabi-lib.h' sh "$work/$base/libgcc/mkheader.sh" > "$work/headers/libgcc_tm.h"
 original=$("$gcc" -march=armv7-a -mthumb -mfloat-abi=soft -print-libgcc-file-name)
 [[ -f $original ]] || exit 2
 functions=(divdi3 moddi3 muldi3 ucmpdi2 udivdi3 udivmoddi4 umoddi3)
@@ -27,8 +30,8 @@ for func in "${functions[@]}"; do
   ( cd "$work/old" && "$ar" x "$original" "_${func}.o" )
   flags=(-O2 -march=armv7-a -mthumb -mfloat-abi=soft -fshort-wchar -fno-short-enums -fno-builtin)
   if "${prefix}readelf" -SW "$work/old/_${func}.o" | grep -q ' .ARM.exidx '; then flags+=(-fexceptions); fi
-  "$gcc" -c "${flags[@]}" -DMIN_UNITS_PER_WORD=4 -D"L_${func}" \
-    -I"$work/headers" -I"$work/$base/libgcc" -I"$work/$base/include" \
+  "$gcc" -c "${flags[@]}" -DIN_GCC -DIN_LIBGCC2 -Dinhibit_libc -fbuilding-libgcc -fno-stack-protector -D"L_${func}" \
+    -I"$work/headers" -I"$plugin" -I"$work/$base/libgcc" -I"$work/$base/libgcc/config" -I"$work/$base/include" \
     "$work/$base/libgcc/libgcc2.c" -o "$work/new/_${func}.o"
   "${prefix}readelf" -A "$work/new/_${func}.o" > "$work/new/$func.attributes"
   "${prefix}readelf" -A "$work/old/_${func}.o" > "$work/old/$func.attributes"
@@ -75,16 +78,21 @@ src="$root/Platforms/Benesse/a04br3Pkg/Tests/check_arm_libgcc_runtime.c"
   -L"$output" -lgcc -o "$work/runtime.elf" 2>"$output/test-link.log"
 [[ ! -s $output/test-link.log ]] || { cat "$output/test-link.log" >&2; exit 1; }
 "$qemu" "$work/runtime.elf"
-python3 - "$archive" "$original" "$output" "$gcc" "$qemu" <<'PY'
+python3 - "$archive" "$original" "$output" "$gcc" "$qemu" "$plugin" <<'PY'
 import hashlib,json,os,subprocess,sys
-archive,original,out,gcc,qemu=sys.argv[1:]
+from pathlib import Path
+archive,original,out,gcc,qemu,plugin=sys.argv[1:]
 def sha(p):
  with open(p,'rb') as f:return hashlib.file_digest(f,'sha256').hexdigest()
+headers=hashlib.sha256()
+for p in sorted(Path(plugin).rglob('*')):
+ if p.is_file(): headers.update(str(p.relative_to(plugin)).encode()+b'\0'+bytes.fromhex(sha(p)))
 data={'status':'experimental-not-integrated','gcc_source_archive_sha256':sha(archive),
       'original_libgcc_sha256':sha(original),'overlay_libgcc_sha256':sha(out+'/libgcc.a'),
       'gcc_sha256':sha(gcc),'qemu_sha256':sha(qemu),'qemu_test_vectors':4096,
+      'gcc_plugin_header_tree_sha256':headers.hexdigest(),
       'validation':'seven rebuilt objects match original allocated sections, globals, relocations and other ARM attributes',
-      'limitations':['generated GCC configuration headers are minimal, not official build outputs',
+      'limitations':['GCC plugin generated target headers and source generation scripts used; full original build tree not independently reproduced',
                      'firmware link and target execution not verified']}
 open(out+'/manifest.json','w').write(json.dumps(data,indent=2)+'\n')
 print(json.dumps(data,indent=2))

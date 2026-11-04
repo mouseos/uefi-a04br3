@@ -8,10 +8,10 @@ canonical=$(realpath "$1"); oldtools=$(realpath "$2"); template=$(realpath "$3")
 three=${A04_DIAGNOSTIC_THREE_CPU:-0}
 a64prefix=${A04_AARCH64_PREFIX:-aarch64-linux-gnu-}
 overlay=${A04_LIBGCC_OVERLAY:-}
-[[ $three == 0 || $three == 1 ]] || exit 2
+[[ $three == 0 || $three == 1 || $three == 2 ]] || exit 2
 if [[ -n $overlay ]]; then
   overlay=$(realpath "$overlay")
-  [[ $three == 1 && $overlay != *[[:space:]]* && -f $overlay/libgcc.a && -f $overlay/manifest.json ]] || exit 2
+  [[ $three != 0 && $overlay != *[[:space:]]* && -f $overlay/libgcc.a && -f $overlay/manifest.json ]] || exit 2
   python3 - "$overlay" "$gccprefix" <<'PY'
 import hashlib,json,subprocess,sys
 from pathlib import Path
@@ -57,17 +57,20 @@ export GCC5_ARM_PREFIX=$gccprefix PYTHON_COMMAND=python3 SOURCE_DATE_EPOCH
 SOURCE_DATE_EPOCH=$(git -C "$root" log -1 --format=%ct)
 export PATH="$oldtools/BaseTools/Source/C/bin:$EDK_TOOLS_PATH/BinWrappers/PosixLike:$PATH"
 buildflags=()
-if [[ $three == 1 ]]; then
+if [[ $three != 0 ]]; then
   buildflags=(-D A04BR3_EXPERIMENTAL_THREE_CPU=1 -D A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT=1)
 fi
+if [[ $three == 2 ]]; then buildflags+=(-D A04BR3_BOOT_DIAGNOSTIC=1); fi
 "$EDK_TOOLS_PATH/BinWrappers/PosixLike/build" -p a04br3Pkg/WindowsArm32/WindowsArm32.dsc -a ARM -b DEBUG -t GCC5 -D FD_BASE=0x41080000 -D FD_SIZE=0x00300000 -D FD_BLOCKS=0x300 -D "A04_BUILD_OUTPUT=Build/$output" "${buildflags[@]}"
-if [[ $three == 1 ]]; then
+if [[ $three != 0 ]]; then
   fv="$root/Build/$output/DEBUG_GCC5/FV"
+  offline=1; no_uart=1; seconds=420
+  if [[ $three == 2 ]]; then offline=0; no_uart=0; seconds=120; fi
   "$a64prefix"gcc -c "$root/Platforms/Benesse/a04br3Pkg/WindowsArm32/BootShim/BootShim.S" -o "$fv/BootShim.o" \
     -DUEFI_BASE=0x41080000 -DUEFI_SIZE=0x300000 -DA04BR3_A64_CPU_TEST=1 -DA04BR3_A32_SECONDARY_TEST=1 \
     -DA04BR3_PARK_TEST=1 -DA04BR3_SMP_TEST=1 -DA04BR3_WDT_HANDOFF_TEST=0 -DA04BR3_FOUR_CPU_TEST=0 \
-    -DA04BR3_A64_WDT_TEST=1 -DA04BR3_A64_WDT_SECONDS=420 -DA04BR3_KERNEL_MARKER=0 -DA04BR3_FB_MONITOR=0 \
-    -DA04BR3_OFFLINE_WDT_UNBOUNDED=1 -DA04BR3_WORKER_NO_UART_RESET=1
+    -DA04BR3_A64_WDT_TEST=1 -DA04BR3_A64_WDT_SECONDS="$seconds" -DA04BR3_KERNEL_MARKER=0 -DA04BR3_FB_MONITOR=0 \
+    -DA04BR3_OFFLINE_WDT_UNBOUNDED="$offline" -DA04BR3_WORKER_NO_UART_RESET="$no_uart" -DA04BR3_WORKER_HEARTBEAT=1
   "$a64prefix"objcopy -O binary "$fv/BootShim.o" "$fv/BootShim.bin"
 fi
 python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" <<'PY'
@@ -106,7 +109,7 @@ result={'status':'diagnostic-only-not-for-device','source_commit':git(root,'rev-
  'build_defines':{'FD_BASE':'0x41080000','FD_SIZE':'0x00300000','FD_BLOCKS':'0x300'},
  'inputs':{str(p):sha(p) for p in inputs},'fd_sha256':sha(fd),'fd_bytes':fd.stat().st_size,
  'limitations':['single CPU only','watchdog worker and parking not connected','RP attribute unsupported','MMU runtime, cache and NVS unverified','libgcc ABI warnings unreviewed']}
-if three == '1':
+if three != '0':
  import shutil,struct
  obj=fd.parent/'BootShim.o'; shim=fd.parent/'BootShim.bin'; data=shim.read_bytes()
  rel=subprocess.check_output([a64prefix+'readelf','-r',str(obj)],text=True)
@@ -123,8 +126,8 @@ if three == '1':
  result['build_defines'].update(A04BR3_EXPERIMENTAL_THREE_CPU='1',A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT='1')
  result['shim_defines']={'UEFI_BASE':'0x41080000','UEFI_SIZE':'0x300000','A04BR3_A64_CPU_TEST':1,
   'A04BR3_A32_SECONDARY_TEST':1,'A04BR3_PARK_TEST':1,'A04BR3_SMP_TEST':1,'A04BR3_WDT_HANDOFF_TEST':0,
-  'A04BR3_FOUR_CPU_TEST':0,'A04BR3_A64_WDT_TEST':1,'A04BR3_A64_WDT_SECONDS':420,'A04BR3_KERNEL_MARKER':0,
-  'A04BR3_FB_MONITOR':0,'A04BR3_OFFLINE_WDT_UNBOUNDED':1,'A04BR3_WORKER_NO_UART_RESET':1}
+  'A04BR3_FOUR_CPU_TEST':0,'A04BR3_A64_WDT_TEST':1,'A04BR3_A64_WDT_SECONDS':120 if three == '2' else 420,'A04BR3_KERNEL_MARKER':0,
+  'A04BR3_FB_MONITOR':0,'A04BR3_OFFLINE_WDT_UNBOUNDED':0 if three == '2' else 1,'A04BR3_WORKER_NO_UART_RESET':0 if three == '2' else 1,'A04BR3_WORKER_HEARTBEAT':1}
  result.update(shim_sha256=sha(shim),shim_bytes=len(data),shimmed_fd_sha256=sha(combined),shimmed_fd_bytes=combined.stat().st_size)
  result['limitations']=['experimental three CPU; no runtime validation','worker heartbeat is not proof of watchdog operation',
   'other reset sources not excluded','DISM forbidden','RP attribute unsupported',
@@ -133,6 +136,10 @@ if three == '1':
   result['libgcc_overlay']={'libgcc_sha256':sha(Path(overlay)/'libgcc.a'),
                             'manifest_sha256':sha(Path(overlay)/'manifest.json')}
   result['limitations'][-1]='experimental libgcc overlay; firmware link and target ABI not verified'
+ if three == '2':
+  result['build_defines']['A04BR3_BOOT_DIAGNOSTIC']='1'
+  result['limitations'].extend(['bounded watchdog diagnostic; RTC fastboot flag is modified',
+   'UEFI ReadyToBoot and ExitBootServices block OS launch; hardware behavior and recovery unverified'])
 (fd.parent/'diagnostic-manifest.json').write_text(json.dumps(result,indent=2)+'\n')
 print(json.dumps(result,indent=2))
 PY
