@@ -138,7 +138,7 @@
 
 DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
 
-!include MT8167Pkg/MT8167Pkg.dsc.inc
+!include a04br3Pkg/WindowsArm32/WindowsMT8167.dsc.inc
 
 [BuildOptions]
   # Board-only smoke: 1 halts after SEC RTC verification; 2 halts with DXE timer live.

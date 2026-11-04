@@ -24,3 +24,6 @@
   ## Windows ARM32 candidate HOB pool; zero is invalid until platform config supplies it.
   gA04BR3WindowsTokenSpaceGuid.PcdA04WinHobBase|0|UINT32|0x00000001
   gA04BR3WindowsTokenSpaceGuid.PcdA04WinHobSize|0|UINT32|0x00000002
+  gA04BR3WindowsTokenSpaceGuid.PcdA04WinCpuIoSize|0|UINT8|0x00000003
+[PcdsFeatureFlag]
+  gA04BR3WindowsTokenSpaceGuid.PcdA04WinNormalNonshareable|FALSE|BOOLEAN|0x00000004

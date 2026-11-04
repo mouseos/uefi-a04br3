@@ -98,3 +98,22 @@ CPU worker起動・parkingの欠落、表示や記憶領域引継ぎの未検証
 ページ表・ACPI NVSの実割当、NVSのキャッシュ可視性、ACPIインストールは
 まだビルド・実機検証できていない。試行ログは作業環境の
 `/tmp/a04-canonical-arm32-build3.log`。再現可能なFDは生成されていない。
+
+## ARM向けPCDと共通ライブラリの追跡
+
+元の `PcdPrePiCpuIoSize` はARMでは値0（I/Oポート空間なし）を使っていた。
+機種用 `PcdA04WinCpuIoSize` の既定値0に置換。正本共通SECがARMでは存在しない
+PCDを参照するため、機種専用DSC構成からそのSECだけを外し、同梱PrePiを使う。
+共通DSCには手を加えず、機種用の構成断片を設けた。
+
+次に現行Muの `ArmMmuBaseLib` がAArch64ソースのみであることが判明した。
+旧EDK IIのARM32 MMUとヘッダーをライセンス表示・出自付きで機種側に移植し、
+非共有メモリの既定FALSEを機種PCDで維持した。さらにARMを持たない
+`ArmMonitorLib` を旧EDK IIのC版へ差し替えた。共通コードは変更していない。
+これらの互換性・ページテーブル動作・保守時の安全性はまだ未検証。
+
+ARM/GCC5の再試行は以前のPCDとMMUのメタデータ検査を越えた後、
+`BaseSynchronizationLib` と `DxeCpuExceptionHandlerLib` にARMのソースが
+ないため停止した。正本Muは他にもAArch64専用化されている可能性があり、
+候補FDの完成や実機での安全性は主張できない。詳細ログ:
+`port/gsi/logs/ios-feasibility/windows-rt-canonical-arm32-build8.log`。

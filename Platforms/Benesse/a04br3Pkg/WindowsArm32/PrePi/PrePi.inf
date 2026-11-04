@@ -70,11 +70,10 @@
 [FixedPcd]
   gArmTokenSpaceGuid.PcdSystemMemoryBase
   gArmTokenSpaceGuid.PcdSystemMemorySize
-  gArmTokenSpaceGuid.PcdCpuVectorBaseAddress
   gArmTokenSpaceGuid.PcdFdBaseAddress
   gArmTokenSpaceGuid.PcdFdSize
   gEmbeddedTokenSpaceGuid.PcdPrePiStackBase
   gEmbeddedTokenSpaceGuid.PcdPrePiStackSize
-  gEmbeddedTokenSpaceGuid.PcdPrePiCpuIoSize
+  gA04BR3WindowsTokenSpaceGuid.PcdA04WinCpuIoSize
   gA04BR3WindowsTokenSpaceGuid.PcdA04WinHobBase
   gA04BR3WindowsTokenSpaceGuid.PcdA04WinHobSize

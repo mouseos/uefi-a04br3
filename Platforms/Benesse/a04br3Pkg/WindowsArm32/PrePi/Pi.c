@@ -172,7 +172,7 @@ PrePiMain(
   BuildStackHob ((UINTN)StackBase, StackSize);
 
   // TODO: Call CpuPei as a library
-  BuildCpuHob (ArmGetPhysicalAddressBits (), PcdGet8 (PcdPrePiCpuIoSize));
+  BuildCpuHob (ArmGetPhysicalAddressBits (), PcdGet8 (PcdA04WinCpuIoSize));
 
   // Set the Boot Mode
   SetBootMode (BOOT_WITH_DEFAULT_SETTINGS);

@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+# ARM32 sources derived from edk2 e7aac7fc137e247edad22f7ee53b9a1fba227397.
+[Defines]
+  INF_VERSION = 0x00010005
+  BASE_NAME = A04WindowsArmMmuLib
+  FILE_GUID = 047DBD14-DF58-489E-B094-9F6CB316CA02
+  MODULE_TYPE = BASE
+  VERSION_STRING = 1.0
+  LIBRARY_CLASS = ArmMmuLib
+[Sources.ARM]
+  Arm/ArmMmuLibConvert.c
+  Arm/ArmMmuLibCore.c
+  Arm/ArmMmuLibUpdate.c
+  Arm/ArmMmuLibV7Support.S | GCC
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  UefiCpuPkg/UefiCpuPkg.dec
+  a04br3Pkg/a04br3.dec
+[LibraryClasses]
+  ArmLib
+  BaseLib
+  BaseMemoryLib
+  CacheMaintenanceLib
+  DebugLib
+  HobLib
+  MemoryAllocationLib
+  PcdLib
+[FeaturePcd]
+  gA04BR3WindowsTokenSpaceGuid.PcdA04WinNormalNonshareable
