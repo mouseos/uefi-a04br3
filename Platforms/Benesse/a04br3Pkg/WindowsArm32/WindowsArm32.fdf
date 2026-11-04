@@ -98,6 +98,9 @@ READ_LOCK_STATUS   = TRUE
   INF MdeModulePkg/Universal/Acpi/AcpiPlatformDxe/AcpiPlatformDxe.inf
   INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTables.inf
   INF a04br3Pkg/Drivers/I2c1HandoffDxe/I2c1HandoffDxe.inf
+!if $(A04BR3_EXPERIMENTAL_THREE_CPU) == 1
+  INF a04br3Pkg/WindowsArm32/Drivers/ThreeCpuDxe/A04BR3BootTraceDxe.inf
+!endif
 
 [FV.FVMAIN_COMPACT]
 FvAlignment        = 8

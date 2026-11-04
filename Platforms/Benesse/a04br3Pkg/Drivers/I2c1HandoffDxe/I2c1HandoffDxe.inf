@@ -9,6 +9,7 @@
 [Sources]
   I2c1HandoffDxe.c
   Mma8652Aml.h
+  I2c1Nvs.h
 [Packages]
   MdePkg/MdePkg.dec
 [LibraryClasses]

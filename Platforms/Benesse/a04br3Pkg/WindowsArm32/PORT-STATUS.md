@@ -1,5 +1,27 @@
 # ARM32 Windows RT 正本への移植
 
+## 現在の作業ツリーの状態
+
+以下の各節は当時の履歴であり、未接続やビルド失敗の記述を現在の状態と
+混同しない。専用worktreeではPrePi、ACPI、I2C1をDSC/FDFに接続し、
+ARM32診断FDを生成した。旧 `b8ca32e` を出自とする3 CPU DXEも試作し、
+CPU1の応答とCPU2/3のparkingを確認した後でSSDTとMADTを公開する設計を
+追加した。`A04BR3_EXPERIMENTAL_THREE_CPU` の既定値は0で、1は試作専用。
+`A04BR3_DISK_SERVICING=1` との組合せはビルド時に拒否する。
+
+CPU1の初回マーカーはwatchdog有効化や継続的な給餌の証拠ではない。workerの
+UARTリセット受信、外部監視によるリセット、watchdogの実際の状態と所有権、
+BootShimとの接続、OS引継ぎ後の動作はいずれも保守用途の安全性が未検証。
+ARMのlibgccにはwchar_tとenumのABI属性警告が残る。3 CPU試作FDは実機用の
+完成品ではなく、書込みやDISMに使わない。旧構成でのWinPE実績はこの
+正本構成での実機動作の証明にならない。
+
+ホストmockでは実際のARM32ページ表更新コードの属性保持と未マップ範囲の
+事前拒否、I2C NVS公開のflush順序を検査した。これは実機のページ表配置、
+TLB・キャッシュ可視性、NVS保持の検証ではない。SSDTの生成元ASLと埋込み
+バイト列の一致は同じiaslバージョンで `Tests/check_windows_cpu_ssdt.py` により
+検査できる。
+
 このディレクトリは `mouseos/edk2-mtk` の機種専用 `A04BR3Pkg`、
 コミット `b8ca32e` からの移植途中のソースである。BootShim、PrePi、
 単一CPUのACPI基盤を保存し、元の著作権・ライセンス表示を保持する。

@@ -1,0 +1,41 @@
+# A04BR3 boot service trace. SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+  INF_VERSION = 0x00010005
+  BASE_NAME = A04BR3BootTraceDxe
+  FILE_GUID = 4f778d64-0798-49d5-99d7-27604ce2d4e9
+  MODULE_TYPE = DXE_DRIVER
+  VERSION_STRING = 1.0
+  ENTRY_POINT = A04BR3BootTraceEntry
+[Sources]
+  A04BR3BootTraceDxe.c
+  CpuParkingSsdt.h
+  SecondaryProbe.S
+  SecondaryParking.S
+[Packages]
+  MdePkg/MdePkg.dec
+  ArmPkg/ArmPkg.dec
+  a04br3Pkg/a04br3.dec
+[LibraryClasses]
+  DebugLib
+  ArmSmcLib
+  ArmLib
+  CacheMaintenanceLib
+  BaseLib
+  BaseMemoryLib
+  DevicePathLib
+  IoLib
+  HobLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+[Protocols]
+  gEfiGraphicsOutputProtocolGuid
+  gEfiLoadedImageProtocolGuid
+  gEfiCpuArchProtocolGuid
+  gEfiDevicePathProtocolGuid
+  gEfiAcpiSdtProtocolGuid
+  gEfiAcpiTableProtocolGuid
+[Guids]
+  gEfiEventReadyToBootGuid
+  gEfiEventBeforeExitBootServicesGuid
+[Depex]
+  TRUE

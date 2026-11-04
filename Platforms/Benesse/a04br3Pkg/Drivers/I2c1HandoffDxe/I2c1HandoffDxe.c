@@ -14,6 +14,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/CacheMaintenanceLib.h>
 #include "Mma8652Aml.h"
+#include "I2c1Nvs.h"
 STATIC volatile UINT32 *mStatus;
 STATIC UINT32 mTiming;
 #endif
@@ -81,17 +82,13 @@ STATIC VOID EFIAPI BeforeExit(EFI_EVENT Event, VOID *Context)
   EFI_STATUS Status;
   (VOID)Event; (VOID)Context;
 #ifndef A04_I2C1_HOST_TEST
-  mStatus[0]=0; mStatus[1]=0; mStatus[2]=0;
-  WriteBackDataCacheRange((VOID *)mStatus, 3*sizeof(*mStatus));
+  A04I2cInvalidateNvs (mStatus);
 #endif
   Status=ConfigureI2c1();
 #ifndef A04_I2C1_HOST_TEST
   if (!EFI_ERROR(Status)) {
-    mStatus[1]=mTiming; mStatus[2]=~mTiming;
-    WriteBackDataCacheRange((VOID *)mStatus, 3*sizeof(*mStatus));
-    mStatus[0]=0x41303431u;
+    A04I2cPublishNvs (mStatus, mTiming);
   }
-  WriteBackDataCacheRange((VOID *)mStatus, 3*sizeof(*mStatus));
 #endif
   DEBUG((DEBUG_ERROR,"A04ACC UEFI I2C1 setup=%r\n",Status));
 }

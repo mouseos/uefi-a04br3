@@ -36,6 +36,12 @@
 !ifndef ENABLE_SECUREBOOT
   DEFINE ENABLE_SECUREBOOT       = 0
 !endif
+!ifndef A04BR3_EXPERIMENTAL_THREE_CPU
+  DEFINE A04BR3_EXPERIMENTAL_THREE_CPU = 0
+!endif
+!if $(A04BR3_EXPERIMENTAL_THREE_CPU) != 0 && $(A04BR3_EXPERIMENTAL_THREE_CPU) != 1
+  !error A04BR3_EXPERIMENTAL_THREE_CPU must be 0 or 1
+!endif
 
   #
   # Unattended test cycle (UniXNU board.toml [firmware.defines]
@@ -55,6 +61,9 @@
 !endif
 !if $(A04BR3_DISK_SERVICING) != 0 && $(A04BR3_DISK_SERVICING) != 1
   !error A04BR3_DISK_SERVICING must be 0 or 1
+!endif
+!if $(A04BR3_DISK_SERVICING) == 1 && $(A04BR3_EXPERIMENTAL_THREE_CPU) == 1
+  !error The experimental CPU worker permits UART reset and is not safe for disk servicing
 !endif
 !if $(A04BR3_DISK_SERVICING) == 1 && $(A04BR3_TEST_CYCLE) != 0
   !error A04BR3_DISK_SERVICING forbids A04BR3_TEST_CYCLE
@@ -269,5 +278,14 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
   }
   a04br3Pkg/WindowsArm32/Acpi/AcpiTables.inf
   a04br3Pkg/Drivers/I2c1HandoffDxe/I2c1HandoffDxe.inf
+!if $(A04BR3_EXPERIMENTAL_THREE_CPU) == 1
+  a04br3Pkg/WindowsArm32/Drivers/ThreeCpuDxe/A04BR3BootTraceDxe.inf {
+    <BuildOptions>
+      GCC:*_*_ARM_CC_FLAGS = -DA04BR3_A64_CPU_TEST=1 -DA04BR3_A64_WDT_TEST=1 -DA04BR3_A32_SECONDARY_TEST=1 -DA04BR3_PARK_TEST=1 -DA04BR3_SMP_TEST=1 -DA04BR3_KERNEL_MARKER=1 -DA04BR3_FB_MONITOR=1 -DA04BR3_FOUR_CPU_TEST=0
+  }
+!endif
   MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf
   MdeModulePkg/Universal/Acpi/AcpiPlatformDxe/AcpiPlatformDxe.inf
+
+[PcdsFeatureFlag.ARM]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdInstallAcpiSdtProtocol|TRUE

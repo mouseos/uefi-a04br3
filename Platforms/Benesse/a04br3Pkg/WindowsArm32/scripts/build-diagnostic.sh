@@ -22,7 +22,7 @@ assert s.count(needle)==1
 inc=root/'Platforms/Benesse/a04br3Pkg/WindowsArm32/Include'
 board=root/'Platforms/Benesse/a04br3Pkg/Include'
 s=s.replace(needle, f'DEFINE GCC5_ARM_CC_FLAGS             = -I{inc} -I{inc}/Arm -I{board} -DEFI_REMOVABLE_MEDIA_FILE_NAME=EFI_REMOVABLE_MEDIA_FILE_NAME_EBC -include {inc}/Uefi/UefiBaseType.h DEF(GCC49_ARM_CC_FLAGS)')
-s=s.replace('*_GCC5_ARM_PP_FLAGS              = $(PLATFORM_FLAGS) DEF(GCC_PP_FLAGS)', '*_GCC5_ARM_PP_FLAGS              = -D__UEFI_BASETYPE_H__ $(PLATFORM_FLAGS) DEF(GCC_PP_FLAGS)')
+s=s.replace('*_GCC5_ARM_PP_FLAGS              = $(PLATFORM_FLAGS) DEF(GCC_PP_FLAGS)', '*_GCC5_ARM_PP_FLAGS              = -DEFI_REMOVABLE_MEDIA_FILE_NAME=EFI_REMOVABLE_MEDIA_FILE_NAME_EBC -D__UEFI_BASETYPE_H__ $(PLATFORM_FLAGS) DEF(GCC_PP_FLAGS)')
 s=s.replace('-L$(WORKSPACE)/ArmPkg/Library/GccLto',f'-L{old}/ArmPkg/Library/GccLto')
 s=s.replace('DEBUG_GCC5_ARM_CC_FLAGS        = DEF(GCC5_ARM_CC_FLAGS) -flto -Wno-unused-but-set-variable -Wno-unused-const-variable','DEBUG_GCC5_ARM_CC_FLAGS        = DEF(GCC5_ARM_CC_FLAGS) -flto -Wno-unused-but-set-variable -Wno-unused-const-variable -lgcc')
 p.write_text(s)
