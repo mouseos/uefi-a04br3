@@ -155,6 +155,8 @@ if three != '0':
   result['limitations'][-1]='experimental libgcc overlay; firmware link and target ABI not verified'
  if three == '2':
   result['build_defines']['A04BR3_BOOT_DIAGNOSTIC']='1'
+  result['shim_c_flags']=['-O2','-ffreestanding','-fno-stack-protector','-fno-builtin','-fno-pic','-fno-pie',
+                          '-fno-asynchronous-unwind-tables','-fno-unwind-tables','-mgeneral-regs-only','-mstrict-align']
   result['limitations'].extend(['bounded watchdog diagnostic; RTC fastboot flag is modified',
    'UEFI ReadyToBoot and ExitBootServices block OS launch; hardware behavior and recovery unverified'])
 (fd.parent/'diagnostic-manifest.json').write_text(json.dumps(result,indent=2)+'\n')

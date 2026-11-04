@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the real FDT guard with EL1 alignment checks on a QEMU virt CPU."""
+"""Run the real FDT guard with EL2 alignment checks on a QEMU virt CPU."""
 import os,struct,subprocess,tempfile
 from pathlib import Path
 
@@ -33,12 +33,15 @@ with tempfile.TemporaryDirectory() as d:
 _start:
   adr x1, stack_top
   mov sp, x1
+  mrs x3, CurrentEL
+  cmp x3, #8
+  b.ne failed
   adr x2, vectors
-  msr vbar_el1, x2
+  msr vbar_el2, x2
   isb
-  mrs x2, sctlr_el1
+  mrs x2, sctlr_el2
   orr x2, x2, #2
-  msr sctlr_el1, x2
+  msr sctlr_el2, x2
   isb
   adr x0, fixture
   mov x1, #FIXTURE_SIZE
@@ -80,6 +83,6 @@ exception:
   subprocess.run([prefix+'gcc',*options,'-c',str(source),'-o',str(t/'guard.o')],check=True)
   subprocess.run([prefix+'ld','-Ttext','0x40080000','-e','_start','-o',str(t/'image.elf'),str(t/'start.o'),str(t/'guard.o')],check=True)
   subprocess.run([prefix+'objcopy','-O','binary',str(t/'image.elf'),str(t/'image.bin')],check=True)
-  r=subprocess.run(['qemu-system-aarch64','-M','virt','-cpu','cortex-a53','-m','128M','-nographic','-monitor','none','-serial','null','-semihosting','-kernel',str(t/'image.bin')],timeout=8)
+  r=subprocess.run(['qemu-system-aarch64','-M','virt,virtualization=on','-cpu','cortex-a53','-m','128M','-nographic','-monitor','none','-serial','null','-semihosting','-kernel',str(t/'image.bin')],timeout=8)
   if r.returncode!=expected: raise SystemExit(f'{label} QEMU exit {r.returncode}, expected {expected}')
-print('QEMU SCTLR_EL1.A: previous guard faults; corrected guard accepts four-byte-aligned reg')
+print('QEMU SCTLR_EL2.A: previous guard faults; corrected guard accepts four-byte-aligned reg')

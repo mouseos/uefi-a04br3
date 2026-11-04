@@ -16,7 +16,7 @@ SCTLR_EL2アラインメント条件は未観測のため、これを今回の�
 機種側の読み取りを明示的なbyte loadにし、guardと早期復旧のAArch64コンパイルに
 `-mstrict-align` を設定する。リンク後の命令をホストで確認する。
 
-`Tests/check_fdt_guard_aarch64.py` はQEMU Cortex-A53でEL1のSCTLR.Aを有効にし、
+`Tests/check_fdt_guard_aarch64.py` はQEMU Cortex-A53でEL2のSCTLR.Aを有効にし、
 4-byte整列の `reg` を含むFDTを実際の検証器へ渡す。同条件で `1c9d7ebe` の
 元コンパイルは例外handlerへ入り、修正版は正常に戻る。これはアラインメント
 有効時の再現であり、実機EL2のSCTLR状態や今回の例外原因の観測ではない。
