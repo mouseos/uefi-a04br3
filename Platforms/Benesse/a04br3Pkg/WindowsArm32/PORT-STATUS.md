@@ -78,3 +78,23 @@ I2C1のNVSはDXEで `EfiACPIMemoryNVS` ページを動的割当てし、固定�
 実際のページ表割当・HOB解釈・NVS保持・キャッシュ整合性を検証しない。
 候補のDSC断片はまだ本体DSCに読み込まれず、SEC/ACPIのFDFへの接続と
 再現可能なARM32 FDビルドも未完了。ディスク保守には使用しない。
+
+## DSC/FDF接続の試作と正本依存ビルド
+
+`WindowsArm32.dsc` / `WindowsArm32.fdf` はPrePi、ACPIテーブル、ACPI table
+protocol、I2C1 DXEの候補接続である。既存AArch64設定とは別ファイルで、
+UniXNUの起動ドライバとDT公開を取り除いた。ただし現時点では単一CPU MADT、
+CPU worker起動・parkingの欠落、表示や記憶領域引継ぎの未検証があり、
+実機投入や保守用途には使えない。
+
+正本Mu_BasecoreのBaseToolsと既存依存キャッシュを参照してARM/GCC5ビルドを
+試した。旧PrePiが要求する `LzmaDecompressLib` は正本MuではNULLクラスの
+コンストラクタなのでPrePiの個別ライブラリ指定へ変更した。その後、共通
+`SiliciumPkg/Sec/Sec.inf` が参照する `PcdPrePiCpuIoSize` がMu_Basecoreの
+`EmbeddedPkg.dec` でARM向けに宣言されていないため、メタデータ検査が
+エラー3000で停止した。PrePi自身も同じPCDに依存する。共通コードを編集せず、
+機種専用ライブラリや別構成でSECを置換し、他のMu側依存も検証する必要がある。
+
+ページ表・ACPI NVSの実割当、NVSのキャッシュ可視性、ACPIインストールは
+まだビルド・実機検証できていない。試行ログは作業環境の
+`/tmp/a04-canonical-arm32-build3.log`。再現可能なFDは生成されていない。
