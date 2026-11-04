@@ -180,3 +180,46 @@ ARM/GCC5の再試行は以前のPCDとMMUのメタデータ検査を越えた後
 ないため停止した。正本Muは他にもAArch64専用化されている可能性があり、
 候補FDの完成や実機での安全性は主張できない。詳細ログ:
 `port/gsi/logs/ios-feasibility/windows-rt-canonical-arm32-build8.log`。
+
+## 共有親 ACPI の選択試作
+
+`A04BR3_SHARED_PARENT=1` は Windows ARM32 DSC/FDF で、基底テーブルに
+`BEN0001` 共有親 SSDT を追加する。既定値は 0。現行正本には旧 `MOU0003`／
+`MOU0004` provider テーブルが存在しないため、未実装の
+`A04BR3_BUTTON_PROVIDER` と `A04BR3_TOUCH_PROVIDER` は 0 以外を拒否する。
+これは当該ビルド構成内の排他であり、外部から別の SSDT が追加されないことや
+ファームウェア・他ドライバの MMIO アクセス停止を保証しない。旧ポートと同じ通知用 MOU0002 button array は共有親モードで追加するが、
+touch 電源 handoff や複数 CPU の各表はこの変更では追加しない。
+共有親ドライバは D0 を拒否中であり、入力も eMMC も動作可能にならない。
+
+ホスト試験は ACPICA で DSDT と共有 SSDT をコンパイル・評価し、`BEN0001`、
+4 つの資源、旧2 ID の不在、AML チェックサムを調べる。ARM32 用の正本
+DeviceBuild はまだなく、正本側の依存調整は別途進行中のため、FD のビルドや実機
+動作を主張しない。共通 EDK II／MediaTek は変更しない。
+
+電源・除去の設計根拠：Microsoft は一般に親 bus が子の D0 前に D0 に入り、
+子が親より先に D0 を離れると説明する。ただし電源依存を取り除く API は
+KMDF 1.29／Windows 10 2004 以降であり、RT 8.1／KMDF 1.13 へ持ち込まない。
+[PDO 電源依存](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdfpdo/nf-wdfpdo-wdfpdoinitremovepowerdependencyonparent)。
+[WdfDeviceStopIdle](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdfdevice/nf-wdfdevice-wdfdevicestopidle)
+は S0 でのアイドル遷移に関する参照であり Sx 遷移を防がず、電源断処理中の
+同期待機はデッドロックし得る。親 interface 参照やこの API だけから実レール、
+クロック、物理的な存在を保証しない。物理除去は通知より先に生じ得るため、
+共有ロックで進行中 MMIO のバス例外を防いだとは判断しない。
+[Surprise removal](https://learn.microsoft.com/en-us/windows-hardware/drivers/wdf/surprise-removal-sequence)。
+電源源と再初期化手順を確定し、停止・復帰と実際のバス障害時の扱いを実装・検証
+するまでは親 D0 と eMMC 起動のゲートを維持する。
+
+Linux v6.6 の [mtk-sd.c](https://github.com/torvalds/linux/blob/v6.6/drivers/mmc/host/mtk-sd.c) は
+MMC の power-up/on/off で vmmc と vqmmc の regulator を操作し、runtime suspend
+ではレジスタ保存後にクロックを止め、resume ではクロックを戻して安定を確認
+してからレジスタを復元する。対象 DTS の eMMC は `non-removable`、
+`cap-mmc-hw-reset`、両 supply を指定するが、これだけでは Windows が同じ
+電源・リセットを所有する証拠にならない。一般的な Linux の pwrseq 実装の
+reset GPIO は、この機種の eMMC ノードに接続されていると推定しない。
+
+共有親を有効にした正本 ARM32/GCC5 ビルドのメタデータ処理では、上記の
+排他指定を受理した後、Mu の `BaseSynchronizationLib` に ARM 向けソースがなく
+`Nothing to build` で停止した。共有側の AML ホスト試験は成功したが、FD は
+生成できていない。試行ログは `port/gsi/logs/ios-feasibility/`
+`windows-canonical-shared-acpi-arm32-build.log`。
