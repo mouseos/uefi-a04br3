@@ -2,6 +2,18 @@
 
 ## 現在の作業ツリーの状態
 
+コミット `6fdba49a` の機種ソースと、固定Mu `3c9c7b2e` 等のクリーン依存から、
+`A04_DIAGNOSTIC_THREE_CPU=1` で同じ出力パスに2回ビルドした。FD、BootShim、
+結合FDはそれぞれバイト一致し、入力・ツール・設定のハッシュをmanifestへ
+記録した。診断専用であり、実機用の完成品ではない。結果はビルド先の絶対
+パスを含むため、別のパスでのバイト一致は主張しない。
+
+リンク警告を出すlibgccの7個の整数ヘルパーを、実際のARM GCCライブラリに
+リンクした `Tests/check_arm_libgcc_runtime.c` でqemu-arm上の代表値について
+実行した。整数の代表値は通過したが、ELFのwchar_tとenumの属性不一致は
+残っている。テストは警告の解消、完全なABI互換性、UEFI上での実行、
+正本構成の実機動作を証明しない。
+
 `A04BR3_WORKER_NO_UART_RESET=1` の試作は無期限workerのUARTリセット受信と
 UART診断出力を除外し、給餌レジスタへの書込み後に共有ページのカウンタを
 増やす。対応するDXE設定 `A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT=1` は
