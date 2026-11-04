@@ -14,6 +14,14 @@
 残っている。テストは警告の解消、完全なABI互換性、UEFI上での実行、
 正本構成の実機動作を証明しない。
 
+追加の非採用試験として、Ubuntuの `gcc-arm-none-eabi_13.2.rel1.orig.tar.bz2`
+（SHA-256 `2db06abe865ce68eced25e449aecb45cdb6c151c3551c739620cfc3730214c91`）
+から `libgcc2.c` とARMの `bpabi-lib.h` を使い、7関数をshort wchar・32-bit enumで
+コンパイルした。独自に空の生成用ヘッダー等を仮置きした実験であり、正式な
+GCC構成とは未照合。代表値のqemu-arm試験とリンク警告なしを確認したが、
+再現可能な依存ビルド・広い入力範囲の検証・ファームウェアへの接続は未完了。
+この試作オブジェクトはFDへ組み込んでいない。
+
 `A04BR3_WORKER_NO_UART_RESET=1` の試作は無期限workerのUARTリセット受信と
 UART診断出力を除外し、給餌レジスタへの書込み後に共有ページのカウンタを
 増やす。対応するDXE設定 `A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT=1` は
