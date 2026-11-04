@@ -25,5 +25,5 @@ DISMをこの診断から開始しない。実機検証がない限り、watchdo
 ビルダーの出力は実験FDであり、`package-boot-diagnostic.py` は入力されたstock
 bootとDTBを使ってAndroid boot imageを生成し、再抽出してkernelとramdiskを照合
 する。DTBは旧機種リポジトリ由来で、正本UEFIソースそのものではない。stock
-boot・DTBのハッシュと出自、メモリ配置の検査は別途確認が必要。作成済み
+boot・DTBのハッシュと出自、LK実行時のメモリ配置の検査は別途確認が必要。作成済み
 `boot.img` も実機投入前の試作品として扱う。

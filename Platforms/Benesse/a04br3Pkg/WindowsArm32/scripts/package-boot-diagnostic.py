@@ -47,6 +47,15 @@ def main():
             paths=[t/(stem+n) for n in ('.cfg','.kernel','.ramdisk')]
             subprocess.run([abootimg,'-x',str(image),*(str(x) for x in paths)], check=True, stdout=subprocess.DEVNULL)
             return paths
+        image_header=stock.read_bytes()[:48]
+        if image_header[:8] != b'ANDROID!': raise SystemExit('invalid Android boot header')
+        _, kernel_addr, ramdisk_size, ramdisk_addr, second_size, _, tags_addr, page_size = struct.unpack_from('<8I',image_header,8)
+        if (kernel_addr,ramdisk_addr,tags_addr,page_size,second_size)!=(0x40080000,0x44000000,0x4e000000,2048,0):
+            raise SystemExit('unexpected stock load addresses or Android boot layout')
+        if ramdisk_addr + ramdisk_size > 0x44400000 or tags_addr + len(blob) > 0x4e240000:
+            raise SystemExit('stock ramdisk or DTB overlaps fixed reservations')
+        if kernel_addr + len(fw.read_bytes()) > 0x41080000:
+            raise SystemExit('expanded kernel overlaps FD destination')
         _, kernel, ramdisk = extract(stock, 'stock')
         old=kernel.read_bytes()
         if len(old)<512 or old[8:15]!=b'KERNEL\0' or struct.unpack_from('<I',old,4)[0]!=len(old)-512:
@@ -69,9 +78,11 @@ def main():
                 'dtb_sha256':sha(dtb),'stock_ramdisk_sha256':sha(ramdisk),'boot_img_sha256':sha(out/'boot.img'),
                 'packager_sha256':sha(Path(__file__)),'abootimg_sha256':sha(Path(abootimg)),
                 'gzip_sha256':sha(Path(gzip)),
+                'android_load_addresses':{'kernel':hex(kernel_addr),'ramdisk':hex(ramdisk_addr),'tags':hex(tags_addr)},
                 'limitations':['non-DISM diagnostic; no device validation','RTC fastboot flag is modified',
                                'watchdog automatically resets after the finite feed deadline',
-                               'DTB and stock boot inputs require provenance and memory-layout review']}
+                               'DTB and stock boot inputs require provenance review',
+                               'LK runtime FDT growth, initrd placement and dynamic reservations are unverified']}
         (out/'manifest.json').write_text(json.dumps(result,indent=2)+'\n')
         print(json.dumps(result,indent=2))
 if __name__ == '__main__': main()
