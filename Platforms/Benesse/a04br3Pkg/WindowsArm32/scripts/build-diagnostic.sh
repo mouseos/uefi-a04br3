@@ -46,10 +46,25 @@ def git(path,*args): return subprocess.check_output(['git','-C',path,*args]).dec
 fd=Path(root)/'Build'/output/'DEBUG_GCC5/FV/SILICIUM_UEFI.fd'
 if not fd.is_file() or fd.stat().st_size != 0x300000: raise SystemExit('FD missing or unexpected size')
 mu=Path(canonical)/'Mu_Basecore'
-diff=subprocess.check_output(['git','-C',str(mu),'diff','--binary'])
-inputs=[Path(template)/'tools_def.txt',Path(conf)/'tools_def.txt',Path(old)/'ArmPkg/Library/GccLto/liblto-arm.a',Path(old)/'BaseTools/Source/C/bin/GenFw',Path(gccprefix+'gcc')]
+diff=subprocess.check_output(['git','-C',str(mu),'-c','core.filemode=false','diff','--binary'])
+submodules=subprocess.check_output(['git','-C',str(mu),'-c','core.filemode=false','submodule','status'],text=True).splitlines()
+if diff or any(not x.startswith(' ') for x in submodules):
+ raise SystemExit('Mu checkout or nested submodules differ from pinned commits')
+other={}
+for name in ('Mu','Mu_OEM_Sample'):
+ path=Path(canonical)/'Common'/name
+ status=subprocess.check_output(['git','-C',str(path),'-c','core.filemode=false','status','--porcelain','--untracked-files=normal'],text=True)
+ if status: raise SystemExit(f'dirty dependency: {name}')
+ other[name]=git(str(path),'rev-parse','HEAD')
+tools=Path(old)/'BaseTools/Source/C/bin'
+inputs=[Path(template)/n for n in ('target.txt','tools_def.txt','build_rule.txt')]
+inputs += [Path(conf)/'tools_def.txt', Path(old)/'ArmPkg/Library/GccLto/liblto-arm.a']
+inputs += [tools/n for n in ('GenFw','GenFfs','GenFv','GenSec','LzmaCompress')]
+inputs += [Path(gccprefix+n) for n in ('gcc','gcc-ar','as','ld','objcopy')]
+libgcc=subprocess.check_output([gccprefix+'gcc','-march=armv7-a','-mthumb','-mfloat-abi=soft','-print-libgcc-file-name'],text=True).strip()
+inputs.append(Path(libgcc))
 result={'status':'diagnostic-only-not-for-device','source_commit':git(root,'rev-parse','HEAD'),
- 'mu_commit':git(str(mu),'rev-parse','HEAD'),'mu_uncommitted_diff_sha256':hashlib.sha256(diff).hexdigest(),
+ 'mu_commit':git(str(mu),'rev-parse','HEAD'),'mu_uncommitted_diff_sha256':hashlib.sha256(diff).hexdigest(),'mu_submodules':submodules,'other_dependencies':other,
  'source_date_epoch':git(root,'log','-1','--format=%ct'),'architecture':'ARM','target':'DEBUG','toolchain':'GCC5',
  'build_defines':{'FD_BASE':'0x41080000','FD_SIZE':'0x00300000','FD_BLOCKS':'0x300'},
  'inputs':{str(p):sha(p) for p in inputs},'fd_sha256':sha(fd),'fd_bytes':fd.stat().st_size,
