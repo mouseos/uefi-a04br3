@@ -17,6 +17,11 @@ APRIORI DXE {
 
   INF MediaTekPkg/Drivers/PmicWrapperDxe/PmicWrapperDxe.inf
 
+!if $(A04BR3_BOOT_DIAGNOSTIC) == 1
+  # Register the OS-entry guard before the APRIORI BDS driver can run.
+  INF a04br3Pkg/WindowsArm32/Drivers/ThreeCpuDxe/A04BR3BootTraceDxe.inf
+!endif
+
 !if $(A04BR3_TEST_CYCLE) == 1
   # Unattended test cycle: SEC stopped the watchdog. Re-arm it and set the
   # LK fastboot flag as early as possible, once the timer driver can run the
