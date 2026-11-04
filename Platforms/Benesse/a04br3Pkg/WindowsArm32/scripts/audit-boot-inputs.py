@@ -27,6 +27,17 @@ def main():
     path='Platform/Benesse/A04BR3Pkg/Blob/mt8167-benesse-a04br3.dtb'
     tracked=subprocess.check_output(['git','-C',str(a.edk2_mtk_repo),'show',ref+':'+path])
     if tracked != dtb: raise SystemExit('DTB does not match pinned edk2-mtk blob')
+    if len(dtb)<40 or dtb[:4]!=bytes.fromhex('d00dfeed'): raise SystemExit('invalid FDT header')
+    total, _, _, reserve_off = struct.unpack_from('>4I',dtb,4)
+    if total != len(dtb) or reserve_off < 40 or reserve_off % 8 or reserve_off >= total:
+        raise SystemExit('invalid FDT reserve-map offset')
+    reserve_map=[]
+    while True:
+        if reserve_off + 16 > total: raise SystemExit('unterminated FDT reserve map')
+        address,size=struct.unpack_from('>QQ',dtb,reserve_off); reserve_off+=16
+        if address == 0 and size == 0: break
+        if not size or address+size > 1<<64: raise SystemExit('invalid FDT reserve-map entry')
+        reserve_map.append((address,size))
     if stock[:8]!=b'ANDROID!': raise SystemExit('invalid boot header')
     kernel,ka,rd,ra,second,_,tags,page=struct.unpack_from('<8I',stock,8)
     if (ka,ra,tags,page,second)!=(0x40080000,0x44000000,0x4e000000,2048,0): raise SystemExit('unexpected boot layout')
@@ -48,6 +59,9 @@ def main():
         if len(values)%4: raise SystemExit('unsupported DTB reserved region cells')
         fixed[node]=[{'base':hex((values[i]<<32)|values[i+1]),'size':hex((values[i+2]<<32)|values[i+3])} for i in range(0,len(values),4)]
     critical=[(0x40080000,0x41080000),(0x41080000,0x41380000),(0x4e000000,0x52000000)]
+    for address,size in reserve_map:
+        if any(address<hi and lo<address+size for lo,hi in critical):
+            raise SystemExit('FDT memory reservation block overlaps firmware')
     for node,regions in fixed.items():
         for x in regions:
             b=int(x['base'],16); e=b+int(x['size'],16)
@@ -59,6 +73,7 @@ def main():
             'predicted_initrd_start':hex(ra),'predicted_initrd_end':hex(ra+size),
             'uefi_initrd_reservation':['0x44000000','0x44400000'],
             'dtb_fixed_reservations':fixed,'dtb_dynamic_reservations':dynamic,
+            'dtb_memreserve':[{'base':hex(b),'size':hex(s)} for b,s in reserve_map],
             'limitations':['OTA identity is not certificate or hardware LK verification',
                            'LK runtime FDT changes, dynamic reservations and active target LK not observed',
                            'runtime FDT pointer and actual initrd need early firmware validation']}
