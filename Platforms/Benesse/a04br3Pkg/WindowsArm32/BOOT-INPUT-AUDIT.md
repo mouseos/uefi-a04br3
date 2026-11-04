@@ -1,5 +1,9 @@
 # ARM32診断入力の静的照合
 
+追記: 後続の試作では機種BootShimへFDコピー前のFDT検査とRTC経由の有限時間
+復旧を接続した。以下の未接続に関する記述は変更前の記録。実際のLK FDT、
+動的予約の表現、復旧の実機動作は依然として未検証。
+
 `scripts/audit-boot-inputs.py OTA.zip STOCK_BOOT DTB EDK2_MTK_REPO` は、OTAの
 boot.imgとのバイト一致と機種・版metadata、DTBと `mouseos/edk2-mtk` の固定
 `1982d888c765f5b12f6e0dce71f1ed8bc92ac50b` blobとの一致、Android header、

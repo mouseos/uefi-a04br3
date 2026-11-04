@@ -34,7 +34,8 @@ def main():
     if (m.get('status') != 'diagnostic-only-not-for-device' or m.get('shimmed_fd_sha256') != sha(fw) or
         m.get('build_defines', {}).get('A04BR3_BOOT_DIAGNOSTIC') != '1' or
         s.get('A04BR3_A64_WDT_SECONDS') != 120 or s.get('A04BR3_OFFLINE_WDT_UNBOUNDED') != 0 or
-        s.get('A04BR3_WORKER_HEARTBEAT') != 1 or s.get('A04BR3_WORKER_NO_UART_RESET') != 0):
+        s.get('A04BR3_WORKER_HEARTBEAT') != 1 or s.get('A04BR3_WORKER_NO_UART_RESET') != 0 or
+        s.get('A04BR3_EARLY_FDT_GUARD') != 1):
         raise SystemExit('firmware manifest is not the bounded diagnostic')
     blob = dtb.read_bytes()
     if len(blob) < 40 or blob[:4] != b'\xd0\x0d\xfe\xed' or struct.unpack_from('>I',blob,4)[0] != len(blob):

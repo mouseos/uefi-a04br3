@@ -2,6 +2,12 @@
 #ifndef A04BR3_OFFLINE_WDT_UNBOUNDED
 #define A04BR3_OFFLINE_WDT_UNBOUNDED 0
 #endif
+#ifndef A04BR3_EARLY_FDT_GUARD
+#define A04BR3_EARLY_FDT_GUARD 0
+#endif
+#if A04BR3_EARLY_FDT_GUARD == 1 && A04BR3_A64_CPU_TEST != 1
+#error Early FDT guard requires the board shim stack
+#endif
 #ifndef A04BR3_WORKER_NO_UART_RESET
 #define A04BR3_WORKER_NO_UART_RESET 0
 #endif
@@ -81,6 +87,32 @@ _Start:
     bl _CleanInvalidateDataCacheAll
     mov x0, x20
     mov x1, x21
+#if A04BR3_EARLY_FDT_GUARD == 1
+    // LK's tags window is bounded before the first FDT load.  The temporary
+    // stack is part of the already loaded shim, not the future FD or HOB.
+    mrs x6, CurrentEL
+    cmp x6, #8
+    b.ne _Dead
+    msr spsel, #1
+    adr x6, _A64StackTop
+    mov sp, x6
+    movz x6, #0x4e00, lsl #16
+    cmp x20, x6
+    b.lo _A04FdtFailure
+    movz x7, #0x4e20, lsl #16
+    sub x7, x7, #40
+    cmp x20, x7
+    b.hi _A04FdtFailure
+    tst x20, #7
+    b.ne _A04FdtFailure
+    mov x0, x20
+    movz x1, #0x4e20, lsl #16
+    sub x1, x1, x20
+    bl A04FdtGuard
+    cbnz w0, _A04FdtFailure
+    mov x0, x20
+    mov x1, x21
+#endif
 	mov	x4, x1
 	ldr	x5, _StackBase
 	cmp	x4, x5
@@ -123,6 +155,14 @@ _Entry:
 _Dead:
 	/* We should never get here */
 	b	_Dead
+#if A04BR3_EARLY_FDT_GUARD == 1
+_A04FdtFailure:
+    // Never reset before the RTC fastboot flag reads back. If PWRAP/RTC or
+    // watchdog enabling fails, remain halted for the operator to recover.
+    bl A04PrepareFastbootRecovery
+1:  wfe
+    b 1b
+#endif
 
 // Based on the BSD-2-Clause-Patent SEC cache maintenance in UniXNU/uefi-sheng.
 _CleanInvalidateDataCacheAll:
@@ -683,6 +723,10 @@ _A64StackTop:
 #endif
 .text
 .align 4
+#if A04BR3_EARLY_FDT_GUARD == 1
+.section .payload,"ax"
+.balign 16
+#endif
 
 _Payload:
 	/* Your code will get ran right after this binary */

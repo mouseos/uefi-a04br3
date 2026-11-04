@@ -40,5 +40,8 @@ with tempfile.TemporaryDirectory() as tmp:
     dynamic=root/'dynamic.dts'; dynamic.write_text(dts.replace('reg = <0 0x43000000 0 0x30000>;','size = <0 0x30000>;'))
     subprocess.run(['dtc','-q','-I','dts','-O','dtb','-o',str(image),str(dynamic)],check=True)
     check(image.read_bytes(),False)
+    reserved=root/'reserve.dts'; reserved.write_text(dts.replace('/dts-v1/;', '/dts-v1/;\n/memreserve/ 0x41080000 0x1000;'))
+    subprocess.run(['dtc','-q','-I','dts','-O','dtb','-o',str(image),str(reserved)],check=True)
+    check(image.read_bytes(),False)
     bad=bytearray(baseline);bad[0]=0;check(bad,False)
 print('FDT guard accepts fixture and rejects truncated, conflicting and unresolved reservations')

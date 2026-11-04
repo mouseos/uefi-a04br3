@@ -66,12 +66,28 @@ if [[ $three != 0 ]]; then
   fv="$root/Build/$output/DEBUG_GCC5/FV"
   offline=1; no_uart=1; seconds=420
   if [[ $three == 2 ]]; then offline=0; no_uart=0; seconds=120; fi
+  guard=0; if [[ $three == 2 ]]; then guard=1; fi
   "$a64prefix"gcc -c "$root/Platforms/Benesse/a04br3Pkg/WindowsArm32/BootShim/BootShim.S" -o "$fv/BootShim.o" \
     -DUEFI_BASE=0x41080000 -DUEFI_SIZE=0x300000 -DA04BR3_A64_CPU_TEST=1 -DA04BR3_A32_SECONDARY_TEST=1 \
     -DA04BR3_PARK_TEST=1 -DA04BR3_SMP_TEST=1 -DA04BR3_WDT_HANDOFF_TEST=0 -DA04BR3_FOUR_CPU_TEST=0 \
     -DA04BR3_A64_WDT_TEST=1 -DA04BR3_A64_WDT_SECONDS="$seconds" -DA04BR3_KERNEL_MARKER=0 -DA04BR3_FB_MONITOR=0 \
-    -DA04BR3_OFFLINE_WDT_UNBOUNDED="$offline" -DA04BR3_WORKER_NO_UART_RESET="$no_uart" -DA04BR3_WORKER_HEARTBEAT=1
-  "$a64prefix"objcopy -O binary "$fv/BootShim.o" "$fv/BootShim.bin"
+    -DA04BR3_OFFLINE_WDT_UNBOUNDED="$offline" -DA04BR3_WORKER_NO_UART_RESET="$no_uart" -DA04BR3_WORKER_HEARTBEAT=1 \
+    -DA04BR3_EARLY_FDT_GUARD="$guard"
+  shimobj="$fv/BootShim.o"
+  if [[ $guard == 1 ]]; then
+    shimdir="$root/Platforms/Benesse/a04br3Pkg/WindowsArm32/BootShim"
+    for src in FdtGuard EarlyRecovery; do
+      "$a64prefix"gcc -c -O2 -ffreestanding -fno-stack-protector -fno-builtin -fno-pic -fno-pie \
+        -fno-asynchronous-unwind-tables -fno-unwind-tables -mgeneral-regs-only "$shimdir/$src.c" -o "$fv/$src.o"
+    done
+    cat > "$conf/shim.ld" <<'EOF'
+SECTIONS { . = 0; .text : { *(.text*) *(.rodata*) . = ALIGN(16); *(.payload*) }
+ /DISCARD/ : { *(.comment*) *(.note*) *(.eh_frame*) } }
+EOF
+    "$a64prefix"ld -T "$conf/shim.ld" -o "$fv/BootShim.linked" "$fv/BootShim.o" "$fv/FdtGuard.o" "$fv/EarlyRecovery.o"
+    shimobj="$fv/BootShim.linked"
+  fi
+  "$a64prefix"objcopy -O binary "$shimobj" "$fv/BootShim.bin"
 fi
 python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" <<'PY'
 from pathlib import Path
@@ -111,7 +127,7 @@ result={'status':'diagnostic-only-not-for-device','source_commit':git(root,'rev-
  'limitations':['single CPU only','watchdog worker and parking not connected','RP attribute unsupported','MMU runtime, cache and NVS unverified','libgcc ABI warnings unreviewed']}
 if three != '0':
  import shutil,struct
- obj=fd.parent/'BootShim.o'; shim=fd.parent/'BootShim.bin'; data=shim.read_bytes()
+ obj=fd.parent/('BootShim.linked' if three == '2' else 'BootShim.o'); shim=fd.parent/'BootShim.bin'; data=shim.read_bytes()
  rel=subprocess.check_output([a64prefix+'readelf','-r',str(obj)],text=True)
  if 'There are no relocations' not in rel: raise SystemExit('BootShim contains relocations')
  nm=subprocess.check_output([a64prefix+'nm','-n',str(obj)],text=True)
@@ -121,13 +137,14 @@ if three != '0':
  combined=fd.parent/'SILICIUM_UEFI.fd.shimmed'
  with combined.open('wb') as dest, fd.open('rb') as src:
   dest.write(data); shutil.copyfileobj(src,dest)
- names=('gcc','objcopy','readelf','nm')
+ names=('gcc','ld','objcopy','readelf','nm')
  result['aarch64_tools']={n:sha(Path(shutil.which(a64prefix+n) or a64prefix+n)) for n in names}
  result['build_defines'].update(A04BR3_EXPERIMENTAL_THREE_CPU='1',A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT='1')
  result['shim_defines']={'UEFI_BASE':'0x41080000','UEFI_SIZE':'0x300000','A04BR3_A64_CPU_TEST':1,
   'A04BR3_A32_SECONDARY_TEST':1,'A04BR3_PARK_TEST':1,'A04BR3_SMP_TEST':1,'A04BR3_WDT_HANDOFF_TEST':0,
   'A04BR3_FOUR_CPU_TEST':0,'A04BR3_A64_WDT_TEST':1,'A04BR3_A64_WDT_SECONDS':120 if three == '2' else 420,'A04BR3_KERNEL_MARKER':0,
   'A04BR3_FB_MONITOR':0,'A04BR3_OFFLINE_WDT_UNBOUNDED':0 if three == '2' else 1,'A04BR3_WORKER_NO_UART_RESET':0 if three == '2' else 1,'A04BR3_WORKER_HEARTBEAT':1}
+ result['shim_defines']['A04BR3_EARLY_FDT_GUARD']=1 if three == '2' else 0
  result.update(shim_sha256=sha(shim),shim_bytes=len(data),shimmed_fd_sha256=sha(combined),shimmed_fd_bytes=combined.stat().st_size)
  result['limitations']=['experimental three CPU; no runtime validation','worker heartbeat is not proof of watchdog operation',
   'other reset sources not excluded','DISM forbidden','RP attribute unsupported',

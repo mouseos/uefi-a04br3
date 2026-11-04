@@ -1,5 +1,12 @@
 # ARM32 3 CPU有限時間起動診断
 
+機種BootShimの試作FDTガードは、FDコピー前にshim内の専用スタックを使い、
+LK引継ぎFDTの予約・initrdを検査する。FDTが対応範囲外・不正・未解決なら、
+RTC fastbootフラグの設定と読戻しに成功した場合のみwatchdogを有効化して停止
+する。RTCまたはwatchdogの操作に失敗した場合は停止し、復帰を保証しない。
+この経路はホストmock・リンク検査のみで、実際のLK FDT、ハードウェアのRTC・
+PWRAP・watchdog、復旧は未検証。実機での成功を前提にしない。
+
 `A04_DIAGNOSTIC_THREE_CPU=2` はディスク保守とは別の実験用設定。CPU1を
 workerに予約し、CPU0/2/3のMADT・SSDTとparkingを試す。旧edk2-mtkの
 実機WinPE実績はこの構成の証拠ではない。
