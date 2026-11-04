@@ -78,7 +78,7 @@ if [[ $three != 0 ]]; then
     shimdir="$root/Platforms/Benesse/a04br3Pkg/WindowsArm32/BootShim"
     for src in FdtGuard EarlyRecovery; do
       "$a64prefix"gcc -c -O2 -ffreestanding -fno-stack-protector -fno-builtin -fno-pic -fno-pie \
-        -fno-asynchronous-unwind-tables -fno-unwind-tables -mgeneral-regs-only "$shimdir/$src.c" -o "$fv/$src.o"
+        -fno-asynchronous-unwind-tables -fno-unwind-tables -mgeneral-regs-only -mstrict-align "$shimdir/$src.c" -o "$fv/$src.o"
     done
     cat > "$conf/shim.ld" <<'EOF'
 SECTIONS { . = 0; .text : { *(.text*) *(.rodata*) . = ALIGN(16); *(.payload*) }

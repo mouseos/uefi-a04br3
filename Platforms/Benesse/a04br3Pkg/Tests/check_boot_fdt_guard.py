@@ -27,6 +27,11 @@ with tempfile.TemporaryDirectory() as tmp:
         result=guard(buf,len(data))
         if (result==0)!=ok: raise AssertionError((result,ok))
     baseline=image.read_bytes();check(baseline,True)
+    # The FDT structure itself is 8-aligned, but individual 64-bit reg
+    # values can be only 4-aligned. Exercise a deliberately offset buffer too.
+    shifted=ctypes.create_string_buffer(len(baseline)+8)
+    ctypes.memmove(ctypes.addressof(shifted)+4,baseline,len(baseline))
+    assert guard(ctypes.addressof(shifted)+4,len(baseline))==0
     for capacity in range(40): check(baseline[:capacity],False)
     def case(node,prop,values):
         copy=root/'changed.dtb';copy.write_bytes(baseline)

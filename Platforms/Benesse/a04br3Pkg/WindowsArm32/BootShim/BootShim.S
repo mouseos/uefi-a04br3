@@ -84,7 +84,15 @@ _Start:
     // Preserve LK arguments while cleaning the previous stage's cache state.
     mov x20, x0
     mov x21, x1
+#if A04BR3_EARLY_FDT_GUARD == 1
+    mov w0, #'0'
+    bl _A04EarlyMark
+#endif
     bl _CleanInvalidateDataCacheAll
+#if A04BR3_EARLY_FDT_GUARD == 1
+    mov w0, #'1'
+    bl _A04EarlyMark
+#endif
     mov x0, x20
     mov x1, x21
 #if A04BR3_EARLY_FDT_GUARD == 1
@@ -105,10 +113,16 @@ _Start:
     b.hi _A04FdtPointerFailure
     tst x20, #7
     b.ne _A04FdtPointerFailure
+    mov w0, #'2'
+    bl _A04EarlyMark
     mov x0, x20
     movz x1, #0x4e20, lsl #16
     sub x1, x1, x20
     bl A04FdtGuard
+    mov w19, w0
+    mov w0, #'3'
+    bl _A04EarlyMark
+    mov w0, w19
     cbnz w0, _A04FdtFailure
     mov x0, x20
     mov x1, x21
@@ -127,6 +141,12 @@ _CopyLoop:
 	ldr	x5, _StackBase
 
 _Entry:
+#if A04BR3_EARLY_FDT_GUARD == 1
+    mov w0, #'4'
+    bl _A04EarlyMark
+    mov x0, x20
+    mov x1, x21
+#endif
     // LK enters in AArch64 EL2. Enter ARM32 SVC with interrupts masked.
     mrs x6, CurrentEL
     cmp x6, #8
@@ -156,6 +176,31 @@ _Dead:
 	/* We should never get here */
 	b	_Dead
 #if A04BR3_EARLY_FDT_GUARD == 1
+// No stack, bounded polling and no writes while DLAB is selected.
+// Clobbers x0-x4 only; stages are emitted as "~N\n".
+_A04EarlyMark:
+    movz x2, #0x5000
+    movk x2, #0x1100, lsl #16
+    ldr w1, [x2, #0x0c]
+    tbnz w1, #7, 4f
+    and w4, w0, #0xff
+    lsl w4, w4, #8
+    orr w4, w4, #0x7e
+    mov w0, #10
+    orr w4, w4, w0, lsl #16
+    mov w3, #3
+1:  mov w0, #4096
+2:  ldr w1, [x2, #0x14]
+    tbnz w1, #5, 3f
+    subs w0, w0, #1
+    b.ne 2b
+    ret
+3:  and w1, w4, #0xff
+    str w1, [x2]
+    lsr w4, w4, #8
+    subs w3, w3, #1
+    b.ne 1b
+4:  ret
 _A04FdtPointerFailure:
     mov w0, #0x10
 _A04FdtFailure:

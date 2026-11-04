@@ -5,7 +5,10 @@
 #include <stddef.h>
 
 static uint32_t be32(const unsigned char *p) {
-  return ((uint32_t)p[0]<<24)|((uint32_t)p[1]<<16)|((uint32_t)p[2]<<8)|p[3];
+  /* FDT properties have only four-byte alignment. Do not let the compiler
+   * combine these into an unaligned 64-bit load while LK's SCTLR is in force. */
+  const volatile unsigned char *b = p;
+  return ((uint32_t)b[0]<<24)|((uint32_t)b[1]<<16)|((uint32_t)b[2]<<8)|b[3];
 }
 static uint64_t be64(const unsigned char *p) { return ((uint64_t)be32(p)<<32)|be32(p+4); }
 static int eq(const char *a,const char *b) { while (*a && *a==*b) { ++a; ++b; } return *a==*b; }
