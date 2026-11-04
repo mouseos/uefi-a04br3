@@ -50,14 +50,15 @@ _start:
   adr x1, exit_ok
   b quit
 failed:
-  adr x1, exit_bad
+  adr x1, exit_reject
 quit:
   mov x0, #0x20
   hlt #0xf000
 1: b 1b
 .balign 8
 exit_ok: .quad 0x20026, 0
-exit_bad: .quad 0x20026, 1
+exit_exception: .quad 0x20026, 1
+exit_reject: .quad 0x20026, 2
 .balign 8
 fixture: .incbin "FIXTURE_PATH"
 .balign 16
@@ -70,7 +71,7 @@ vectors:
   .space 124
 .endr
 exception:
-  adr x1, exit_bad
+  adr x1, exit_exception
   mov x0, #0x20
   hlt #0xf000
 2: b 2b
