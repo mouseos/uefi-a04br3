@@ -37,6 +37,24 @@
   DEFINE ENABLE_SECUREBOOT       = 0
 !endif
 
+# Canonical ARM32 has no legacy MOU0003/MOU0004 table variants.  Reject
+# their explicit selection instead of silently publishing overlapping owners.
+!ifndef A04BR3_SHARED_PARENT
+  DEFINE A04BR3_SHARED_PARENT = 0
+!endif
+!ifndef A04BR3_BUTTON_PROVIDER
+  DEFINE A04BR3_BUTTON_PROVIDER = 0
+!endif
+!ifndef A04BR3_TOUCH_PROVIDER
+  DEFINE A04BR3_TOUCH_PROVIDER = 0
+!endif
+!if $(A04BR3_SHARED_PARENT) != 0 && $(A04BR3_SHARED_PARENT) != 1
+  !error A04BR3_SHARED_PARENT must be 0 or 1
+!endif
+!if $(A04BR3_BUTTON_PROVIDER) != 0 || $(A04BR3_TOUCH_PROVIDER) != 0
+  !error canonical ARM32 has no legacy input provider; shared resources must remain exclusive
+!endif
+
   #
   # Unattended test cycle (UniXNU board.toml [firmware.defines]
   # A04BR3_TEST_CYCLE = "1"): from SEC on (A04BR3PlatformSecBoardLib) every
@@ -266,7 +284,11 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
     <LibraryClasses>
       NULL|MdeModulePkg/Library/LzmaCustomDecompressLib/LzmaCustomDecompressLib.inf
   }
+!if $(A04BR3_SHARED_PARENT) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesShared.inf
+!else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTables.inf
+!endif
   a04br3Pkg/Drivers/I2c1HandoffDxe/I2c1HandoffDxe.inf
   MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf
   MdeModulePkg/Universal/Acpi/AcpiPlatformDxe/AcpiPlatformDxe.inf
