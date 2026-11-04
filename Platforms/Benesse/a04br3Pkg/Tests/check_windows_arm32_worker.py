@@ -2,6 +2,7 @@
 """Compile actual board shim options and inspect the worker's timer branch."""
 from pathlib import Path
 import os
+import re
 import subprocess
 import tempfile
 
@@ -21,10 +22,19 @@ with tempfile.TemporaryDirectory(prefix='a04-worker-') as tmp:
         assert (result.returncode == 0) == ok, result.stderr
         if ok:
             dis = subprocess.check_output([prefix+'objdump', '-d', str(out)], text=True)
-            return dis.split('<_A64SecondaryProbe>:',1)[1][:1600]
+            body = dis.split('<_A64SecondaryProbe>:',1)[1]
+            return re.split(r'\n[0-9a-f]+ <[^>]+>:\n', body, maxsplit=1)[0]
     bounded = compile_case({**flags,'A04BR3_OFFLINE_WDT_UNBOUNDED':'0'})
     unbounded = compile_case({**flags,'A04BR3_OFFLINE_WDT_UNBOUNDED':'1'})
     assert 'cmp\tx10, x6' in bounded and 'cmp\tx10, x6' not in unbounded
+    assert 'str\tw16, [x7, #12]' in bounded
+    quiet = compile_case({**flags, 'A04BR3_KERNEL_MARKER':'0', 'A04BR3_FB_MONITOR':'0',
+                          'A04BR3_OFFLINE_WDT_UNBOUNDED':'1', 'A04BR3_WORKER_NO_UART_RESET':'1'})
+    assert 'str\tw16, [x19, #44]' in quiet
+    assert 'str\tw16, [x7, #12]' not in quiet
+    compile_case({**flags, 'A04BR3_OFFLINE_WDT_UNBOUNDED':'1', 'A04BR3_WORKER_NO_UART_RESET':'1'}, False)
+    compile_case({**flags, 'A04BR3_KERNEL_MARKER':'0', 'A04BR3_FB_MONITOR':'0',
+                  'A04BR3_OFFLINE_WDT_UNBOUNDED':'0', 'A04BR3_WORKER_NO_UART_RESET':'1'}, False)
     for key in ('A04BR3_FOUR_CPU_TEST', 'A04BR3_WDT_HANDOFF_TEST'):
         compile_case({**flags, key:'1','A04BR3_OFFLINE_WDT_UNBOUNDED':'1'}, False)
     compile_case({**flags, 'A04BR3_A64_WDT_TEST':'0','A04BR3_OFFLINE_WDT_UNBOUNDED':'1'}, False)

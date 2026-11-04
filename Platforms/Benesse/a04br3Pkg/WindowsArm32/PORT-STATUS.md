@@ -2,6 +2,14 @@
 
 ## 現在の作業ツリーの状態
 
+`A04BR3_WORKER_NO_UART_RESET=1` の試作は無期限workerのUARTリセット受信と
+UART診断出力を除外し、給餌レジスタへの書込み後に共有ページのカウンタを
+増やす。対応するDXE設定 `A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT=1` は
+カウンタの2回の変化を観測できなければ停止し、TOPRGU modeを記録する。
+このカウンタはwatchdogの有効化、継続動作、CPU故障時の保護、OS側やホスト側
+など他主体のリセット排他を保証しない。BootShimとDXEは必ず同じ試作設定を
+用いる必要がある。正本構成で実機検証しておらず、ディスク保守は禁止。
+
 以下の各節は当時の履歴であり、未接続やビルド失敗の記述を現在の状態と
 混同しない。専用worktreeではPrePi、ACPI、I2C1をDSC/FDFに接続し、
 ARM32診断FDを生成した。旧 `b8ca32e` を出自とする3 CPU DXEも試作し、

@@ -5,6 +5,7 @@
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/CacheMaintenanceLib.h>
+#include <Library/IoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Guid/EventGroup.h>
 #include <IndustryStandard/Acpi50.h>
@@ -16,6 +17,9 @@
 #define A04BR3_KERNEL_MARKER 1
 #define A04_SMP_CPU_COUNT 3
 #define A04_SMP_FIRST_AP 2
+#ifndef A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT
+#define A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT 0
+#endif
 extern UINT32 A04RequestA64Probe (UINT32 Context);
 extern UINT32 A04RequestParkingProbe (UINT32 Context, UINT32 CpuId);
 extern UINT8 A04ParkingStart[], A04ParkingEnd[];
@@ -107,6 +111,7 @@ STATIC VOID EFIAPI A04PublishSmp (EFI_EVENT Event, VOID *Context)
   Status = Tables->InstallAcpiTable (Tables, &New, sizeof (New), &NewKey);
   DEBUG ((DEBUG_ERROR, "A04SMP install MADT %r\n", Status));
   if (!EFI_ERROR (Status) && mProbePage != NULL) {
+#if A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT != 1
 #if A04BR3_FOUR_CPU_TEST == 1
     mProbePage[7] = (UINT32)(Page[1] + 0xffc);
     mProbePage[8] = (UINT32)(Page[2] + 0xffc);
@@ -117,6 +122,7 @@ STATIC VOID EFIAPI A04PublishSmp (EFI_EVENT Event, VOID *Context)
 #endif
     WriteBackDataCacheRange ((VOID *)mProbePage, 64);
     DEBUG ((DEBUG_ERROR, "A04SMP mailbox monitoring armed\n"));
+#endif
     mThreeCpuReady = TRUE;
   }
   if (EFI_ERROR (Status)) {
@@ -154,6 +160,21 @@ STATIC VOID ProbeSecondaryA64 (VOID)
     }
     DEBUG ((DEBUG_ERROR, "A04TRACE A64 secondary marker=%08x polls=%u\n", *Marker, (UINT32)Index));
     if (*Marker != 0xa064beef) CpuDeadLoop ();
+#if A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT == 1
+    {
+      UINT32 Last, Changes;
+      InvalidateDataCacheRange ((VOID *)Marker, 64);
+      Last = Marker[11];
+      Changes = 0;
+      for (Index = 0; Index < 12000 && Changes < 2; Index++) {
+        gBS->Stall (1000);
+        InvalidateDataCacheRange ((VOID *)Marker, 64);
+        if (Marker[11] != Last) { Last = Marker[11]; Changes++; }
+      }
+      if (Changes < 2) { DEBUG ((DEBUG_ERROR, "A04TRACE CPU1 feed counter stopped\n")); CpuDeadLoop (); }
+      DEBUG ((DEBUG_ERROR, "A04TRACE CPU1 feed writes changed twice; TOPRGU mode=%08x\n", MmioRead32 (0x10007000)));
+    }
+#endif
 #if A04BR3_A64_WDT_TEST == 1
     DEBUG ((DEBUG_ERROR, "A04TRACE CPU1 entry observed; watchdog state and continued feeding not verified\n"));
 #else

@@ -2,6 +2,18 @@
 #ifndef A04BR3_OFFLINE_WDT_UNBOUNDED
 #define A04BR3_OFFLINE_WDT_UNBOUNDED 0
 #endif
+#ifndef A04BR3_WORKER_NO_UART_RESET
+#define A04BR3_WORKER_NO_UART_RESET 0
+#endif
+#if A04BR3_WORKER_NO_UART_RESET != 0 && A04BR3_WORKER_NO_UART_RESET != 1
+#error Invalid worker UART reset option
+#endif
+#if A04BR3_WORKER_NO_UART_RESET == 1 && A04BR3_OFFLINE_WDT_UNBOUNDED != 1
+#error UART reset exclusion is restricted to the offline worker experiment
+#endif
+#if A04BR3_WORKER_NO_UART_RESET == 1 && (A04BR3_KERNEL_MARKER != 0 || A04BR3_FB_MONITOR != 0)
+#error Offline worker must not block on UART diagnostic output
+#endif
 #if A04BR3_OFFLINE_WDT_UNBOUNDED == 1 && (A04BR3_A64_WDT_TEST != 1 || A04BR3_A64_CPU_TEST != 1 || A04BR3_SMP_TEST != 1 || A04BR3_FOUR_CPU_TEST != 0 || A04BR3_WDT_HANDOFF_TEST != 0)
 #error Offline worker requires 3 CPU SMP and exclusive watchdog ownership
 #endif
@@ -312,12 +324,22 @@ _A64SecondaryProbe:
 #endif
     str w8, [x7]
     dsb sy
+#if A04BR3_WORKER_NO_UART_RESET == 1
+    // Reserved probe page, offset 44: completed feed writes, not proof that
+    // the watchdog is enabled or that any other reset source is excluded.
+    ldr w16, [x19, #44]
+    add w16, w16, #1
+    str w16, [x19, #44]
+    dsb sy
+#endif
 #if A04BR3_WDT_HANDOFF_TEST == 1
 52:
 #endif
     mov x11, #5
     madd x12, x4, x11, x9
-3:  // Honor the existing reset command even after Boot Services exit.
+3:
+#if A04BR3_WORKER_NO_UART_RESET != 1
+    // Honor the existing reset command even after Boot Services exit.
     // Never read RBR when DLAB is set during UART reconfiguration.
     ldr w16, [x15, #0x0c]
     tbnz w16, #7, 4f
@@ -414,6 +436,7 @@ _A64SecondaryProbe:
     adr x13, _A64ResetCommand
     cmp w17, #'A'
     cinc x14, x14, eq
+#endif
 4:
 #if A04BR3_FOUR_CPU_TEST == 1
     // CPU1 keeps the watchdog/UART worker until Windows requests its mailbox.
