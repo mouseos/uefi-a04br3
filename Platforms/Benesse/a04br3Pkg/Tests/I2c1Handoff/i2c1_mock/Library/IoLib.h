@@ -1,0 +1,2 @@
+UINT32 MmioRead32(UINT32); UINT16 MmioRead16(UINT32);
+void MmioWrite32(UINT32,UINT32); void MmioWrite16(UINT32,UINT16);
