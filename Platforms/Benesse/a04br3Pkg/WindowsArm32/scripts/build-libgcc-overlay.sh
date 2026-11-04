@@ -30,6 +30,12 @@ for func in "${functions[@]}"; do
   "$gcc" -c "${flags[@]}" -DMIN_UNITS_PER_WORD=4 -D"L_${func}" \
     -I"$work/headers" -I"$work/$base/libgcc" -I"$work/$base/include" \
     "$work/$base/libgcc/libgcc2.c" -o "$work/new/_${func}.o"
+  "${prefix}readelf" -A "$work/new/_${func}.o" > "$work/new/$func.attributes"
+  "${prefix}readelf" -A "$work/old/_${func}.o" > "$work/old/$func.attributes"
+  grep -q '^  Tag_ABI_PCS_wchar_t: 2$' "$work/new/$func.attributes"
+  grep -q '^  Tag_ABI_enum_size: int$' "$work/new/$func.attributes"
+  diff -u <(sed '/Tag_ABI_PCS_wchar_t/d; /Tag_ABI_enum_size/d' "$work/old/$func.attributes") \
+          <(sed '/Tag_ABI_PCS_wchar_t/d; /Tag_ABI_enum_size/d' "$work/new/$func.attributes")
 done
 python3 - "$work" <<'PY'
 from pathlib import Path
@@ -77,7 +83,7 @@ def sha(p):
 data={'status':'experimental-not-integrated','gcc_source_archive_sha256':sha(archive),
       'original_libgcc_sha256':sha(original),'overlay_libgcc_sha256':sha(out+'/libgcc.a'),
       'gcc_sha256':sha(gcc),'qemu_sha256':sha(qemu),'qemu_test_vectors':4096,
-      'validation':'seven rebuilt objects match original allocated sections, globals and relocations',
+      'validation':'seven rebuilt objects match original allocated sections, globals, relocations and other ARM attributes',
       'limitations':['generated GCC configuration headers are minimal, not official build outputs',
                      'firmware link and target execution not verified']}
 open(out+'/manifest.json','w').write(json.dumps(data,indent=2)+'\n')
