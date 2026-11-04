@@ -7,7 +7,24 @@ fi
 canonical=$(realpath "$1"); oldtools=$(realpath "$2"); template=$(realpath "$3"); gccprefix=$4; output=$5
 three=${A04_DIAGNOSTIC_THREE_CPU:-0}
 a64prefix=${A04_AARCH64_PREFIX:-aarch64-linux-gnu-}
+overlay=${A04_LIBGCC_OVERLAY:-}
 [[ $three == 0 || $three == 1 ]] || exit 2
+if [[ -n $overlay ]]; then
+  overlay=$(realpath "$overlay")
+  [[ $three == 1 && $overlay != *[[:space:]]* && -f $overlay/libgcc.a && -f $overlay/manifest.json ]] || exit 2
+  python3 - "$overlay" "$gccprefix" <<'PY'
+import hashlib,json,subprocess,sys
+from pathlib import Path
+path=Path(sys.argv[1]); prefix=sys.argv[2]
+def sha(p):
+ with open(p,'rb') as f:return hashlib.file_digest(f,'sha256').hexdigest()
+m=json.loads((path/'manifest.json').read_text())
+original=subprocess.check_output([prefix+'gcc','-march=armv7-a','-mthumb','-mfloat-abi=soft','-print-libgcc-file-name'],text=True).strip()
+if (m.get('status')!='experimental-not-integrated' or m.get('overlay_libgcc_sha256')!=sha(path/'libgcc.a') or
+    m.get('original_libgcc_sha256')!=sha(original) or m.get('gcc_sha256')!=sha(prefix+'gcc')):
+ raise SystemExit('libgcc overlay manifest does not match the inputs')
+PY
+fi
 [[ $output =~ ^[A-Za-z0-9_-]+$ ]] || exit 2
 root=$(git rev-parse --show-toplevel)
 [[ -z $(git -C "$root" -c core.filemode=false status --porcelain --untracked-files=normal --ignore-submodules=all) ]] || { echo 'source worktree must be clean' >&2; exit 2; }
@@ -16,7 +33,7 @@ for f in "$template"/{target.txt,tools_def.txt,build_rule.txt} "$oldtools/ArmPkg
 conf=$(mktemp -d "${TMPDIR:-/tmp}/a04-windows-build.XXXXXXXX")
 trap 'rm -r -- "$conf"' EXIT
 cp "$template"/{target.txt,tools_def.txt,build_rule.txt} "$conf/"
-python3 - "$conf/tools_def.txt" "$root" "$oldtools" <<'PY'
+python3 - "$conf/tools_def.txt" "$root" "$oldtools" "$overlay" <<'PY'
 from pathlib import Path
 import sys
 p=Path(sys.argv[1]); s=p.read_text(); root=Path(sys.argv[2]); old=Path(sys.argv[3])
@@ -28,6 +45,10 @@ s=s.replace(needle, f'DEFINE GCC5_ARM_CC_FLAGS             = -I{inc} -I{inc}/Arm
 s=s.replace('*_GCC5_ARM_PP_FLAGS              = $(PLATFORM_FLAGS) DEF(GCC_PP_FLAGS)', '*_GCC5_ARM_PP_FLAGS              = -DEFI_REMOVABLE_MEDIA_FILE_NAME=EFI_REMOVABLE_MEDIA_FILE_NAME_EBC -D__UEFI_BASETYPE_H__ $(PLATFORM_FLAGS) DEF(GCC_PP_FLAGS)')
 s=s.replace('-L$(WORKSPACE)/ArmPkg/Library/GccLto',f'-L{old}/ArmPkg/Library/GccLto')
 s=s.replace('DEBUG_GCC5_ARM_CC_FLAGS        = DEF(GCC5_ARM_CC_FLAGS) -flto -Wno-unused-but-set-variable -Wno-unused-const-variable','DEBUG_GCC5_ARM_CC_FLAGS        = DEF(GCC5_ARM_CC_FLAGS) -flto -Wno-unused-but-set-variable -Wno-unused-const-variable -lgcc')
+if sys.argv[4]:
+ needle='DEFINE GCC5_ARM_DLINK_FLAGS          = DEF(GCC49_ARM_DLINK_FLAGS)'
+ assert s.count(needle)==1
+ s=s.replace(needle, f'DEFINE GCC5_ARM_DLINK_FLAGS          = -L{sys.argv[4]} DEF(GCC49_ARM_DLINK_FLAGS)')
 p.write_text(s)
 PY
 export WORKSPACE=$root EDK_TOOLS_PATH="$canonical/Mu_Basecore/BaseTools" CONF_PATH=$conf
@@ -49,10 +70,10 @@ if [[ $three == 1 ]]; then
     -DA04BR3_OFFLINE_WDT_UNBOUNDED=1 -DA04BR3_WORKER_NO_UART_RESET=1
   "$a64prefix"objcopy -O binary "$fv/BootShim.o" "$fv/BootShim.bin"
 fi
-python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" <<'PY'
+python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" <<'PY'
 from pathlib import Path
 import hashlib,json,subprocess,sys
-root,canonical,old,template,gccprefix,output,conf,three,a64prefix=sys.argv[1:]
+root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay=sys.argv[1:]
 def sha(path):
  h=hashlib.sha256()
  with open(path,'rb') as f:
@@ -108,6 +129,10 @@ if three == '1':
  result['limitations']=['experimental three CPU; no runtime validation','worker heartbeat is not proof of watchdog operation',
   'other reset sources not excluded','DISM forbidden','RP attribute unsupported',
   'MMU runtime, cache and NVS unverified','libgcc ABI warnings unreviewed']
+ if overlay:
+  result['libgcc_overlay']={'libgcc_sha256':sha(Path(overlay)/'libgcc.a'),
+                            'manifest_sha256':sha(Path(overlay)/'manifest.json')}
+  result['limitations'][-1]='experimental libgcc overlay; firmware link and target ABI not verified'
 (fd.parent/'diagnostic-manifest.json').write_text(json.dumps(result,indent=2)+'\n')
 print(json.dumps(result,indent=2))
 PY
