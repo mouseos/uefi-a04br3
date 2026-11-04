@@ -1,5 +1,40 @@
 # ARM32 3 CPU有限時間起動診断
 
+## 既存ESPを保持する主担当向け手順
+
+空ESP切替後の旧4 CPU試験では最初のUART resetから約90秒fastbootが現れず、
+UEFI Shell停留の後、2回目のUART resetで復帰した。これは候補bootの結果では
+ない。同条件を自動で繰り返さない。`fastboot boot` もこの機種ではinitrd引継ぎ
+不正の既存観測があるため使わない。
+
+`scripts/run-boot-only-diagnostic.py` は、主担当がfastboot状態と外部reset主体の
+排他を整えた後に実行する。候補と対応するboot manifest・firmware manifest、
+既知の復元bootとそのSHA-256、継続収集されているUARTログを指定する。候補の
+boot領域書込みとrebootの後、fastbootを一度離れたことと同一機種のfastboot
+復帰を両方観測した場合に限りboot領域を復元する。ESPを操作しない。
+復元コマンドの成功はreadbackではない。タイムアウト、コマンド失敗、信号、
+不明状態ではresetや復元を自動実行せず、主担当が状態を確認する。
+
+```
+python3 Platforms/Benesse/a04br3Pkg/WindowsArm32/scripts/run-boot-only-diagnostic.py \
+  SERIAL CANDIDATE_BOOT BOOT_MANIFEST FIRMWARE_MANIFEST \
+  RESTORE_BOOT RESTORE_SHA256 UART_LOG OUTPUT_DIR
+```
+
+`OUTPUT_DIR` は新規パス。`state.json` と `commands.log`、開始位置以降のUART
+スナップショットを残す。ロックはこのスクリプト間だけのホスト内排他であり、
+systemd、別ホスト、手動・ハードウェアresetを排除しない。試験中にディスク
+保守やDISMを開始しない。診断のReadyToBoot・ExitBootServices停止は実機未検証。
+
+## 早期UART
+
+FDコピー前の検査失敗は `A04FDT FAIL=0xNN` を送る。`10` はFDTポインタの
+範囲・アラインメント、`01`〜`09` はそれぞれmagic、ヘッダー範囲、予約マップ、
+予約衝突、構造、予約node、initrd property、memory reg、最終整合性のエラー。
+続いて `A04FDT RECOVERY=RTC_WDT_ARMED` または `FAILED_HALT` を送る。UARTが
+未準備・DLAB有効・送信不可のときはbounded pollingで出力を省き、出力がない
+ことを成功と扱わない。RTCフラグの読戻し前にwatchdogを新規設定しない。
+
 機種BootShimの試作FDTガードは、FDコピー前にshim内の専用スタックを使い、
 LK引継ぎFDTの予約・initrdを検査する。FDTが対応範囲外・不正・未解決なら、
 RTC fastbootフラグの設定と読戻しに成功した場合のみwatchdogを有効化して停止

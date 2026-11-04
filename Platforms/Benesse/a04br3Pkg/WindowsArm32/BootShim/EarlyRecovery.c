@@ -11,6 +11,21 @@ extern void wr(uintptr_t,uint32_t);
 #define RDATA 0x1000f0a4U
 #define CMD 0x1000f0a0U
 #define VLD 0x1000f0a8U
+#define UART 0x11005000U
+/* LK leaves UART configured. Bounded polling must not block RTC recovery. */
+static void putc_early(uint32_t c) {
+  uint32_t i;
+  if(rd(UART+0x0c)&0x80U) return;
+  for(i=0;i<4096;i++) if(rd(UART+0x14)&0x20U) {wr(UART,c);return;}
+}
+static void text_early(const char *s) { while(*s) putc_early((unsigned char)*s++); }
+void A04FdtReport(uint32_t code) {
+  static const char hex[]="0123456789ABCDEF";
+  text_early("\nA04FDT FAIL=0x");putc_early(hex[(code>>4)&15]);putc_early(hex[code&15]);putc_early('\n');
+}
+void A04RecoveryReport(uint32_t ok) {
+  text_early(ok ? "A04FDT RECOVERY=RTC_WDT_ARMED\n" : "A04FDT RECOVERY=FAILED_HALT\n");
+}
 static int wacs(int write,uint32_t addr,uint32_t data,uint32_t *out) {
   uint32_t s,i;
   for(i=0;i<1000000;i++) { s=rd(RDATA); if(!(s&(1U<<21))) return 0;

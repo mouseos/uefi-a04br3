@@ -98,13 +98,13 @@ _Start:
     mov sp, x6
     movz x6, #0x4e00, lsl #16
     cmp x20, x6
-    b.lo _A04FdtFailure
+    b.lo _A04FdtPointerFailure
     movz x7, #0x4e20, lsl #16
     sub x7, x7, #40
     cmp x20, x7
-    b.hi _A04FdtFailure
+    b.hi _A04FdtPointerFailure
     tst x20, #7
-    b.ne _A04FdtFailure
+    b.ne _A04FdtPointerFailure
     mov x0, x20
     movz x1, #0x4e20, lsl #16
     sub x1, x1, x20
@@ -156,10 +156,14 @@ _Dead:
 	/* We should never get here */
 	b	_Dead
 #if A04BR3_EARLY_FDT_GUARD == 1
+_A04FdtPointerFailure:
+    mov w0, #0x10
 _A04FdtFailure:
     // Never reset before the RTC fastboot flag reads back. If PWRAP/RTC or
     // watchdog enabling fails, remain halted for the operator to recover.
+    bl A04FdtReport
     bl A04PrepareFastbootRecovery
+    bl A04RecoveryReport
 1:  wfe
     b 1b
 #endif
