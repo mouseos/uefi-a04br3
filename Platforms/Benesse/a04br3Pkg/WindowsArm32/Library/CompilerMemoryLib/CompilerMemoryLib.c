@@ -9,3 +9,11 @@ void *memcpy(void *dst, const void *src, UINTN count)
   for (i = 0; i < count; ++i) d[i] = s[i];
   return dst;
 }
+
+void *memset(void *dst, int value, UINTN count)
+{
+  volatile UINT8 *d = dst;
+  UINTN i;
+  for (i = 0; i < count; ++i) d[i] = (UINT8)value;
+  return dst;
+}

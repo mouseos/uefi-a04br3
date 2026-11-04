@@ -22,7 +22,7 @@
   PLATFORM_GUID                  = 5BBBD0DF-844D-42FF-8CC6-E5A04C8467A9
   PLATFORM_VERSION               = 0.1
   DSC_SPECIFICATION              = 0x00010005
-  OUTPUT_DIRECTORY               = Build/a04br3WindowsArm32
+  OUTPUT_DIRECTORY               = $(A04_BUILD_OUTPUT)
   SUPPORTED_ARCHITECTURES        = ARM
   BUILD_TARGETS                  = RELEASE|DEBUG
   SKUID_IDENTIFIER               = DEFAULT
@@ -265,6 +265,7 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
   a04br3Pkg/WindowsArm32/PrePi/PrePi.inf {
     <LibraryClasses>
       NULL|MdeModulePkg/Library/LzmaCustomDecompressLib/LzmaCustomDecompressLib.inf
+      NULL|a04br3Pkg/WindowsArm32/Library/EarlyStackGuard/EarlyStackGuard.inf
   }
   a04br3Pkg/WindowsArm32/Acpi/AcpiTables.inf
   a04br3Pkg/Drivers/I2c1HandoffDxe/I2c1HandoffDxe.inf

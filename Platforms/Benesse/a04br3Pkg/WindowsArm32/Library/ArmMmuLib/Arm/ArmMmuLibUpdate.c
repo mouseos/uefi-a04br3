@@ -17,6 +17,7 @@
 #include <Library/MemoryAllocationLib.h>
 
 #include <Chipset/ArmV7.h>
+#include "A04AttributeMask.h"
 
 #define __EFI_MEMORY_RWX  0                 // no restrictions
 
@@ -81,6 +82,7 @@ UpdatePageEntries (
   IN  EFI_PHYSICAL_ADDRESS  BaseAddress,
   IN  UINT64                Length,
   IN  UINT64                Attributes,
+  IN  UINT64                AttributeMask,
   OUT BOOLEAN               *FlushTlbs OPTIONAL
   )
 {
@@ -147,6 +149,9 @@ UpdatePageEntries (
   } else {
     EntryValue |= TT_DESCRIPTOR_PAGE_AP_RW_RW;
   }
+
+  A04FilterDescriptorMask (AttributeMask, TT_DESCRIPTOR_PAGE_XN_MASK,
+                           TT_DESCRIPTOR_PAGE_AP_MASK, &EntryMask, &EntryValue);
 
   // Obtain page table base
   FirstLevelTable = (ARM_FIRST_LEVEL_DESCRIPTOR *)ArmGetTTBR0BaseAddress ();
@@ -216,7 +221,8 @@ EFI_STATUS
 UpdateSectionEntries (
   IN EFI_PHYSICAL_ADDRESS  BaseAddress,
   IN UINT64                Length,
-  IN UINT64                Attributes
+  IN UINT64                Attributes,
+  IN UINT64                AttributeMask
   )
 {
   EFI_STATUS                           Status;
@@ -281,6 +287,9 @@ UpdateSectionEntries (
     EntryValue |= TT_DESCRIPTOR_SECTION_XN_MASK;
   }
 
+  A04FilterDescriptorMask (AttributeMask, TT_DESCRIPTOR_SECTION_XN_MASK,
+                           TT_DESCRIPTOR_SECTION_AP_MASK, &EntryMask, &EntryValue);
+
   // obtain page table base
   FirstLevelTable = (ARM_FIRST_LEVEL_DESCRIPTOR *)ArmGetTTBR0BaseAddress ();
 
@@ -302,6 +311,7 @@ UpdateSectionEntries (
                  (FirstLevelIdx + i) << TT_DESCRIPTOR_SECTION_BASE_SHIFT,
                  TT_DESCRIPTOR_SECTION_SIZE,
                  Attributes,
+                 AttributeMask,
                  NULL
                  );
     } else {
@@ -332,25 +342,47 @@ UpdateSectionEntries (
   return Status;
 }
 
+/* Refuse fault/supersection descriptors before modifying a partial range.
+   GIC/firmware map uses identity-mapped 32-bit table addresses. */
+STATIC EFI_STATUS
+A04ValidateMappedRange (EFI_PHYSICAL_ADDRESS Base, UINT64 Length)
+{
+  volatile ARM_FIRST_LEVEL_DESCRIPTOR *L1;
+  volatile ARM_PAGE_TABLE_ENTRY *L2;
+  UINT64 Off;
+  UINT32 D, P;
+  L1 = (ARM_FIRST_LEVEL_DESCRIPTOR *)ArmGetTTBR0BaseAddress ();
+  if (L1 == NULL) return EFI_NO_MAPPING;
+  for (Off = 0; Off < Length; Off += TT_DESCRIPTOR_PAGE_SIZE) {
+    D = L1[(UINTN)(Base + Off) >> TT_DESCRIPTOR_SECTION_BASE_SHIFT];
+    if ((D & TT_DESCRIPTOR_SECTION_TYPE_MASK) == TT_DESCRIPTOR_SECTION_TYPE_SECTION) continue;
+    if (!TT_DESCRIPTOR_SECTION_TYPE_IS_PAGE_TABLE (D)) return EFI_NO_MAPPING;
+    L2 = (ARM_PAGE_TABLE_ENTRY *)(UINTN)TT_DESCRIPTOR_PAGE_BASE_ADDRESS (D);
+    P = L2[((UINTN)(Base + Off) & TT_DESCRIPTOR_PAGE_INDEX_MASK) >> TT_DESCRIPTOR_PAGE_BASE_SHIFT];
+    if ((P & 2U) == 0) return EFI_NO_MAPPING;
+  }
+  return EFI_SUCCESS;
+}
+
 EFI_STATUS
 ArmSetMemoryAttributes (
   IN EFI_PHYSICAL_ADDRESS  BaseAddress,
   IN UINT64                Length,
-  IN UINT64                Attributes
+  IN UINT64                Attributes,
+  IN UINT64                AttributeMask
   )
 {
   EFI_STATUS  Status;
   UINT64      ChunkLength;
   BOOLEAN     FlushTlbs;
 
-  if (BaseAddress > (UINT64)MAX_ADDRESS) {
-    return EFI_UNSUPPORTED;
-  }
-
-  Length = MIN (Length, (UINT64)MAX_ADDRESS - BaseAddress + 1);
-  if (Length == 0) {
-    return EFI_SUCCESS;
-  }
+  Status = A04ValidateAttributeRequest (BaseAddress, Length, Attributes, AttributeMask);
+  if (EFI_ERROR (Status)) return Status;
+  if (Attributes == 0 && AttributeMask == 0) return EFI_SUCCESS;
+  Status = A04ValidateMappedRange (BaseAddress, Length);
+  if (EFI_ERROR (Status)) return Status;
+  if ((Attributes & (EFI_MEMORY_UC | EFI_MEMORY_WC | EFI_MEMORY_WT | EFI_MEMORY_WB)) != 0)
+    AttributeMask = EFI_MEMORY_RO | EFI_MEMORY_XP;
 
   FlushTlbs = FALSE;
   while (Length > 0) {
@@ -367,7 +399,7 @@ ArmSetMemoryAttributes (
         Attributes
         ));
 
-      Status = UpdateSectionEntries (BaseAddress, ChunkLength, Attributes);
+      Status = UpdateSectionEntries (BaseAddress, ChunkLength, Attributes, AttributeMask);
 
       FlushTlbs = TRUE;
     } else {
@@ -393,6 +425,7 @@ ArmSetMemoryAttributes (
                  BaseAddress,
                  ChunkLength,
                  Attributes,
+                 AttributeMask,
                  &FlushTlbs
                  );
     }
@@ -418,7 +451,7 @@ ArmSetMemoryRegionNoExec (
   IN  UINT64                Length
   )
 {
-  return ArmSetMemoryAttributes (BaseAddress, Length, EFI_MEMORY_XP);
+  return ArmSetMemoryAttributes (BaseAddress, Length, EFI_MEMORY_XP, EFI_MEMORY_XP);
 }
 
 EFI_STATUS
@@ -427,7 +460,7 @@ ArmClearMemoryRegionNoExec (
   IN  UINT64                Length
   )
 {
-  return ArmSetMemoryAttributes (BaseAddress, Length, __EFI_MEMORY_RWX);
+  return ArmSetMemoryAttributes (BaseAddress, Length, __EFI_MEMORY_RWX, EFI_MEMORY_XP);
 }
 
 EFI_STATUS
@@ -436,7 +469,7 @@ ArmSetMemoryRegionReadOnly (
   IN  UINT64                Length
   )
 {
-  return ArmSetMemoryAttributes (BaseAddress, Length, EFI_MEMORY_RO);
+  return ArmSetMemoryAttributes (BaseAddress, Length, EFI_MEMORY_RO, EFI_MEMORY_RO);
 }
 
 EFI_STATUS
@@ -445,5 +478,5 @@ ArmClearMemoryRegionReadOnly (
   IN  UINT64                Length
   )
 {
-  return ArmSetMemoryAttributes (BaseAddress, Length, __EFI_MEMORY_RWX);
+  return ArmSetMemoryAttributes (BaseAddress, Length, __EFI_MEMORY_RWX, EFI_MEMORY_RO);
 }

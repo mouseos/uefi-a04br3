@@ -400,7 +400,10 @@
   # Processor Core Services
   #
   a04br3Pkg/WindowsArm32/Drivers/CpuDxe/CpuDxe.inf
-  ArmPkg/Drivers/ArmGicDxe/ArmGicDxe.inf
+  ArmPkg/Drivers/ArmGicDxe/ArmGicDxe.inf {
+    <LibraryClasses>
+      NULL|a04br3Pkg/WindowsArm32/Library/GicV3Compat/GicV3Compat.inf
+  }
   ArmPkg/Drivers/TimerDxe/TimerDxe.inf
 
   #

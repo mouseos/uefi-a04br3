@@ -13,7 +13,7 @@
 #include <Uefi.h>
 
 #include <A04ArmLib.h>
-#include <Library/ArmMmuLib.h>
+#include <A04ArmMmuLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/PcdLib.h>
