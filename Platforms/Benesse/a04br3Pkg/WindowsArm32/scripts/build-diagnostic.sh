@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# Build-only diagnostic. Never flash: this platform currently exposes one CPU.
+# Build-only diagnostic. Never flash: runtime and disk safety remain unverified.
 set -euo pipefail
 if [[ $# != 5 ]]; then
   echo 'usage: build-diagnostic.sh CANONICAL_UEFI_ROOT EDK2_TOOLS_ROOT CONF_TEMPLATE ARM_GCC_PREFIX OUTPUT_NAME' >&2; exit 2
 fi
 canonical=$(realpath "$1"); oldtools=$(realpath "$2"); template=$(realpath "$3"); gccprefix=$4; output=$5
+three=${A04_DIAGNOSTIC_THREE_CPU:-0}
+a64prefix=${A04_AARCH64_PREFIX:-aarch64-linux-gnu-}
+[[ $three == 0 || $three == 1 ]] || exit 2
 [[ $output =~ ^[A-Za-z0-9_-]+$ ]] || exit 2
 root=$(git rev-parse --show-toplevel)
 [[ -z $(git -C "$root" -c core.filemode=false status --porcelain --untracked-files=normal --ignore-submodules=all) ]] || { echo 'source worktree must be clean' >&2; exit 2; }
@@ -32,11 +35,24 @@ export PACKAGES_PATH="$root/Platforms/Benesse:$root/Silicon/MediaTek:$root/Silic
 export GCC5_ARM_PREFIX=$gccprefix PYTHON_COMMAND=python3 SOURCE_DATE_EPOCH
 SOURCE_DATE_EPOCH=$(git -C "$root" log -1 --format=%ct)
 export PATH="$oldtools/BaseTools/Source/C/bin:$EDK_TOOLS_PATH/BinWrappers/PosixLike:$PATH"
-"$EDK_TOOLS_PATH/BinWrappers/PosixLike/build" -p a04br3Pkg/WindowsArm32/WindowsArm32.dsc -a ARM -b DEBUG -t GCC5 -D FD_BASE=0x41080000 -D FD_SIZE=0x00300000 -D FD_BLOCKS=0x300 -D "A04_BUILD_OUTPUT=Build/$output"
-python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" <<'PY'
+buildflags=()
+if [[ $three == 1 ]]; then
+  buildflags=(-D A04BR3_EXPERIMENTAL_THREE_CPU=1 -D A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT=1)
+fi
+"$EDK_TOOLS_PATH/BinWrappers/PosixLike/build" -p a04br3Pkg/WindowsArm32/WindowsArm32.dsc -a ARM -b DEBUG -t GCC5 -D FD_BASE=0x41080000 -D FD_SIZE=0x00300000 -D FD_BLOCKS=0x300 -D "A04_BUILD_OUTPUT=Build/$output" "${buildflags[@]}"
+if [[ $three == 1 ]]; then
+  fv="$root/Build/$output/DEBUG_GCC5/FV"
+  "$a64prefix"gcc -c "$root/Platforms/Benesse/a04br3Pkg/WindowsArm32/BootShim/BootShim.S" -o "$fv/BootShim.o" \
+    -DUEFI_BASE=0x41080000 -DUEFI_SIZE=0x300000 -DA04BR3_A64_CPU_TEST=1 -DA04BR3_A32_SECONDARY_TEST=1 \
+    -DA04BR3_PARK_TEST=1 -DA04BR3_SMP_TEST=1 -DA04BR3_WDT_HANDOFF_TEST=0 -DA04BR3_FOUR_CPU_TEST=0 \
+    -DA04BR3_A64_WDT_TEST=1 -DA04BR3_A64_WDT_SECONDS=420 -DA04BR3_KERNEL_MARKER=0 -DA04BR3_FB_MONITOR=0 \
+    -DA04BR3_OFFLINE_WDT_UNBOUNDED=1 -DA04BR3_WORKER_NO_UART_RESET=1
+  "$a64prefix"objcopy -O binary "$fv/BootShim.o" "$fv/BootShim.bin"
+fi
+python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" <<'PY'
 from pathlib import Path
 import hashlib,json,subprocess,sys
-root,canonical,old,template,gccprefix,output,conf=sys.argv[1:]
+root,canonical,old,template,gccprefix,output,conf,three,a64prefix=sys.argv[1:]
 def sha(path):
  h=hashlib.sha256()
  with open(path,'rb') as f:
@@ -69,6 +85,29 @@ result={'status':'diagnostic-only-not-for-device','source_commit':git(root,'rev-
  'build_defines':{'FD_BASE':'0x41080000','FD_SIZE':'0x00300000','FD_BLOCKS':'0x300'},
  'inputs':{str(p):sha(p) for p in inputs},'fd_sha256':sha(fd),'fd_bytes':fd.stat().st_size,
  'limitations':['single CPU only','watchdog worker and parking not connected','RP attribute unsupported','MMU runtime, cache and NVS unverified','libgcc ABI warnings unreviewed']}
+if three == '1':
+ import shutil,struct
+ obj=fd.parent/'BootShim.o'; shim=fd.parent/'BootShim.bin'; data=shim.read_bytes()
+ rel=subprocess.check_output([a64prefix+'readelf','-r',str(obj)],text=True)
+ if 'There are no relocations' not in rel: raise SystemExit('BootShim contains relocations')
+ nm=subprocess.check_output([a64prefix+'nm','-n',str(obj)],text=True)
+ payload=int(next(x.split()[0] for x in nm.splitlines() if x.endswith(' _Payload')),16)
+ if payload!=len(data) or struct.unpack_from('<QQ',data,0x48)!=(0x41080000,0x300000):
+  raise SystemExit('BootShim payload or FD layout mismatch')
+ combined=fd.parent/'SILICIUM_UEFI.fd.shimmed'
+ with combined.open('wb') as dest, fd.open('rb') as src:
+  dest.write(data); shutil.copyfileobj(src,dest)
+ names=('gcc','objcopy','readelf','nm')
+ result['aarch64_tools']={n:sha(Path(shutil.which(a64prefix+n) or a64prefix+n)) for n in names}
+ result['build_defines'].update(A04BR3_EXPERIMENTAL_THREE_CPU='1',A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT='1')
+ result['shim_defines']={'UEFI_BASE':'0x41080000','UEFI_SIZE':'0x300000','A04BR3_A64_CPU_TEST':1,
+  'A04BR3_A32_SECONDARY_TEST':1,'A04BR3_PARK_TEST':1,'A04BR3_SMP_TEST':1,'A04BR3_WDT_HANDOFF_TEST':0,
+  'A04BR3_FOUR_CPU_TEST':0,'A04BR3_A64_WDT_TEST':1,'A04BR3_A64_WDT_SECONDS':420,'A04BR3_KERNEL_MARKER':0,
+  'A04BR3_FB_MONITOR':0,'A04BR3_OFFLINE_WDT_UNBOUNDED':1,'A04BR3_WORKER_NO_UART_RESET':1}
+ result.update(shim_sha256=sha(shim),shim_bytes=len(data),shimmed_fd_sha256=sha(combined),shimmed_fd_bytes=combined.stat().st_size)
+ result['limitations']=['experimental three CPU; no runtime validation','worker heartbeat is not proof of watchdog operation',
+  'other reset sources not excluded','DISM forbidden','RP attribute unsupported',
+  'MMU runtime, cache and NVS unverified','libgcc ABI warnings unreviewed']
 (fd.parent/'diagnostic-manifest.json').write_text(json.dumps(result,indent=2)+'\n')
 print(json.dumps(result,indent=2))
 PY
