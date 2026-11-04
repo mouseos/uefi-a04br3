@@ -1,6 +1,9 @@
 // Copyright (c) 2026. SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/PcdLib.h>
 #include <AsmMacroIoLib.h>
+#ifndef ASM_PFX
+#define ASM_PFX(name) name
+#endif
 .text
 .arm
 .align 2

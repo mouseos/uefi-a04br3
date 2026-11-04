@@ -84,7 +84,6 @@ READ_LOCK_STATUS   = TRUE
 
   # SmBios
   INF MdeModulePkg/Universal/SmbiosDxe/SmbiosDxe.inf
-  INF SiliciumPkg/Drivers/SmBiosTableDxe/SmBiosTableDxe.inf
 
   # UniXNU: the menu application and the driver that registers it as a boot
   # option, embedded in the firmware volume (UniXNU porting/uefi-firmware).

@@ -19,7 +19,7 @@
   #
   # ARM Libraries
   #
-  ArmSmcLib|MdePkg/Library/ArmSmcLib/ArmSmcLib.inf
+  ArmSmcLib|a04br3Pkg/WindowsArm32/Library/ArmSmcLib/ArmSmcLib.inf
 
   #
   # Memory Libraries
@@ -30,8 +30,4 @@
   #
   # Custom Drivers
   #
-  MediaTekPkg/Drivers/GpioDxe/GpioDxe.inf
-  MediaTekPkg/Drivers/ClockDxe/ClockDxe.inf
   MediaTekPkg/Drivers/PmicWrapperDxe/PmicWrapperDxe.inf
-  MediaTekPkg/Drivers/MT6358PmicDxe/MT6358PmicDxe.inf
-  MediaTekPkg/Drivers/MsdcDxe/MsdcDxe.inf

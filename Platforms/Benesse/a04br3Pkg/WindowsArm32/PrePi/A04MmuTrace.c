@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Base.h>
 #include <Library/DebugLib.h>
-#include <Library/ArmLib.h>
+#include <A04ArmLib.h>
 #include <Library/A04BR3TestCycleLib.h>
 
 VOID EFIAPI __real_ArmEnableMmu (VOID);

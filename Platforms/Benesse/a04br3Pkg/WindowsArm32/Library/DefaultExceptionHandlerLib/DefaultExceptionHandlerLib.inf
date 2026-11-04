@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+  INF_VERSION = 0x00010005
+  BASE_NAME = A04DefaultArmExceptionHandlerLib
+  FILE_GUID = 79286F28-D1BB-4B39-9323-68ED8D9A1A5E
+  MODULE_TYPE = BASE
+  VERSION_STRING = 1.0
+  LIBRARY_CLASS = DefaultExceptionHandlerLib|DXE_CORE DXE_DRIVER
+[Sources.ARM]
+  DefaultExceptionHandlerUefi.c
+  Arm/DefaultExceptionHandler.c
+[Packages]
+  MdePkg/MdePkg.dec
+  ArmPkg/ArmPkg.dec
+  a04br3Pkg/a04br3.dec
+[LibraryClasses]
+  UefiLib
+  BaseLib
+  PrintLib
+  DebugLib
+  PeCoffGetEntryPointLib
+  ArmDisassemblerLib
+  SerialPortLib
+  UefiBootServicesTableLib
+[Guids]
+  gEfiDebugImageInfoTableGuid

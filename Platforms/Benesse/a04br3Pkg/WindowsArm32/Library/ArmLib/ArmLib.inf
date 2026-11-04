@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+ INF_VERSION = 0x00010005
+ BASE_NAME = A04ArmBaseLib
+ FILE_GUID = 9DC074E5-0D48-40CA-8CE3-DBFC6C2A4542
+ MODULE_TYPE = BASE
+ VERSION_STRING = 1.0
+ LIBRARY_CLASS = ArmLib
+[Sources.ARM]
+ ArmLibPrivate.h
+ ArmLib.c
+ Arm/ArmV7Lib.h
+ Arm/ArmV7Lib.c
+ Arm/ArmLibSupport.S | GCC
+ Arm/ArmLibSupportV7.S | GCC
+ Arm/ArmV7Support.S | GCC
+ Arm/ArmV7ArchTimerSupport.S | GCC
+[Packages]
+ ArmPkg/ArmPkg.dec
+ MdePkg/MdePkg.dec
+ a04br3Pkg/a04br3.dec
+[LibraryClasses]
+ DebugLib

@@ -1,0 +1,11 @@
+/* SPDX-License-Identifier: BSD-2-Clause-Patent
+ * GCC may emit memcpy for structure copies even with -fno-builtin. */
+#include <Base.h>
+void *memcpy(void *dst, const void *src, UINTN count)
+{
+  volatile UINT8 *d = dst;
+  const volatile UINT8 *s = src;
+  UINTN i;
+  for (i = 0; i < count; ++i) d[i] = s[i];
+  return dst;
+}

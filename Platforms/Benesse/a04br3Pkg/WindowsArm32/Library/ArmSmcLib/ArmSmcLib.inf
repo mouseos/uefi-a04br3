@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+ INF_VERSION = 0x00010005
+ BASE_NAME = A04ArmSmcLib
+ FILE_GUID = 027BC348-E2A2-44FB-93C5-2505F16C0703
+ MODULE_TYPE = BASE
+ VERSION_STRING = 1.0
+ LIBRARY_CLASS = ArmSmcLib
+[Sources.ARM]
+ ArmSmc.c
+ Arm/ArmSmc.S | GCC
+[Packages]
+ MdePkg/MdePkg.dec
+ ArmPkg/ArmPkg.dec
+ a04br3Pkg/a04br3.dec

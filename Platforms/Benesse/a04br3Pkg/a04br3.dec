@@ -16,6 +16,8 @@
 [LibraryClasses]
   ## @libraryclass  LK fastboot flag and TOPRGU watchdog of the unattended test cycle
   A04BR3TestCycleLib|Include/Library/A04BR3TestCycleLib.h
+  DefaultExceptionHandlerLib|Include/Library/DefaultExceptionHandlerLib.h
+  ArmDisassemblerLib|Include/Library/ArmDisassemblerLib.h
 
 [Guids]
   gA04BR3WindowsTokenSpaceGuid = { 0x4b106d23, 0xf96a, 0x48aa, { 0x81, 0x67, 0xa0, 0x4b, 0x33, 0x57, 0x49, 0x4e } }
@@ -25,5 +27,7 @@
   gA04BR3WindowsTokenSpaceGuid.PcdA04WinHobBase|0|UINT32|0x00000001
   gA04BR3WindowsTokenSpaceGuid.PcdA04WinHobSize|0|UINT32|0x00000002
   gA04BR3WindowsTokenSpaceGuid.PcdA04WinCpuIoSize|0|UINT8|0x00000003
+  gA04BR3WindowsTokenSpaceGuid.PcdA04WinVectorBase|0xffff0000|UINT64|0x00000005
 [PcdsFeatureFlag]
+  gA04BR3WindowsTokenSpaceGuid.PcdA04WinDebuggerException|FALSE|BOOLEAN|0x00000006
   gA04BR3WindowsTokenSpaceGuid.PcdA04WinNormalNonshareable|FALSE|BOOLEAN|0x00000004

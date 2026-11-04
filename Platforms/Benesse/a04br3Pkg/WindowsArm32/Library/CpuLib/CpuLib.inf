@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+  INF_VERSION = 0x00010005
+  BASE_NAME = A04ArmCpuLib
+  FILE_GUID = C36278B0-59CF-4A18-94EC-4EA6CAAA5262
+  MODULE_TYPE = BASE
+  VERSION_STRING = 1.0
+  LIBRARY_CLASS = CpuLib
+[Sources.ARM]
+  Arm/CpuFlushTlb.S | GCC
+  Arm/CpuSleep.S | GCC
+[Packages]
+  MdePkg/MdePkg.dec

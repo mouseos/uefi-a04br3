@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+ INF_VERSION = 0x00010005
+ BASE_NAME = A04ArmPeCoffLib
+ FILE_GUID = 3F4CFD6D-937B-4D74-B491-D68721DD11C0
+ MODULE_TYPE = BASE
+ VERSION_STRING = 1.0
+ LIBRARY_CLASS = PeCoffLib
+[Sources.ARM]
+ BasePeCoffLibInternals.h
+ BasePeCoff.c
+ Arm/PeCoffLoaderEx.c
+[Packages]
+ MdePkg/MdePkg.dec
+[LibraryClasses]
+ DebugLib
+ PeCoffExtraActionLib
+ BaseMemoryLib
+ SafeIntLib

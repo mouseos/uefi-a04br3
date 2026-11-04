@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+ INF_VERSION = 0x00010005
+ BASE_NAME = A04ArmHvcLib
+ FILE_GUID = D55E01D0-EC27-4FE0-AF4F-07877423D205
+ MODULE_TYPE = BASE
+ VERSION_STRING = 1.0
+ LIBRARY_CLASS = ArmHvcLib
+[Sources.ARM]
+ Arm/ArmHvc.S | GCC
+[Packages]
+ MdePkg/MdePkg.dec
+ ArmPkg/ArmPkg.dec
+ a04br3Pkg/a04br3.dec

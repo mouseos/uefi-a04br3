@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+# ARM32 from edk2 e7aac7fc137e247edad22f7ee53b9a1fba227397.
+[Defines]
+  INF_VERSION = 0x00010005
+  BASE_NAME = A04ArmSynchronizationLib
+  FILE_GUID = 0DA84617-C253-4CEB-B5FD-2EB5DAF2FBC8
+  MODULE_TYPE = BASE
+  VERSION_STRING = 1.0
+  LIBRARY_CLASS = SynchronizationLib
+[Sources.ARM]
+  BaseSynchronizationLibInternals.h
+  Synchronization.c
+  Arm/Synchronization.S | GCC
+[Packages]
+  MdePkg/MdePkg.dec
+[LibraryClasses]
+  PcdLib
+  TimerLib
+  DebugLib
+  BaseMemoryLib
+[Pcd]
+  gEfiMdePkgTokenSpaceGuid.PcdSpinLockTimeout

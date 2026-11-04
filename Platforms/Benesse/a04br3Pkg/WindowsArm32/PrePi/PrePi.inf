@@ -36,6 +36,7 @@
   MdeModulePkg/MdeModulePkg.dec
   EmbeddedPkg/EmbeddedPkg.dec
   MediaTekPkg/MediaTekPkg.dec
+  SiliciumPkg/SiliciumPkg.dec
   a04br3Pkg/a04br3.dec
 
 [LibraryClasses]

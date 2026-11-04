@@ -9,7 +9,7 @@
 
 #include <Uefi.h>
 
-#include <Library/ArmLib.h>
+#include <A04ArmLib.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>

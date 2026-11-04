@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+  INF_VERSION = 0x00010005
+  BASE_NAME = A04ArmDisassemblerLib
+  FILE_GUID = 59FBE3F7-239C-4DBB-95B6-C3966CD9676A
+  MODULE_TYPE = BASE
+  VERSION_STRING = 1.0
+  LIBRARY_CLASS = ArmDisassemblerLib
+[Sources.ARM]
+  ArmDisassembler.c
+  ThumbDisassembler.c
+[Packages]
+  MdePkg/MdePkg.dec
+  ArmPkg/ArmPkg.dec
+  a04br3Pkg/a04br3.dec
+[LibraryClasses]
+  BaseLib
+  PrintLib
+  DebugLib
+  PeCoffGetEntryPointLib

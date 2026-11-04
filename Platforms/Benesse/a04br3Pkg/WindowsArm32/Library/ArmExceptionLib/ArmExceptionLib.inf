@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+  INF_VERSION = 0x00010005
+  BASE_NAME = A04ArmExceptionLib
+  FILE_GUID = 39DAA621-87A6-47A6-945A-147B781D5D28
+  MODULE_TYPE = BASE
+  VERSION_STRING = 1.0
+  LIBRARY_CLASS = CpuExceptionHandlerLib
+[Sources.ARM]
+  ArmExceptionLib.c
+  Arm/ArmException.c
+  Arm/ExceptionSupport.S | GCC
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ArmPkg/ArmPkg.dec
+  a04br3Pkg/a04br3.dec
+[LibraryClasses]
+  ArmLib
+  BaseMemoryLib
+  CacheMaintenanceLib
+  DebugLib
+  DefaultExceptionHandlerLib
+  MemoryAllocationLib
+[Pcd]
+  gA04BR3WindowsTokenSpaceGuid.PcdA04WinVectorBase
+[FeaturePcd]
+  gA04BR3WindowsTokenSpaceGuid.PcdA04WinDebuggerException

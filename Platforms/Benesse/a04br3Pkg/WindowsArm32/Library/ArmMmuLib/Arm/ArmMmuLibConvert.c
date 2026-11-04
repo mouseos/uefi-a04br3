@@ -9,7 +9,7 @@
 
 #include <Uefi.h>
 
-#include <Library/ArmLib.h>
+#include <A04ArmLib.h>
 
 #include <Chipset/ArmV7.h>
 

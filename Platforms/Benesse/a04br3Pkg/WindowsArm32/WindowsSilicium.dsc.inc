@@ -132,9 +132,9 @@
   #
   # ARM Libraries
   #
-  ArmLib|MdePkg/Library/ArmLib/ArmBaseLib.inf
-  ArmSmcLib|MdePkg/Library/ArmSmcLib/ArmSmcLib.inf
-  ArmHvcLib|ArmPkg/Library/ArmHvcLib/ArmHvcLib.inf
+  ArmLib|a04br3Pkg/WindowsArm32/Library/ArmLib/ArmLib.inf
+  ArmSmcLib|a04br3Pkg/WindowsArm32/Library/ArmSmcLib/ArmSmcLib.inf
+  ArmHvcLib|a04br3Pkg/WindowsArm32/Library/ArmHvcLib/ArmHvcLib.inf
   ArmMonitorLib|a04br3Pkg/WindowsArm32/Library/ArmMonitorLib/ArmMonitorLib.inf
 !if $(USE_PHYSICAL_TIMER) == 1
   ArmGenericTimerCounterLib|ArmPkg/Library/ArmGenericTimerPhyCounterLib/ArmGenericTimerPhyCounterLib.inf
@@ -145,15 +145,19 @@
   #
   # Base Libraries
   #
-  BaseLib|MdePkg/Library/BaseLib/BaseLib.inf
-  CpuExceptionHandlerLib|UefiCpuPkg/Library/CpuExceptionHandlerLib/DxeCpuExceptionHandlerLib.inf
+  BaseLib|a04br3Pkg/WindowsArm32/Library/BaseLib/BaseLib.inf
+  CpuExceptionHandlerLib|a04br3Pkg/WindowsArm32/Library/ArmExceptionLib/ArmExceptionLib.inf
   TimeBaseLib|EmbeddedPkg/Library/TimeBaseLib/TimeBaseLib.inf
   TimerLib|ArmPkg/Library/ArmArchTimerLib/ArmArchTimerLib.inf
-  SynchronizationLib|MdePkg/Library/BaseSynchronizationLib/BaseSynchronizationLib.inf
+  SynchronizationLib|a04br3Pkg/WindowsArm32/Library/SynchronizationLib/SynchronizationLib.inf
+  NULL|a04br3Pkg/WindowsArm32/Library/CompilerMemoryLib/CompilerMemoryLib.inf
+  CpuLib|a04br3Pkg/WindowsArm32/Library/CpuLib/CpuLib.inf
+  DefaultExceptionHandlerLib|a04br3Pkg/WindowsArm32/Library/DefaultExceptionHandlerLib/DefaultExceptionHandlerLib.inf
+  ArmDisassemblerLib|a04br3Pkg/WindowsArm32/Library/ArmDisassemblerLib/ArmDisassemblerLib.inf
   PerformanceLib|MdePkg/Library/BasePerformanceLibNull/BasePerformanceLibNull.inf
   PrintLib|MdePkg/Library/BasePrintLib/BasePrintLib.inf
-  IoLib|MdePkg/Library/BaseIoLibIntrinsic/BaseIoLibIntrinsic.inf
-  SafeIntLib|MdePkg/Library/BaseSafeIntLib/BaseSafeIntLib.inf
+  IoLib|a04br3Pkg/WindowsArm32/Library/BaseIoLibIntrinsic/BaseIoLibIntrinsic.inf
+  SafeIntLib|a04br3Pkg/WindowsArm32/Library/SafeIntLib/SafeIntLib.inf
 
   #
   # Debug Libraries
@@ -190,7 +194,7 @@
   #
   ExtractGuidedSectionLib|EmbeddedPkg/Library/PrePiExtractGuidedSectionLib/PrePiExtractGuidedSectionLib.inf
   PeCoffGetEntryPointLib|MdePkg/Library/BasePeCoffGetEntryPointLib/BasePeCoffGetEntryPointLib.inf
-  PeCoffLib|MdePkg/Library/BasePeCoffLib/BasePeCoffLib.inf
+  PeCoffLib|a04br3Pkg/WindowsArm32/Library/PeCoffLib/PeCoffLib.inf
   PeCoffExtraActionLib|MdePkg/Library/BasePeCoffExtraActionLibNull/BasePeCoffExtraActionLibNull.inf
   PlatformPeiLib|SiliciumNullPkg/Library/PlatformPeiLibNull/PlatformPeiLibNull.inf
   PrePiLib|EmbeddedPkg/Library/PrePiLib/PrePiLib.inf
@@ -395,7 +399,7 @@
   #
   # Processor Core Services
   #
-  ArmPkg/Drivers/CpuDxe/CpuDxe.inf
+  a04br3Pkg/WindowsArm32/Drivers/CpuDxe/CpuDxe.inf
   ArmPkg/Drivers/ArmGicDxe/ArmGicDxe.inf
   ArmPkg/Drivers/TimerDxe/TimerDxe.inf
 
@@ -426,7 +430,6 @@
 !endif
   }
   MdeModulePkg/Universal/WatchdogTimerDxe/WatchdogTimer.inf
-  MdeModulePkg/Universal/CapsuleRuntimeDxe/CapsuleRuntimeDxe.inf
 
   #
   # Disk
@@ -464,10 +467,8 @@
   #
   # BDS
   #
-  MdeModulePkg/Universal/BdsDxe/BdsDxe.inf {
-    <LibraryClasses>
-      NULL|SiliciumPkg/Library/KernelErrataPatcherLib/KernelErrataPatcherLib.inf
-  }
+  # The AArch64 Windows loader patcher is not valid for ARM32.
+  MdeModulePkg/Universal/BdsDxe/BdsDxe.inf
   PcBdsPkg/MsBootPolicy/MsBootPolicy.inf
   MdeModulePkg/Universal/PrintDxe/PrintDxe.inf
   MdeModulePkg/Universal/SetupBrowserDxe/SetupBrowserDxe.inf
@@ -484,22 +485,18 @@
   # SMBIOS
   #
   MdeModulePkg/Universal/SmbiosDxe/SmbiosDxe.inf
-  SiliciumPkg/Drivers/SmBiosTableDxe/SmBiosTableDxe.inf
 
   #
   # ACPI
   #
   MdeModulePkg/Universal/Acpi/AcpiPlatformDxe/AcpiPlatformDxe.inf
   MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf
-  MdeModulePkg/Universal/Acpi/BootGraphicsResourceTableDxe/BootGraphicsResourceTableDxe.inf
 
   #
   # Device Tree
   #
-  EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
 
   #
   # UEFI Applications
   #
   MdeModulePkg/Application/BootManagerMenuApp/BootManagerMenuApp.inf
-  SiliciumPkg/Applications/UFPLoader/UFPLoader.inf
