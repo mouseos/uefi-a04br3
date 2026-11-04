@@ -28,3 +28,21 @@ watchdog給餌を前提とする。旧 `71eb45b` の無期限給餌は3 CPU限�
 PSCIとparking pageの所有権、初期化失敗時のACPI整合性、watchdogを
 有効にしない場合の全CPUの起動・復帰経路を設計し、ホスト検証と実機
 証拠を得るまで、DSC/FDFへ4 CPUまたはI2C1を有効化しない。
+
+## 3 CPU保守workerの部分移植
+
+BootShimに既定0の `A04BR3_OFFLINE_WDT_UNBOUNDED` を追加。1のときは
+CPU1の給餌期限比較を省く。アセンブラのコンパイル時に、3 CPU SMP、
+A64 worker、CPU1専用所有を要求し、4 CPUとwatchdog引継ぎ機能を拒否する。
+有限版と無期限版の実際の命令、無効な組合せの拒否はホストで確認した。
+CPU1はリセットUART受信も行うため、外部のリセット要求を防げない。
+ハードウェア故障、counter周波数ゼロ、別主体によるwatchdog変更、電源喪失、
+実機上の給餌・WinPEの動作をこの検査は保証しない。
+
+`CpuParkingSsdt.asl` は旧実績構成のCPU2とCPU3を宣言し、CPU0と合わせ
+UID 0,2,3になることをacpiexecで検査した。MADTの動的置換、parking page、
+CPU1 worker起動とその有効性の確認、およびI2C1のDXE登録は未接続。
+PrePiが参照する旧 `PlatformPrePiLib`、`PcdUefiMemPoolBase/Size`、
+`A04BR3Pkg.dec` は現行正本の同名実装が存在せず、ライブラリとPCDを
+機種固有に設計してからMuのDSC/FDFへ接続する必要がある。未接続状態では
+正本から3 CPU WinPE FDを作成できない。DISMや実機書込みに使わない。

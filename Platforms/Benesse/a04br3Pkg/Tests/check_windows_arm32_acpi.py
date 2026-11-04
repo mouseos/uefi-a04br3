@@ -17,4 +17,9 @@ with tempfile.TemporaryDirectory(prefix='a04-win-acpi-') as tmp:
     result = subprocess.run(['acpiexec', '-b', commands, *outputs], check=True, capture_output=True, text=True)
     ids = [int(v, 16) for v in re.findall(r'\[Integer\] = ([0-9A-Fa-f]+)', result.stdout)]
     assert ids == [0, 1, 2, 3], ids
-print('ACPI CPU namespace UIDs 0-3 verified; MADT and startup unverified')
+    three = Path(tmp)/'cpu3'
+    subprocess.run(['iasl', '-p', str(three), str(acpi/'CpuParkingSsdt.asl')], check=True, capture_output=True)
+    result = subprocess.run(['acpiexec', '-b', 'evaluate _SB.CPU0._UID; evaluate _SB.CPU2._UID; evaluate _SB.CPU3._UID', outputs[0], str(three.with_suffix('.aml'))], check=True, capture_output=True, text=True)
+    ids = [int(v, 16) for v in re.findall(r'\[Integer\] = ([0-9A-Fa-f]+)', result.stdout)]
+    assert ids == [0, 2, 3], ids
+print('ACPI three/four CPU namespace UIDs verified; MADT and startup unverified')

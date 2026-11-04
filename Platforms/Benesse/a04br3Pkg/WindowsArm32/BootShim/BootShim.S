@@ -1,3 +1,13 @@
+/* The servicing worker reserves CPU1; no watchdog-handoff or four-CPU path. */
+#ifndef A04BR3_OFFLINE_WDT_UNBOUNDED
+#define A04BR3_OFFLINE_WDT_UNBOUNDED 0
+#endif
+#if A04BR3_OFFLINE_WDT_UNBOUNDED == 1 && (A04BR3_A64_WDT_TEST != 1 || A04BR3_A64_CPU_TEST != 1 || A04BR3_SMP_TEST != 1 || A04BR3_FOUR_CPU_TEST != 0 || A04BR3_WDT_HANDOFF_TEST != 0)
+#error Offline worker requires 3 CPU SMP and exclusive watchdog ownership
+#endif
+#if A04BR3_OFFLINE_WDT_UNBOUNDED != 0 && A04BR3_OFFLINE_WDT_UNBOUNDED != 1
+#error Invalid offline watchdog option
+#endif
 _Head:
 	/* Set _Entry address */
 	adr	x1, _Payload
@@ -291,9 +301,11 @@ _A64SecondaryProbe:
     movz x15, #0x5000
     movk x15, #0x1100, lsl #16
 1:  mrs x9, cntpct_el0
+#if A04BR3_OFFLINE_WDT_UNBOUNDED != 1
     sub x10, x9, x5
     cmp x10, x6
     b.hs 2f
+#endif
 #if A04BR3_WDT_HANDOFF_TEST == 1
     ldr w16, [x19, #40]
     cbnz w16, 52f
