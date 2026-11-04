@@ -1,0 +1,81 @@
+#/** @file
+#
+#
+#  Copyright (c) DuoWoA authors. All rights reserved.
+#  Copyright (c) Renegade Project. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = A04BR3Sec
+  FILE_GUID                      = 89c230d9-0b47-4b97-9551-6a04b3108167
+  MODULE_TYPE                    = SEC
+  VERSION_STRING                 = 1.0
+
+[Sources.common]
+  Pi.c
+
+[Sources.ARM]
+  Cpu1300.c
+  A04MmuTrace.c
+  Arm/ModuleEntryPoint.S | GCC
+
+
+[BuildOptions.ARM]
+  GCC:*_*_*_DLINK_FLAGS = -Wl,--wrap=ArmEnableMmu
+
+[BuildOptions.AARCH64]
+  GCC:*_*_*_CC_FLAGS = -Werror -Wno-error=unused-function
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MediaTekPkg/MediaTekPkg.dec
+  A04BR3Pkg/A04BR3Pkg.dec
+
+[LibraryClasses]
+  A04BR3TestCycleLib
+  ArmLib
+  BaseLib
+  CacheMaintenanceLib
+  DebugLib
+  ExtractGuidedSectionLib
+  HobLib
+  FdtLib
+  IoLib
+  LzmaDecompressLib
+  MemoryAllocationLib
+  MemoryInitPeiLib
+  PlatformPeiLib
+  PlatformPrePiLib
+  PrePiHobListPointerLib
+  PrePiLib
+  SerialPortLib
+
+[Guids]
+  gEfiSystemNvDataFvGuid
+  gEfiVariableGuid
+  gEfiFirmwarePerformanceGuid
+
+[FeaturePcd]
+  gEmbeddedTokenSpaceGuid.PcdPrePiProduceMemoryTypeInformationHob
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
+
+[FixedPcd]
+  gArmTokenSpaceGuid.PcdSystemMemoryBase
+  gArmTokenSpaceGuid.PcdSystemMemorySize
+  gArmTokenSpaceGuid.PcdCpuVectorBaseAddress
+  gArmTokenSpaceGuid.PcdFdBaseAddress
+  gArmTokenSpaceGuid.PcdFdSize
+  gEmbeddedTokenSpaceGuid.PcdPrePiStackBase
+  gEmbeddedTokenSpaceGuid.PcdPrePiStackSize
+  gEmbeddedTokenSpaceGuid.PcdPrePiCpuIoSize
+  gMediaTekTokenSpaceGuid.PcdUefiMemPoolBase
+  gMediaTekTokenSpaceGuid.PcdUefiMemPoolSize

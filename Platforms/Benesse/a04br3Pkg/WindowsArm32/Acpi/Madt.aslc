@@ -1,0 +1,16 @@
+/** One-CPU experimental GICv2 topology; secondary-core startup not yet validated.
+    SPDX-License-Identifier: BSD-2-Clause-Patent **/
+#include "AcpiTables.h"
+#pragma pack(1)
+typedef struct {
+  EFI_ACPI_5_0_MULTIPLE_APIC_DESCRIPTION_TABLE_HEADER Header;
+  EFI_ACPI_5_0_GIC_STRUCTURE Cpu;
+  EFI_ACPI_5_0_GIC_DISTRIBUTOR_STRUCTURE Distributor;
+} A04BR3_MADT;
+#pragma pack()
+A04BR3_MADT Madt = {
+  .Header = { .Header = A04_ACPI_HEADER(EFI_ACPI_5_0_MULTIPLE_APIC_DESCRIPTION_TABLE_SIGNATURE, A04BR3_MADT, EFI_ACPI_5_0_MULTIPLE_APIC_DESCRIPTION_TABLE_REVISION) },
+  .Cpu = { .Type = EFI_ACPI_5_0_GIC, .Length = sizeof(EFI_ACPI_5_0_GIC_STRUCTURE), .GicId = 0, .AcpiProcessorUid = 0, .Flags = EFI_ACPI_5_0_GIC_ENABLED, .PhysicalBaseAddress = 0x10320000 },
+  .Distributor = { .Type = EFI_ACPI_5_0_GICD, .Length = sizeof(EFI_ACPI_5_0_GIC_DISTRIBUTOR_STRUCTURE), .PhysicalBaseAddress = 0x10310000 }
+};
+VOID *CONST ReferenceAcpiTable = &Madt;
