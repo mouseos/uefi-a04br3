@@ -14,6 +14,10 @@ entries = {name:(int(addr,16),int(length,16)) for name,addr,length in re.findall
 assert entries['ARM32 HOB Heap'] == (base, stack-base)
 assert entries['ARM32 Stack'] == (stack, ss)
 assert entries['I2C1 Accelerometer'] == (0x1100a000, 0x1000)
+assert entries['DDR Mid 0'] == (0x43030000, 0x00fd0000)
+assert entries['Stock LK Initrd'] == (0x44000000, 0x00400000)
+assert entries['Stock LK Initrd'][0] + entries['Stock LK Initrd'][1] == entries['RAM Console'][0]
+assert entries['DT Audio DMA'] == (0x5c000000, 0x00400000)
 for name in ('UEFI FD','LK DTB','ATF Reserved','Boot Ramdisk','Display Reserved'):
     start,length = entries[name]
     assert base+size <= start or start+length <= base, name

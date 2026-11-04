@@ -49,7 +49,11 @@ gMemoryDescriptor[] = {
   {"UEFI FD",            0x41080000, 0x00300000, AddMem, SYS_MEM, SYS_MEM_CAP, BsCode, WRITE_BACK},    // Fixed up from FD_BASE/FD_SIZE
   {"DDR Before ATF",     0x41380000, 0x01C80000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK_XN}, // Fixed up from FD_BASE/FD_SIZE
   {"ATF Reserved",       0x43000000, 0x00030000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK},
-  {"DDR Mid 0",          0x43030000, 0x013D0000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK_XN},
+  {"DDR Mid 0",          0x43030000, 0x00FD0000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK_XN},
+  // The stock Android header selects 0x44000000. LK strips the 512-byte
+  // ROOTFS header and copies the payload here. Reserve through the following
+  // fixed RAM-console reservation; do not return it to DXE allocation.
+  {"Stock LK Initrd",    0x44000000, 0x00400000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK_XN},
   {"RAM Console",        0x44400000, 0x00010000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK},
   {"PStore",             0x44410000, 0x000E0000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK},
   {"MiniRdDump",         0x444F0000, 0x00010000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK},
@@ -58,7 +62,9 @@ gMemoryDescriptor[] = {
   {"DDR Former Stack",   0x4E200000, 0x00040000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK_XN},
   {"ARM32 HOB Heap",     0x4E240000, 0x03D80000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK},
   {"ARM32 Stack",        0x51FC0000, 0x00040000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
-  {"DDR Mid 2",          0x52000000, 0x0E000000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK_XN},
+  {"DDR Mid 2",          0x52000000, 0x0A000000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK_XN},
+  {"DT Audio DMA",       0x5C000000, 0x00400000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK_XN},
+  {"DDR Mid 3",          0x5C400000, 0x03C00000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK_XN},
 #if A04BR3_RAMDISK_RECLAIMABLE
   // Boot services data: never allocated by UEFI, the OS's after ExitBootServices (DarwinBoot darwinboot-memory-floor).
   {"Boot Ramdisk",       0x60000000, 0x08000000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
