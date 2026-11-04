@@ -20,7 +20,7 @@ elif 'getvar' in args: print('(bootloader) product: A04BR3')
     restore=root/'restore';restore.write_bytes(b'ANDROID!restore')
     uart=root/'uart';uart.write_bytes(b'old')
     digest=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
-    fw=root/'fw.json';fw.write_text(json.dumps({'source_commit':'abc','build_defines':{'A04BR3_BOOT_DIAGNOSTIC':'1'},'shim_defines':{'A04BR3_EARLY_FDT_GUARD':1}}))
+    fw=root/'fw.json';fw.write_text(json.dumps({'source_commit':'abc','build_defines':{'A04BR3_BOOT_DIAGNOSTIC':'1'},'shim_defines':{'A04BR3_EARLY_FDT_GUARD':1,'A04BR3_A64_WDT_SECONDS':120,'A04BR3_OFFLINE_WDT_UNBOUNDED':0,'A04BR3_WORKER_NO_UART_RESET':0}}))
     manifest=root/'manifest.json';manifest.write_text(json.dumps({'status':'bounded-diagnostic-not-validated-on-device','boot_img_sha256':digest(candidate),'uefi_source_commit':'abc','firmware_manifest_sha256':digest(fw)}))
     env={**os.environ,'PATH':str(bin)+':'+os.environ['PATH'],'FAKE_ROOT':str(root),'XDG_RUNTIME_DIR':str(root)}
     args=['python3',str(runner),'SERIAL',str(candidate),str(manifest),str(fw),str(restore),digest(restore),str(uart)]

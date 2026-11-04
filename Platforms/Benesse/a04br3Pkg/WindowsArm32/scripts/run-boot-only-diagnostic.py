@@ -28,10 +28,12 @@ def main():
     if m.get('status')!='bounded-diagnostic-not-validated-on-device' or m.get('boot_img_sha256')!=sha(a.candidate):
         raise SystemExit('candidate or manifest mismatch')
     firmware=json.loads(a.firmware_manifest.read_text())
+    shim=firmware.get('shim_defines',{})
     if (m.get('firmware_manifest_sha256')!=sha(a.firmware_manifest) or
         m.get('uefi_source_commit')!=firmware.get('source_commit') or
         firmware.get('build_defines',{}).get('A04BR3_BOOT_DIAGNOSTIC')!='1' or
-        firmware.get('shim_defines',{}).get('A04BR3_EARLY_FDT_GUARD')!=1):
+        shim.get('A04BR3_EARLY_FDT_GUARD')!=1 or shim.get('A04BR3_A64_WDT_SECONDS')!=120 or
+        shim.get('A04BR3_OFFLINE_WDT_UNBOUNDED')!=0 or shim.get('A04BR3_WORKER_NO_UART_RESET')!=0):
         raise SystemExit('bounded guard firmware provenance mismatch')
     for image in (a.candidate,a.restore_boot):
         with image.open('rb') as f:
