@@ -36,7 +36,7 @@
   MdeModulePkg/MdeModulePkg.dec
   EmbeddedPkg/EmbeddedPkg.dec
   MediaTekPkg/MediaTekPkg.dec
-  A04BR3Pkg/A04BR3Pkg.dec
+  a04br3Pkg/a04br3.dec
 
 [LibraryClasses]
   A04BR3TestCycleLib
@@ -52,7 +52,7 @@
   MemoryAllocationLib
   MemoryInitPeiLib
   PlatformPeiLib
-  PlatformPrePiLib
+  PlatformSecLib
   PrePiHobListPointerLib
   PrePiLib
   SerialPortLib

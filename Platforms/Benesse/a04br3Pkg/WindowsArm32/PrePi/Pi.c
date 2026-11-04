@@ -7,7 +7,7 @@
 #include <Library/PrintLib.h>
 #include <Library/PrePiHobListPointerLib.h>
 #include <Library/CacheMaintenanceLib.h>
-#include <Library/PlatformPrePiLib.h>
+#include <Library/PlatformSecLib.h>
 #include <Library/SerialPortLib.h>
 #if defined (MDE_CPU_ARM)
 #include <Library/A04BR3TestCycleLib.h>
@@ -224,21 +224,11 @@ CEntryPoint(
   )
 {
   SerialPortInit ();
-#if defined (MDE_CPU_ARM)
-  // Experimental test cycle: arm only when LK fastboot selection readback succeeds.
-  if (A04BR3SetFastbootFlag ()) {
-    A04BR3WatchdogArm (31);
-    DEBUG ((DEBUG_ERROR, "A04 recovery armed: fastboot flag verified, watchdog 31s\n"));
-#if A04BR3_WINDOWS_CPU_1300 == 1
-    if (A04BR3WindowsCpu1300 () == 1) mCpuHandoffValue = A04BR3_CPU_HANDOFF_COMPLETE;
-#endif
-  } else {
-    DEBUG ((DEBUG_ERROR, "A04 recovery unavailable: RTC flag could not be verified\n"));
-  }
-#endif
-
-  // Do platform specific initialization here
+  // The canonical SEC hook stops the inherited watchdog. Run it before any
+  // opt-in test-cycle arm, never after it.
   PlatformInitialize();
+  // The canonical board SEC hook owns recovery watchdog setup; do not arm
+  // a second time here. Its build-time policy controls servicing mode.
 
   // Goto primary Main.
   PrePiMain(StackBase, StackSize, BootDtb);

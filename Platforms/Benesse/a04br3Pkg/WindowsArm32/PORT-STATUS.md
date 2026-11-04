@@ -46,3 +46,19 @@ PrePiが参照する旧 `PlatformPrePiLib`、`PcdUefiMemPoolBase/Size`、
 `A04BR3Pkg.dec` は現行正本の同名実装が存在せず、ライブラリとPCDを
 機種固有に設計してからMuのDSC/FDFへ接続する必要がある。未接続状態では
 正本から3 CPU WinPE FDを作成できない。DISMや実機書込みに使わない。
+
+## PrePiのSEC依存の接続準備
+
+元の `PlatformPrePiLib` は正本にはなく、正本のMT8167 SEC初期化は
+`PlatformSecLib` とそのboard hookを使う。PrePiのINFとincludeを正本の
+パッケージ名・ライブラリ名へ修正し、watchdogの操作をSECのboard hookに
+集約した。旧PrePiにあった追加のwatchdog武装は削除した。SEC初期化を
+PrePiMainより先に一回呼ぶことは静的に確認したが、コンパイルも実機も
+未検証。旧Windows専用CPU 1300 MHz切替経路は接続していない。
+
+旧UEFIプールは `0x44550000..0x4BAFFFFF`、旧初期スタックは
+`0x44500000..0x4453FFFF`。正本のスタックは `0x4E200000..0x4E23FFFF`、
+DXE heapは `0x4E240000..0x51FFFFFF` であり、旧PCDをそのまま流用できない。
+PrePiのHOB作成が算出するスタック位置と実際のSP、ファームウェアFV、
+ページテーブル、ACPI NVS、RAM mapを一緒に設計・検証してからPCDを
+接続する必要がある。旧サイズ・アドレスを未検証のまま正本に設定しない。
