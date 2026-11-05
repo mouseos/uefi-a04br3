@@ -79,8 +79,7 @@
   !error Boot diagnostic requires the three CPU worker heartbeat
 !endif
 
-# Canonical ARM32 has no legacy MOU0003/MOU0004 table variants.  Reject
-# their explicit selection instead of silently publishing overlapping owners.
+# Keep exclusive shared-resource ownership; the button producer is not integrated.
 !ifndef A04BR3_BATTERY_PROVIDER
   DEFINE A04BR3_BATTERY_PROVIDER = 0
 !endif
@@ -102,8 +101,11 @@
 !if $(A04BR3_SHARED_PARENT) != 0 && $(A04BR3_SHARED_PARENT) != 1
   !error A04BR3_SHARED_PARENT must be 0 or 1
 !endif
-!if $(A04BR3_BUTTON_PROVIDER) != 0 || $(A04BR3_TOUCH_PROVIDER) != 0
-  !error canonical ARM32 has no legacy input provider; shared resources must remain exclusive
+!if $(A04BR3_BUTTON_PROVIDER) != 0
+  !error canonical ARM32 has no button provider
+!endif
+!if $(A04BR3_TOUCH_PROVIDER) != 0 && $(A04BR3_TOUCH_PROVIDER) != 1
+  !error A04BR3_TOUCH_PROVIDER must be 0 or 1
 !endif
 
   #
