@@ -36,14 +36,14 @@ int A04FdtGuard(const void *input,size_t capacity) {
     if (token==1) {
       uint32_t start=pos; while(pos<sz && st[pos]) pos++; if(pos==sz) return 5;
       depth++; if(depth>32) return 5;
-      if(depth==1 && eq((const char*)st+start,"reserved-memory")) { if(seenres) return 6; seenres=1; resdepth=depth; }
+      if(depth==1 && eq((const char*)st+start,"reserved-memory")) { if(seenres) return 10; seenres=1; resdepth=depth; }
       if(depth==1 && (eq((const char*)st+start,"chosen") || eq((const char*)st+start,"chosen@0"))) chosen=depth;
       if(depth==1 && (eq((const char*)st+start,"memory") || eq((const char*)st+start,"memory@00000000"))) mem=depth;
       if(resdepth>=0 && depth==resdepth+1) { resnode=depth; resreg=0; }
       pos=(pos+4)&~3U; if(pos>sz) return 5;
     } else if(token==2) {
       if(depth<0) return 5;
-      if(depth==resnode) { if(!resreg) return 6; resnode=-1; }
+      if(depth==resnode) { if(!resreg) return 11; resnode=-1; }
       if(depth==resdepth) resdepth=-1; if(depth==chosen) chosen=-1; if(depth==mem) mem=-1; depth--;
     } else if(token==3) {
       uint32_t len,noff; const char *name; const unsigned char *v; uint32_t n;
@@ -55,12 +55,12 @@ int A04FdtGuard(const void *input,size_t capacity) {
       if(depth==0 && eq(name,"#size-cells") && len==4) rootsize=be32(v);
       if(depth==resdepth && eq(name,"#address-cells") && len==4) resaddr=be32(v);
       if(depth==resdepth && eq(name,"#size-cells") && len==4) ressize=be32(v);
-      if(depth==resdepth && eq(name,"ranges")) { if(len) return 6; resranges=1; }
+      if(depth==resdepth && eq(name,"ranges")) { if(len) return 12; resranges=1; }
       if(depth==chosen && eq(name,"linux,initrd-start")) { if(len!=4 && len!=8) return 7; init_start=len==4?be32(v):be64(v);have_start=1; }
       if(depth==chosen && eq(name,"linux,initrd-end")) { if(len!=4 && len!=8) return 7; init_end=len==4?be32(v):be64(v);have_end=1; }
       if(depth==resnode && eq(name,"reg")) {
-        if(resaddr!=2 || ressize!=2 || !len || len%16) return 6;
-        for(n=0;n<len;n+=16) { uint64_t a=be64(v+n),s=be64(v+n+8); if(!s||s>UINT64_MAX-a||conflict(a,s)) return 6; }
+        if(resaddr!=2 || ressize!=2 || !len || len%16) return 13;
+        for(n=0;n<len;n+=16) { uint64_t a=be64(v+n),s=be64(v+n+8); if(!s||s>UINT64_MAX-a||conflict(a,s)) return 14; }
         resreg=1;
       }
       if(depth==mem && eq(name,"reg")) {
