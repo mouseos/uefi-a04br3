@@ -129,7 +129,6 @@ result={'status':'diagnostic-only-not-for-device','source_commit':git(root,'rev-
  'inputs':{str(p):sha(p) for p in inputs},'fd_sha256':sha(fd),'fd_bytes':fd.stat().st_size,
  'limitations':['single CPU only','watchdog worker and parking not connected','RP attribute unsupported','MMU runtime, cache and NVS unverified','libgcc ABI warnings unreviewed']}
 result['build_defines']['A04BR3_BATTERY_PROVIDER']=battery
-if battery == '1': result['limitations'].append('LC709203F ACPI and I2C2 handoff have not been validated on this firmware')
 if three != '0':
  import shutil,struct
  obj=fd.parent/('BootShim.linked' if three == '2' else 'BootShim.o'); shim=fd.parent/'BootShim.bin'; data=shim.read_bytes()
@@ -164,6 +163,7 @@ if three != '0':
                           '-fno-asynchronous-unwind-tables','-fno-unwind-tables','-mgeneral-regs-only','-mstrict-align','-DA04_FDT_TRACE=1']
   result['limitations'].extend(['bounded watchdog diagnostic; RTC fastboot flag is modified',
    'UEFI ReadyToBoot and ExitBootServices block OS launch; hardware behavior and recovery unverified'])
+if battery == '1': result['limitations'].append('LC709203F ACPI and I2C2 handoff have not been validated on this firmware')
 (fd.parent/'diagnostic-manifest.json').write_text(json.dumps(result,indent=2)+'\n')
 print(json.dumps(result,indent=2))
 PY

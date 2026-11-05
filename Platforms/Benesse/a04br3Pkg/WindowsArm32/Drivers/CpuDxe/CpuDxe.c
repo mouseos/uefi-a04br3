@@ -236,7 +236,13 @@ CpuDxeInitialize (
   EFI_STATUS  Status;
   EFI_EVENT   IdleLoopEvent;
 
-  InitializeExceptions (&mCpu);
+  // Match upstream ArmPkg CpuDxe: keep IRQ/FIQ masked while installing the
+  // CPU vectors and until ArmGicDxe has installed its interrupt handler.
+  ArmDisableInterrupts ();
+  Status = InitializeExceptions (&mCpu);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   InitializeDma (&mCpu);
 
