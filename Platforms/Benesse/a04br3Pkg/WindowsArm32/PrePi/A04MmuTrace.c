@@ -4,6 +4,8 @@
 #include <Library/DebugLib.h>
 #include <Library/MemoryMapLib.h>
 #include <Library/IoLib.h>
+#include <Protocol/DebugSupport.h>
+STATIC_ASSERT (ARM_ARCH_EXCEPTION_IRQ == EXCEPT_ARM_IRQ, "ARM32 IRQ ABI mismatch");
 #include <Library/ArmLib.h>
 #include <Library/A04BR3TestCycleLib.h>
 
