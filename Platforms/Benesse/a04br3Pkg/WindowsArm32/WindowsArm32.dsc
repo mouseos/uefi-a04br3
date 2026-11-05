@@ -104,6 +104,15 @@
 !ifndef A04BR3_SHARED_PARENT
   DEFINE A04BR3_SHARED_PARENT = 0
 !endif
+!ifndef A04BR3_SHARED_APMIXED
+  DEFINE A04BR3_SHARED_APMIXED = 0
+!endif
+!if $(A04BR3_SHARED_APMIXED) != 0 && $(A04BR3_SHARED_APMIXED) != 1
+  !error A04BR3_SHARED_APMIXED must be 0 or 1
+!endif
+!if $(A04BR3_SHARED_APMIXED) == 1 && $(A04BR3_SHARED_PARENT) != 1
+  !error APMIXED diagnostic requires the shared parent
+!endif
 !ifndef A04BR3_BUTTON_PROVIDER
   DEFINE A04BR3_BUTTON_PROVIDER = 0
 !endif
@@ -376,22 +385,46 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
 !if $(A04BR3_BATTERY_PROVIDER) == 1
 !if $(A04BR3_GPU_HANDOFF) == 1
 !if $(A04BR3_DISPLAY_PROVIDER) == 1
+!if $(A04BR3_SHARED_APMIXED) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedApmixedBatteryGpuDisplay.inf
+!else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedBatteryGpuDisplay.inf
+!endif
+!else
+!if $(A04BR3_SHARED_APMIXED) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedApmixedBatteryGpu.inf
 !else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedBatteryGpu.inf
 !endif
+!endif
+!else
+!if $(A04BR3_SHARED_APMIXED) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedApmixedBattery.inf
 !else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedBattery.inf
+!endif
 !endif
 !else
 !if $(A04BR3_GPU_HANDOFF) == 1
 !if $(A04BR3_DISPLAY_PROVIDER) == 1
+!if $(A04BR3_SHARED_APMIXED) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedApmixedGpuDisplay.inf
+!else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedGpuDisplay.inf
+!endif
+!else
+!if $(A04BR3_SHARED_APMIXED) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedApmixedGpu.inf
 !else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedGpu.inf
 !endif
+!endif
+!else
+!if $(A04BR3_SHARED_APMIXED) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedApmixed.inf
 !else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesShared.inf
+!endif
 !endif
 !endif
 !else

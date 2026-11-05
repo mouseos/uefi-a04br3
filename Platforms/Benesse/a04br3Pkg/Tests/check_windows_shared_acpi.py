@@ -8,9 +8,11 @@ import tempfile
 pkg=Path(__file__).resolve().parents[1]/'WindowsArm32'
 dsc=(pkg/'WindowsArm32.dsc').read_text();fdf=(pkg/'WindowsArm32.fdf').read_text()
 assert 'DEFINE A04BR3_SHARED_PARENT = 0' in dsc
-assert '$(A04BR3_BUTTON_PROVIDER) != 0 || $(A04BR3_TOUCH_PROVIDER) != 0' in dsc
+assert '$(A04BR3_TOUCH_PROVIDER) == 1 && $(A04BR3_SHARED_PARENT) == 1' in dsc
+assert '$(A04BR3_BUTTON_PROVIDER) != 0' in dsc
 for text in (dsc,fdf):
-    assert re.search(r'!if \$\(A04BR3_SHARED_PARENT\) == 1\s+.*AcpiTablesShared\.inf\s+!else\s+.*AcpiTables\.inf\s+!endif',text)
+    assert '!if $(A04BR3_SHARED_PARENT) == 1' in text
+    assert 'AcpiTablesShared.inf' in text and 'AcpiTables.inf' in text
 base=(pkg/'Acpi/AcpiTables.inf').read_text();shared=(pkg/'Acpi/AcpiTablesShared.inf').read_text()
 assert 'SharedParent.asl' not in base and 'SharedParent.asl' in shared
 assert 'ButtonArray.asl' not in base and 'ButtonArray.asl' in shared

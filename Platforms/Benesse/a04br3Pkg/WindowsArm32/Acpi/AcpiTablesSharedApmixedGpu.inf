@@ -1,0 +1,20 @@
+# Experimental ACPI 5.0 tables. SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+  INF_VERSION = 0x00010005
+  BASE_NAME = A04BR3AcpiTablesSharedGpuApmixed
+  FILE_GUID = 3486B01D-C42B-50B8-AFBF-0746CC105AD8
+  MODULE_TYPE = USER_DEFINED
+  VERSION_STRING = 1.0
+[Sources]
+  AcpiTables.h
+  Fadt.aslc
+  Gtdt.aslc
+  Madt.aslc
+  Dsdt.asl
+  GpuProvider.asl
+  ButtonArray.asl
+  SharedParentApmixed.asl
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ArmPkg/ArmPkg.dec

@@ -183,6 +183,14 @@ ARM/GCC5の再試行は以前のPCDとMMUのメタデータ検査を越えた後
 
 ## 共有親 ACPI の選択試作
 
+追記: `A04BR3_SHARED_APMIXED=1` は、既定OFFの共有親構成に限り、
+従来の4領域にAPMIXED `0x10018000`・長さ `0x710` を加えた別SSDTを選択する。
+通常構成と既存の4領域共有親構成は従来のテーブルを使う。対応する診断用
+ビルダーの指定は `A04_DIAGNOSTIC_SHARED=1` と
+`A04_DIAGNOSTIC_SHARED_APMIXED=1`。共有親と旧touch providerの同時選択は拒否する。
+これは共有クロックの物理所有やWindowsドライバの動作を保証せず、既存touchの
+代替も含めて実機未検証。未署名のドライバと組み合わせて製品構成に使用しない。
+
 `A04BR3_SHARED_PARENT=1` は Windows ARM32 DSC/FDF で、基底テーブルに
 `BEN0001` 共有親 SSDT を追加する。既定値は 0。現行正本には旧 `MOU0003`／
 `MOU0004` provider テーブルが存在しないため、未実装の
