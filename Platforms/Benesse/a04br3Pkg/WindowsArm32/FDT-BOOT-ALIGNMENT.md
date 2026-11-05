@@ -30,3 +30,5 @@ UARTはDLABを確認し、1文字あたり有限回のみ送信準備を待つ�
 ## 実機のreserved-memory失敗の詳細
 
 `b1c35271` の実機診断は `~0`〜`~3`、`A04FDT FAIL=0x06`、RTC watchdog武装、fastboot復帰を観測し、既知bootの書戻しコマンドが成功した。失敗６は５種類の分岐をまとめており、原因を区別できない。次の診断では拒否条件を維持したまま重複reserved-memory=0x0a、子にregなし=0x0b、非空ranges=0x0c、reg書式=0x0d、予約範囲の不正または衝突=0x0eに分ける。候補DTSにはregを持たない動的予約consysノードがあるが、実機のFDTと同一とは未確認である。
+
+`a5308050` の実機UARTは `A04FDT RESERVED_NODE=consys-reserve-memory` と出力し、watchdogからfastbootへ復帰、既知boot書戻しコマンド成功。機種DTSはこのノードをsize/alignment各2 MiBの動的予約として記述する。次のguardは固定の物理アドレスがまだ指定されていないこの既知形式だけを受理し、それ以外のregなしやalloc-ranges付きは従来どおり拒否する。動的予約の物理領域を確保したり、後続OSでの割当てを保証するものではない。実機FDTのsize/alignmentが一致しない場合も拒否する。

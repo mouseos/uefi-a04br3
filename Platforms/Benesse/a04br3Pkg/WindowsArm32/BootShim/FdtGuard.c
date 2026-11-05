@@ -25,6 +25,7 @@ static int conflict(uint64_t base,uint64_t size) {
 int A04FdtGuard(const void *input,size_t capacity) {
   const unsigned char *f=input,*st,*strings; uint32_t total,so,sz,stro,strsz,ro,pos=0;
   uint32_t res_node_start=0, res_node_length=0;
+  int dynamic_size=0,dynamic_alignment=0,dynamic_ranges=0;
   uint64_t init_start=0,init_end=0; int have_start=0,have_end=0,depth=-1,resdepth=-1;
   int chosen=-1,mem=-1,resnode=-1,resreg=0,memok=0,rootaddr=2,rootsize=1,resaddr=0,ressize=0,seenres=0,resranges=0;
   if (!f || capacity<40 || be32(f)!=0xd00dfeed) return 1;
@@ -43,11 +44,11 @@ int A04FdtGuard(const void *input,size_t capacity) {
       if(depth==1 && eq((const char*)st+start,"reserved-memory")) { if(seenres) return 10; seenres=1; resdepth=depth; }
       if(depth==1 && (eq((const char*)st+start,"chosen") || eq((const char*)st+start,"chosen@0"))) chosen=depth;
       if(depth==1 && (eq((const char*)st+start,"memory") || eq((const char*)st+start,"memory@00000000"))) mem=depth;
-      if(resdepth>=0 && depth==resdepth+1) { resnode=depth; resreg=0; res_node_start=start; res_node_length=pos-start; }
+      if(resdepth>=0 && depth==resdepth+1) { resnode=depth; resreg=0; res_node_start=start; res_node_length=pos-start; dynamic_size=dynamic_alignment=dynamic_ranges=0; }
       pos=(pos+4)&~3U; if(pos>sz) return 5;
     } else if(token==2) {
       if(depth<0) return 5;
-      if(depth==resnode) { if(!resreg) {
+      if(depth==resnode) { if(!resreg && !(eq((const char*)st+res_node_start,"consys-reserve-memory") && dynamic_size && dynamic_alignment && !dynamic_ranges)) {
 #ifdef A04_FDT_TRACE
         A04FdtNodeReport(st+res_node_start,res_node_length);
 #else
@@ -68,6 +69,14 @@ int A04FdtGuard(const void *input,size_t capacity) {
       if(depth==resdepth && eq(name,"ranges")) { if(len) return 12; resranges=1; }
       if(depth==chosen && eq(name,"linux,initrd-start")) { if(len!=4 && len!=8) return 7; init_start=len==4?be32(v):be64(v);have_start=1; }
       if(depth==chosen && eq(name,"linux,initrd-end")) { if(len!=4 && len!=8) return 7; init_end=len==4?be32(v):be64(v);have_end=1; }
+      /* The board's consys pool is a DT dynamic reservation: LK supplies
+       * size/alignment, not a physical address. It is not a fixed occupied
+       * region during this pre-copy check. Never infer a physical address. */
+      if(depth==resnode && eq(name,"size"))
+        dynamic_size=(ressize==2 && len==8 && be64(v)==0x200000);
+      if(depth==resnode && eq(name,"alignment"))
+        dynamic_alignment=(ressize==2 && len==8 && be64(v)==0x200000);
+      if(depth==resnode && eq(name,"alloc-ranges")) dynamic_ranges=1;
       if(depth==resnode && eq(name,"reg")) {
         if(resaddr!=2 || ressize!=2 || !len || len%16) return 13;
         for(n=0;n<len;n+=16) { uint64_t a=be64(v+n),s=be64(v+n+8); if(!s||s>UINT64_MAX-a||conflict(a,s)) return 14; }

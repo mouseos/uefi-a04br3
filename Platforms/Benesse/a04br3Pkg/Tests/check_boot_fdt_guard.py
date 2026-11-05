@@ -45,7 +45,16 @@ with tempfile.TemporaryDirectory() as tmp:
     dynamic=root/'dynamic.dts'; dynamic.write_text(dts.replace('reg = <0 0x43000000 0 0x30000>;','size = <0 0x30000>;'))
     subprocess.run(['dtc','-q','-I','dts','-O','dtb','-o',str(image),str(dynamic)],check=True)
     check(image.read_bytes(),False)
-    reserved=root/'reserve.dts'; reserved.write_text(dts.replace('/dts-v1/;', '/dts-v1/;\n/memreserve/ 0x41080000 0x1000;'))
+    # Only the board's exact unresolved dynamic pool is admitted; it does
+    # not claim a physical address before the later allocator chooses one.
+    dynamic.write_text(dts.replace('test@43000000 { reg = <0 0x43000000 0 0x30000>; };',
+        'consys-reserve-memory { size = <0 0x200000>; alignment = <0 0x200000>; };'))
+    subprocess.run(['dtc','-q','-I','dts','-O','dtb','-o',str(image),str(dynamic)],check=True)
+    check(image.read_bytes(),True)
+    dynamic.write_text(dynamic.read_text().replace('alignment = <0 0x200000>;', 'alignment = <0 0x100000>;'))
+    subprocess.run(['dtc','-q','-I','dts','-O','dtb','-o',str(image),str(dynamic)],check=True)
+    check(image.read_bytes(),False)
+    reserved=root/'reserve.dts' ; reserved.write_text(dts.replace('/dts-v1/;', '/dts-v1/;\n/memreserve/ 0x41080000 0x1000;'))
     subprocess.run(['dtc','-q','-I','dts','-O','dtb','-o',str(image),str(reserved)],check=True)
     check(image.read_bytes(),False)
     bad=bytearray(baseline);bad[0]=0;check(bad,False)
