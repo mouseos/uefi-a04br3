@@ -51,6 +51,12 @@
 !if $(A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT) == 1 && $(A04BR3_EXPERIMENTAL_THREE_CPU) != 1
   !error Worker heartbeat requires the experimental three CPU driver
 !endif
+!ifndef A04BR3_DISPLAY_PROVIDER
+  DEFINE A04BR3_DISPLAY_PROVIDER = 0
+!endif
+!if $(A04BR3_DISPLAY_PROVIDER) == 1 && $(A04BR3_GPU_HANDOFF) != 1
+  !error A04BR3_DISPLAY_PROVIDER requires A04BR3_GPU_HANDOFF
+!endif
 !ifndef A04BR3_GPU_HANDOFF
   DEFINE A04BR3_GPU_HANDOFF = 0
 !endif
@@ -346,13 +352,21 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
 !if $(A04BR3_SHARED_PARENT) == 1
 !if $(A04BR3_BATTERY_PROVIDER) == 1
 !if $(A04BR3_GPU_HANDOFF) == 1
+!if $(A04BR3_DISPLAY_PROVIDER) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedBatteryGpuDisplay.inf
+!else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedBatteryGpu.inf
+!endif
 !else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedBattery.inf
 !endif
 !else
 !if $(A04BR3_GPU_HANDOFF) == 1
+!if $(A04BR3_DISPLAY_PROVIDER) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedGpuDisplay.inf
+!else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedGpu.inf
+!endif
 !else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesShared.inf
 !endif
@@ -360,13 +374,21 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
 !else
 !if $(A04BR3_BATTERY_PROVIDER) == 1
 !if $(A04BR3_GPU_HANDOFF) == 1
+!if $(A04BR3_DISPLAY_PROVIDER) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesBatteryGpuDisplay.inf
+!else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesBatteryGpu.inf
+!endif
 !else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesBattery.inf
 !endif
 !else
 !if $(A04BR3_GPU_HANDOFF) == 1
+!if $(A04BR3_DISPLAY_PROVIDER) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesGpuDisplay.inf
+!else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesGpu.inf
+!endif
 !else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTables.inf
 !endif

@@ -99,13 +99,21 @@ READ_LOCK_STATUS   = TRUE
 !if $(A04BR3_SHARED_PARENT) == 1
 !if $(A04BR3_BATTERY_PROVIDER) == 1
 !if $(A04BR3_GPU_HANDOFF) == 1
+!if $(A04BR3_DISPLAY_PROVIDER) == 1
+  INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedBatteryGpuDisplay.inf
+!else
   INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedBatteryGpu.inf
+!endif
 !else
   INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedBattery.inf
 !endif
 !else
 !if $(A04BR3_GPU_HANDOFF) == 1
+!if $(A04BR3_DISPLAY_PROVIDER) == 1
+  INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedGpuDisplay.inf
+!else
   INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedGpu.inf
+!endif
 !else
   INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesShared.inf
 !endif
@@ -113,13 +121,21 @@ READ_LOCK_STATUS   = TRUE
 !else
 !if $(A04BR3_BATTERY_PROVIDER) == 1
 !if $(A04BR3_GPU_HANDOFF) == 1
+!if $(A04BR3_DISPLAY_PROVIDER) == 1
+  INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesBatteryGpuDisplay.inf
+!else
   INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesBatteryGpu.inf
+!endif
 !else
   INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesBattery.inf
 !endif
 !else
 !if $(A04BR3_GPU_HANDOFF) == 1
+!if $(A04BR3_DISPLAY_PROVIDER) == 1
+  INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesGpuDisplay.inf
+!else
   INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesGpu.inf
+!endif
 !else
   INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTables.inf
 !endif
