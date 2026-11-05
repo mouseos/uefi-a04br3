@@ -16,6 +16,7 @@
 [LibraryClasses]
   ## @libraryclass  LK fastboot flag and TOPRGU watchdog of the unattended test cycle
   A04BR3TestCycleLib|Include/Library/A04BR3TestCycleLib.h
+  A04BR3BqFirmwareOwnerLib|Include/Library/A04BR3BqFirmwareOwnerLib.h
   DefaultExceptionHandlerLib|Include/Library/DefaultExceptionHandlerLib.h
   ArmDisassemblerLib|Include/Library/ArmDisassemblerLib.h
 

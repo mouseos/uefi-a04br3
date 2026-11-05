@@ -67,6 +67,19 @@
   !error A04BR3_CHARGER_OWNER must be 0 or 1
 !endif
 
+# Windows BQHR source is staged for the future ARM32/ACPI board port.
+# The present AARCH64/FDT platform cannot publish its ACPI method; never
+# silently build a non-functional transport or a second I2C2 owner.
+!ifndef A04BR3_WINDOWS_BQHR
+  DEFINE A04BR3_WINDOWS_BQHR = 0
+!endif
+!if $(A04BR3_WINDOWS_BQHR) != 0 && $(A04BR3_WINDOWS_BQHR) != 1
+  !error A04BR3_WINDOWS_BQHR must be 0 or 1
+!endif
+!if $(A04BR3_WINDOWS_BQHR) == 1
+  !error A04BR3_WINDOWS_BQHR requires the unimplemented ARM32/ACPI board platform
+!endif
+
 !ifndef A04BR3_EARLY_FAULT
   DEFINE A04BR3_EARLY_FAULT      = 0
 !endif
