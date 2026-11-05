@@ -73,10 +73,11 @@ if [[ $three != 0 ]]; then
   if [[ $three == 2 || $three == 3 ]]; then offline=0; no_uart=0; fi
   if [[ $three == 2 ]]; then seconds=120; fi
   guard=0; if [[ $three == 2 || $three == 3 ]]; then guard=1; fi
+  framebuffer=0; if [[ $three == 3 ]]; then framebuffer=1; fi
   "$a64prefix"gcc -c "$root/Platforms/Benesse/a04br3Pkg/WindowsArm32/BootShim/BootShim.S" -o "$fv/BootShim.o" \
     -DUEFI_BASE=0x41080000 -DUEFI_SIZE=0x300000 -DA04BR3_A64_CPU_TEST=1 -DA04BR3_A32_SECONDARY_TEST=1 \
     -DA04BR3_PARK_TEST=1 -DA04BR3_SMP_TEST=1 -DA04BR3_WDT_HANDOFF_TEST=0 -DA04BR3_FOUR_CPU_TEST=0 \
-    -DA04BR3_A64_WDT_TEST=1 -DA04BR3_A64_WDT_SECONDS="$seconds" -DA04BR3_KERNEL_MARKER=0 -DA04BR3_FB_MONITOR=0 \
+    -DA04BR3_A64_WDT_TEST=1 -DA04BR3_A64_WDT_SECONDS="$seconds" -DA04BR3_KERNEL_MARKER="$framebuffer" -DA04BR3_FB_MONITOR="$framebuffer" \
     -DA04BR3_OFFLINE_WDT_UNBOUNDED="$offline" -DA04BR3_WORKER_NO_UART_RESET="$no_uart" -DA04BR3_WORKER_HEARTBEAT=1 \
     -DA04BR3_EARLY_FDT_GUARD="$guard"
   shimobj="$fv/BootShim.o"
@@ -149,8 +150,8 @@ if three != '0':
  result['build_defines'].update(A04BR3_EXPERIMENTAL_THREE_CPU='1',A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT='1')
  result['shim_defines']={'UEFI_BASE':'0x41080000','UEFI_SIZE':'0x300000','A04BR3_A64_CPU_TEST':1,
   'A04BR3_A32_SECONDARY_TEST':1,'A04BR3_PARK_TEST':1,'A04BR3_SMP_TEST':1,'A04BR3_WDT_HANDOFF_TEST':0,
-  'A04BR3_FOUR_CPU_TEST':0,'A04BR3_A64_WDT_TEST':1,'A04BR3_A64_WDT_SECONDS':120 if three == '2' else 420,'A04BR3_KERNEL_MARKER':0,
-  'A04BR3_FB_MONITOR':0,'A04BR3_OFFLINE_WDT_UNBOUNDED':0 if three in ('2','3') else 1,'A04BR3_WORKER_NO_UART_RESET':0 if three in ('2','3') else 1,'A04BR3_WORKER_HEARTBEAT':1}
+  'A04BR3_FOUR_CPU_TEST':0,'A04BR3_A64_WDT_TEST':1,'A04BR3_A64_WDT_SECONDS':120 if three == '2' else 420,'A04BR3_KERNEL_MARKER':1 if three == '3' else 0,
+  'A04BR3_FB_MONITOR':1 if three == '3' else 0,'A04BR3_OFFLINE_WDT_UNBOUNDED':0 if three in ('2','3') else 1,'A04BR3_WORKER_NO_UART_RESET':0 if three in ('2','3') else 1,'A04BR3_WORKER_HEARTBEAT':1}
  result['shim_defines']['A04BR3_EARLY_FDT_GUARD']=1 if three in ('2','3') else 0
  result.update(shim_sha256=sha(shim),shim_bytes=len(data),shimmed_fd_sha256=sha(combined),shimmed_fd_bytes=combined.stat().st_size)
  result['limitations']=['experimental three CPU; no runtime validation','worker heartbeat is not proof of watchdog operation',
