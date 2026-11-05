@@ -236,7 +236,7 @@ CEntryPoint(
   // The canonical SEC hook stops the inherited watchdog. Run it before any
   // opt-in test-cycle arm, never after it.
   PlatformInitialize();
-#if defined (MDE_CPU_ARM) && A04BR3_BOOT_DIAGNOSTIC == 1
+#if defined (MDE_CPU_ARM) && A04BR3_BOUNDED_RECOVERY == 1
   /* PlatformInitialize disables the inherited watchdog. Arm immediately
    * after it, before DXE can fault and before its CPU1 worker is started. */
   if (!A04BR3SetFastbootFlag ()) {

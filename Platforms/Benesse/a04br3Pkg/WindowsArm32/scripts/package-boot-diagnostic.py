@@ -32,7 +32,8 @@ def main():
     m = json.loads(mf.read_text())
     s = m.get('shim_defines', {})
     if (m.get('status') != 'diagnostic-only-not-for-device' or m.get('shimmed_fd_sha256') != sha(fw) or
-        m.get('build_defines', {}).get('A04BR3_BOOT_DIAGNOSTIC') != '1' or
+        m.get('build_defines', {}).get('A04BR3_BOOT_DIAGNOSTIC') not in ('0', '1') or
+        m.get('build_defines', {}).get('A04BR3_BOUNDED_RECOVERY') != '1' or
         s.get('A04BR3_A64_WDT_SECONDS') != 120 or s.get('A04BR3_OFFLINE_WDT_UNBOUNDED') != 0 or
         s.get('A04BR3_WORKER_HEARTBEAT') != 1 or s.get('A04BR3_WORKER_NO_UART_RESET') != 0 or
         s.get('A04BR3_EARLY_FDT_GUARD') != 1):
@@ -74,7 +75,7 @@ def main():
             raise SystemExit('firmware gzip roundtrip failed')
         out.mkdir(parents=True)
         shutil.copyfile(candidate,out/'boot.img')
-        result={'status':'bounded-diagnostic-not-validated-on-device','uefi_source_commit':m['source_commit'],
+        result={'status':'bounded-os-entry-unvalidated' if m['build_defines']['A04BR3_BOOT_DIAGNOSTIC'] == '0' else 'bounded-diagnostic-not-validated-on-device','uefi_source_commit':m['source_commit'],
                 'firmware_manifest_sha256':sha(mf),'firmware_sha256':sha(fw),'stock_boot_sha256':sha(stock),
                 'dtb_sha256':sha(dtb),'stock_ramdisk_sha256':sha(ramdisk),'boot_img_sha256':sha(out/'boot.img'),
                 'packager_sha256':sha(Path(__file__)),'abootimg_sha256':sha(Path(abootimg)),
