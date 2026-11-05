@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: MIT
+[Defines]
+  INF_VERSION = 0x0001001B
+  BASE_NAME = A04BR3BqFirmwareOwnerLib
+  FILE_GUID = 058219EE-1C91-47A5-B291-A04B34160002
+  MODULE_TYPE = BASE
+  VERSION_STRING = 1.0
+  LIBRARY_CLASS = A04BR3BqFirmwareOwnerLib
+[Sources]
+  charger.c
+  BqFirmwareOwner.c
+  BqPio.c
+[Packages]
+  MdePkg/MdePkg.dec
+  a04br3Pkg/a04br3.dec

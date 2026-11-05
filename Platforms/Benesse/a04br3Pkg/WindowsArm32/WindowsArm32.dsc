@@ -158,6 +158,17 @@
   !error A04BR3_DISK_SERVICING forbids A04BR3_TEST_CYCLE
 !endif
 
+# Optional BQHR stop record; mutually exclusive I2C2 owner and battery ACPI required.
+!ifndef A04BR3_BQ_HANDOFF
+  DEFINE A04BR3_BQ_HANDOFF = 0
+!endif
+!if $(A04BR3_BQ_HANDOFF) != 0 && $(A04BR3_BQ_HANDOFF) != 1
+  !error A04BR3_BQ_HANDOFF must be 0 or 1
+!endif
+!if $(A04BR3_BQ_HANDOFF) == 1 && $(A04BR3_BATTERY_PROVIDER) != 1
+  !error BQHR requires the battery provider
+!endif
+
 !ifndef A04BR3_CHARGER_OWNER
   DEFINE A04BR3_CHARGER_OWNER = 0
 !endif
@@ -482,7 +493,16 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
   a04br3Pkg/WindowsArm32/Drivers/GpuPowerDxe/GpuPowerDxe.inf
 !endif
 !if $(A04BR3_BATTERY_PROVIDER) == 1
+!if $(A04BR3_BQ_HANDOFF) == 1
+  a04br3Pkg/WindowsArm32/Drivers/BqI2c2HandoffDxe/I2c2HandoffDxe.inf {
+    <LibraryClasses>
+      A04BR3BqFirmwareOwnerLib|a04br3Pkg/Library/Bq24160HandoffLib/Bq24160HandoffLib.inf
+    <BuildOptions>
+      GCC:*_*_ARM_CC_FLAGS = -DA04BR3_BQ_HANDOFF=1
+  }
+!else
   a04br3Pkg/WindowsArm32/Drivers/I2c2HandoffDxe/I2c2HandoffDxe.inf
+!endif
 !endif
 !if $(A04BR3_EXPERIMENTAL_THREE_CPU) == 1
   a04br3Pkg/WindowsArm32/Drivers/ThreeCpuDxe/A04BR3BootTraceDxe.inf {

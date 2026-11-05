@@ -197,7 +197,11 @@ READ_LOCK_STATUS   = TRUE
   INF a04br3Pkg/WindowsArm32/Drivers/GpuPowerDxe/GpuPowerDxe.inf
 !endif
 !if $(A04BR3_BATTERY_PROVIDER) == 1
+!if $(A04BR3_BQ_HANDOFF) == 1
+  INF a04br3Pkg/WindowsArm32/Drivers/BqI2c2HandoffDxe/I2c2HandoffDxe.inf
+!else
   INF a04br3Pkg/WindowsArm32/Drivers/I2c2HandoffDxe/I2c2HandoffDxe.inf
+!endif
 !endif
 !if $(A04BR3_EXPERIMENTAL_THREE_CPU) == 1
   INF a04br3Pkg/WindowsArm32/Drivers/ThreeCpuDxe/A04BR3BootTraceDxe.inf

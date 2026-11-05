@@ -12,6 +12,8 @@ display=${A04_DIAGNOSTIC_DISPLAY:-0}
 touch=${A04_DIAGNOSTIC_TOUCH:-0}
 shared=${A04_DIAGNOSTIC_SHARED:-0}
 apmixed=${A04_DIAGNOSTIC_SHARED_APMIXED:-0}
+bq=${A04_DIAGNOSTIC_BQ_HANDOFF:-0}
+[[ $bq == 0 || ($bq == 1 && $battery == 1) ]] || exit 2
 [[ $shared == 0 || $shared == 1 ]] || exit 2
 [[ $apmixed == 0 || ($apmixed == 1 && $shared == 1) ]] || exit 2
 [[ $shared == 0 || $touch == 0 ]] || exit 2
@@ -78,6 +80,7 @@ if [[ $three == 3 || $three == 4 ]]; then buildflags+=(-D A04BR3_CACHE_TEST=1); 
 if [[ $three == 4 ]]; then buildflags+=(-D A04BR3_FOUR_CPU_TEST=1); fi
 if [[ $three == 2 || $three == 3 || $three == 4 ]]; then buildflags+=(-D A04BR3_BOUNDED_RECOVERY=1); fi
 if [[ $battery == 1 ]]; then buildflags+=(-D A04BR3_BATTERY_PROVIDER=1); fi
+if [[ $bq == 1 ]]; then buildflags+=(-D A04BR3_BQ_HANDOFF=1); fi
 if [[ $gpu == 1 ]]; then buildflags+=(-D A04BR3_GPU_HANDOFF=1); fi
 if [[ $display == 1 ]]; then buildflags+=(-D A04BR3_DISPLAY_PROVIDER=1); fi
 if [[ $touch == 1 ]]; then buildflags+=(-D A04BR3_TOUCH_PROVIDER=1); fi
@@ -114,10 +117,10 @@ EOF
   fi
   "$a64prefix"objcopy -O binary "$shimobj" "$fv/BootShim.bin"
 fi
-python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" <<'PY'
+python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" <<'PY'
 from pathlib import Path
 import hashlib,json,subprocess,sys
-root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed=sys.argv[1:]
+root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq=sys.argv[1:]
 def sha(path):
  h=hashlib.sha256()
  with open(path,'rb') as f:
@@ -156,6 +159,8 @@ result['build_defines']['A04BR3_DISPLAY_PROVIDER']=display
 result['build_defines']['A04BR3_TOUCH_PROVIDER']=touch
 result['build_defines']['A04BR3_SHARED_PARENT']=shared
 result['build_defines']['A04BR3_SHARED_APMIXED']=apmixed
+result['build_defines']['A04BR3_BQ_HANDOFF']=bq
+if bq == '1': result['limitations'].append('BQHR stopped record transport untested; BQ communication remains disabled')
 if three != '0':
  import shutil,struct
  obj=fd.parent/('BootShim.linked' if three in ('2','3','4') else 'BootShim.o'); shim=fd.parent/'BootShim.bin'; data=shim.read_bytes()

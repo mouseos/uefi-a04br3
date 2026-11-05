@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: MIT
+[Defines]
+  INF_VERSION = 0x00010019
+  BASE_NAME = A04Br3I2c2HandoffDxe
+  FILE_GUID = 64E5014E-B9D1-4E61-ADAE-EFDCA3D6F9AA
+  MODULE_TYPE = DXE_DRIVER
+  VERSION_STRING = 1.0
+  ENTRY_POINT = I2c2HandoffEntry
+[Sources]
+  I2c2HandoffDxe.c
+[Packages]
+  MdePkg/MdePkg.dec
+  ArmPkg/ArmPkg.dec
+  a04br3Pkg/a04br3.dec
+[LibraryClasses]
+  A04BR3BqFirmwareOwnerLib
+  ArmLib
+  TimerLib
+  BaseMemoryLib
+  CacheMaintenanceLib
+  BaseLib
+  DebugLib
+  IoLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+[Guids]
+  gEfiEventBeforeExitBootServicesGuid
+  gEfiEventExitBootServicesGuid
+  gEfiEventReadyToBootGuid
+[Protocols]
+  gEfiAcpiTableProtocolGuid
+  gEfiAcpiSdtProtocolGuid
+[Depex]
+  gEfiAcpiTableProtocolGuid
