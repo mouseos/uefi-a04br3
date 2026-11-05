@@ -2,6 +2,7 @@
   INF MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
   INF a04br3Pkg/WindowsArm32/Drivers/CpuDxe/CpuDxe.inf
   INF MdeModulePkg/Core/RuntimeDxe/RuntimeDxe.inf
+  INF a04br3Pkg/WindowsArm32/Drivers/CapsuleUnsupportedDxe/CapsuleUnsupportedDxe.inf
   INF MdeModulePkg/Universal/SecurityStubDxe/SecurityStubDxe.inf
   INF MdeModulePkg/Universal/WatchdogTimerDxe/WatchdogTimer.inf
   INF MdeModulePkg/Universal/ReportStatusCodeRouter/RuntimeDxe/ReportStatusCodeRouterRuntimeDxe.inf
