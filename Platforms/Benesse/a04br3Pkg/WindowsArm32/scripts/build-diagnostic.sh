@@ -9,6 +9,8 @@ three=${A04_DIAGNOSTIC_THREE_CPU:-0}
 battery=${A04_DIAGNOSTIC_BATTERY:-0}
 gpu=${A04_DIAGNOSTIC_GPU:-0}
 display=${A04_DIAGNOSTIC_DISPLAY:-0}
+touch=${A04_DIAGNOSTIC_TOUCH:-0}
+[[ $touch == 0 || $touch == 1 ]] || exit 2
 [[ $display == 0 || ($display == 1 && $gpu == 1) ]] || exit 2
 [[ $gpu == 0 || $gpu == 1 ]] || exit 2
 [[ $battery == 0 || $battery == 1 ]] || exit 2
@@ -72,6 +74,7 @@ if [[ $three == 2 || $three == 3 ]]; then buildflags+=(-D A04BR3_BOUNDED_RECOVER
 if [[ $battery == 1 ]]; then buildflags+=(-D A04BR3_BATTERY_PROVIDER=1); fi
 if [[ $gpu == 1 ]]; then buildflags+=(-D A04BR3_GPU_HANDOFF=1); fi
 if [[ $display == 1 ]]; then buildflags+=(-D A04BR3_DISPLAY_PROVIDER=1); fi
+if [[ $touch == 1 ]]; then buildflags+=(-D A04BR3_TOUCH_PROVIDER=1); fi
 "$EDK_TOOLS_PATH/BinWrappers/PosixLike/build" -p a04br3Pkg/WindowsArm32/WindowsArm32.dsc -a ARM -b DEBUG -t GCC5 -D FD_BASE=0x41080000 -D FD_SIZE=0x00300000 -D FD_BLOCKS=0x300 -D "A04_BUILD_OUTPUT=Build/$output" "${buildflags[@]}"
 if [[ $three != 0 ]]; then
   fv="$root/Build/$output/DEBUG_GCC5/FV"
@@ -102,10 +105,10 @@ EOF
   fi
   "$a64prefix"objcopy -O binary "$shimobj" "$fv/BootShim.bin"
 fi
-python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" <<'PY'
+python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" <<'PY'
 from pathlib import Path
 import hashlib,json,subprocess,sys
-root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display=sys.argv[1:]
+root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch=sys.argv[1:]
 def sha(path):
  h=hashlib.sha256()
  with open(path,'rb') as f:
@@ -141,6 +144,7 @@ result={'status':'diagnostic-only-not-for-device','source_commit':git(root,'rev-
 result['build_defines']['A04BR3_BATTERY_PROVIDER']=battery
 result['build_defines']['A04BR3_GPU_HANDOFF']=gpu
 result['build_defines']['A04BR3_DISPLAY_PROVIDER']=display
+result['build_defines']['A04BR3_TOUCH_PROVIDER']=touch
 if three != '0':
  import shutil,struct
  obj=fd.parent/('BootShim.linked' if three in ('2','3') else 'BootShim.o'); shim=fd.parent/'BootShim.bin'; data=shim.read_bytes()

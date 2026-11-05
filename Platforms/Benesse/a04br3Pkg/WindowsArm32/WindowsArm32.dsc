@@ -51,6 +51,9 @@
 !if $(A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT) == 1 && $(A04BR3_EXPERIMENTAL_THREE_CPU) != 1
   !error Worker heartbeat requires the experimental three CPU driver
 !endif
+!ifndef A04BR3_TOUCH_PROVIDER
+  DEFINE A04BR3_TOUCH_PROVIDER = 0
+!endif
 !ifndef A04BR3_DISPLAY_PROVIDER
   DEFINE A04BR3_DISPLAY_PROVIDER = 0
 !endif
@@ -92,6 +95,9 @@
 !endif
 !ifndef A04BR3_TOUCH_PROVIDER
   DEFINE A04BR3_TOUCH_PROVIDER = 0
+!endif
+!if $(A04BR3_TOUCH_PROVIDER) == 1 && $(A04BR3_SHARED_PARENT) == 1
+  !error Touch provider conflicts with shared parent resources
 !endif
 !if $(A04BR3_SHARED_PARENT) != 0 && $(A04BR3_SHARED_PARENT) != 1
   !error A04BR3_SHARED_PARENT must be 0 or 1
@@ -375,26 +381,53 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
 !if $(A04BR3_BATTERY_PROVIDER) == 1
 !if $(A04BR3_GPU_HANDOFF) == 1
 !if $(A04BR3_DISPLAY_PROVIDER) == 1
+!if $(A04BR3_TOUCH_PROVIDER) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesBatteryGpuDisplayTouch.inf
+!else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesBatteryGpuDisplay.inf
+!endif
+!else
+!if $(A04BR3_TOUCH_PROVIDER) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesBatteryGpuTouch.inf
 !else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesBatteryGpu.inf
 !endif
+!endif
+!else
+!if $(A04BR3_TOUCH_PROVIDER) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesBatteryTouch.inf
 !else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesBattery.inf
+!endif
 !endif
 !else
 !if $(A04BR3_GPU_HANDOFF) == 1
 !if $(A04BR3_DISPLAY_PROVIDER) == 1
+!if $(A04BR3_TOUCH_PROVIDER) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesGpuDisplayTouch.inf
+!else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesGpuDisplay.inf
+!endif
+!else
+!if $(A04BR3_TOUCH_PROVIDER) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesGpuTouch.inf
 !else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesGpu.inf
 !endif
+!endif
+!else
+!if $(A04BR3_TOUCH_PROVIDER) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesTouch.inf
 !else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTables.inf
 !endif
 !endif
 !endif
+!endif
   a04br3Pkg/Drivers/I2c1HandoffDxe/I2c1HandoffDxe.inf
+!if $(A04BR3_TOUCH_PROVIDER) == 1
+  a04br3Pkg/WindowsArm32/Drivers/TouchPowerDxe/TouchPowerDxe.inf
+!endif
 !if $(A04BR3_GPU_HANDOFF) == 1
   a04br3Pkg/WindowsArm32/Drivers/GpuPowerDxe/GpuPowerDxe.inf
 !endif

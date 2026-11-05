@@ -1,0 +1,21 @@
+# Experimental ACPI 5.0 tables. SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+  INF_VERSION = 0x00010005
+  BASE_NAME = A04BR3AcpiTablesBatteryGpuDisplayTouch
+  FILE_GUID = 7E374E25-8E01-4FEE-87F2-390C23C606CD
+  MODULE_TYPE = USER_DEFINED
+  VERSION_STRING = 1.0
+[Sources]
+  AcpiTables.h
+  Fadt.aslc
+  Gtdt.aslc
+  Madt.aslc
+  Dsdt.asl
+  TouchProvider.asl
+  GpuProvider.asl
+  DisplayProvider.asl
+  BatteryGauge.asl
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ArmPkg/ArmPkg.dec
