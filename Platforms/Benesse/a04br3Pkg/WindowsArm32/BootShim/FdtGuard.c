@@ -3,6 +3,9 @@
  */
 #include <stdint.h>
 #include <stddef.h>
+#ifdef A04_FDT_TRACE
+extern void A04FdtNodeReport(const unsigned char *, uint32_t);
+#endif
 
 static uint32_t be32(const unsigned char *p) {
   /* FDT properties have only four-byte alignment. Do not let the compiler
@@ -21,6 +24,7 @@ static int conflict(uint64_t base,uint64_t size) {
 /* capacity is the amount of mapped input, never an untrusted FDT field. */
 int A04FdtGuard(const void *input,size_t capacity) {
   const unsigned char *f=input,*st,*strings; uint32_t total,so,sz,stro,strsz,ro,pos=0;
+  uint32_t res_node_start=0, res_node_length=0;
   uint64_t init_start=0,init_end=0; int have_start=0,have_end=0,depth=-1,resdepth=-1;
   int chosen=-1,mem=-1,resnode=-1,resreg=0,memok=0,rootaddr=2,rootsize=1,resaddr=0,ressize=0,seenres=0,resranges=0;
   if (!f || capacity<40 || be32(f)!=0xd00dfeed) return 1;
@@ -39,11 +43,17 @@ int A04FdtGuard(const void *input,size_t capacity) {
       if(depth==1 && eq((const char*)st+start,"reserved-memory")) { if(seenres) return 10; seenres=1; resdepth=depth; }
       if(depth==1 && (eq((const char*)st+start,"chosen") || eq((const char*)st+start,"chosen@0"))) chosen=depth;
       if(depth==1 && (eq((const char*)st+start,"memory") || eq((const char*)st+start,"memory@00000000"))) mem=depth;
-      if(resdepth>=0 && depth==resdepth+1) { resnode=depth; resreg=0; }
+      if(resdepth>=0 && depth==resdepth+1) { resnode=depth; resreg=0; res_node_start=start; res_node_length=pos-start; }
       pos=(pos+4)&~3U; if(pos>sz) return 5;
     } else if(token==2) {
       if(depth<0) return 5;
-      if(depth==resnode) { if(!resreg) return 11; resnode=-1; }
+      if(depth==resnode) { if(!resreg) {
+#ifdef A04_FDT_TRACE
+        A04FdtNodeReport(st+res_node_start,res_node_length);
+#else
+        (void)res_node_start; (void)res_node_length;
+#endif
+        return 11; } resnode=-1; }
       if(depth==resdepth) resdepth=-1; if(depth==chosen) chosen=-1; if(depth==mem) mem=-1; depth--;
     } else if(token==3) {
       uint32_t len,noff; const char *name; const unsigned char *v; uint32_t n;

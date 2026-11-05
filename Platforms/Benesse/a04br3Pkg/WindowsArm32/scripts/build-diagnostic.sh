@@ -81,7 +81,7 @@ if [[ $three != 0 ]]; then
     shimdir="$root/Platforms/Benesse/a04br3Pkg/WindowsArm32/BootShim"
     for src in FdtGuard EarlyRecovery; do
       "$a64prefix"gcc -c -O2 -ffreestanding -fno-stack-protector -fno-builtin -fno-pic -fno-pie \
-        -fno-asynchronous-unwind-tables -fno-unwind-tables -mgeneral-regs-only -mstrict-align "$shimdir/$src.c" -o "$fv/$src.o"
+        -fno-asynchronous-unwind-tables -fno-unwind-tables -mgeneral-regs-only -mstrict-align -DA04_FDT_TRACE=1 "$shimdir/$src.c" -o "$fv/$src.o"
     done
     cat > "$conf/shim.ld" <<'EOF'
 SECTIONS { . = 0; .text : { *(.text*) *(.rodata*) . = ALIGN(16); *(.payload*) }
@@ -161,7 +161,7 @@ if three != '0':
  if three == '2':
   result['build_defines']['A04BR3_BOOT_DIAGNOSTIC']='1'
   result['shim_c_flags']=['-O2','-ffreestanding','-fno-stack-protector','-fno-builtin','-fno-pic','-fno-pie',
-                          '-fno-asynchronous-unwind-tables','-fno-unwind-tables','-mgeneral-regs-only','-mstrict-align']
+                          '-fno-asynchronous-unwind-tables','-fno-unwind-tables','-mgeneral-regs-only','-mstrict-align','-DA04_FDT_TRACE=1']
   result['limitations'].extend(['bounded watchdog diagnostic; RTC fastboot flag is modified',
    'UEFI ReadyToBoot and ExitBootServices block OS launch; hardware behavior and recovery unverified'])
 (fd.parent/'diagnostic-manifest.json').write_text(json.dumps(result,indent=2)+'\n')

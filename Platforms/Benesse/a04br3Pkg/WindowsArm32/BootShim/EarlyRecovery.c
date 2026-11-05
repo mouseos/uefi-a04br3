@@ -19,6 +19,12 @@ static void putc_early(uint32_t c) {
   for(i=0;i<4096;i++) if(rd(UART+0x14)&0x20U) {wr(UART,c);return;}
 }
 static void text_early(const char *s) { while(*s) putc_early((unsigned char)*s++); }
+void A04FdtNodeReport(const unsigned char *name,uint32_t length) {
+  uint32_t i; text_early("\nA04FDT RESERVED_NODE=");
+  if(length>80) length=80;
+  for(i=0;i<length;i++) { uint32_t c=name[i]; putc_early(c>=32 && c<=126 ? c : '?'); }
+  putc_early('\n');
+}
 void A04FdtReport(uint32_t code) {
   static const char hex[]="0123456789ABCDEF";
   text_early("\nA04FDT FAIL=0x");putc_early(hex[(code>>4)&15]);putc_early(hex[code&15]);putc_early('\n');
