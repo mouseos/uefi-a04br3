@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+  INF_VERSION = 0x00010005
+  BASE_NAME = A04BR3WindowsDisplayOverlayDxe
+  FILE_GUID = 69807639-7C60-4F86-9318-81343C2BFD36
+  MODULE_TYPE = DXE_DRIVER
+  VERSION_STRING = 1.0
+  ENTRY_POINT = A04DisplayOverlayEntry
+[Sources]
+  DisplayOverlayDxe.c
+[Packages]
+  MdePkg/MdePkg.dec
+[LibraryClasses]
+  DebugLib
+  IoLib
+  UefiDriverEntryPoint
+[Protocols]
+  gEfiGraphicsOutputProtocolGuid
+[Depex]
+  gEfiGraphicsOutputProtocolGuid
