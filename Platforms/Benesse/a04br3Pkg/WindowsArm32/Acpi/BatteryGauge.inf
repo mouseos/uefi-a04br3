@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+  INF_VERSION = 0x00010005
+  BASE_NAME = A04BR3BatteryGauge
+  FILE_GUID = A74C214E-5E79-4858-A713-A6EBC6D246ED
+  MODULE_TYPE = USER_DEFINED
+  VERSION_STRING = 1.0
+[Sources]
+  BatteryGauge.asl
+[Packages]
+  MdePkg/MdePkg.dec

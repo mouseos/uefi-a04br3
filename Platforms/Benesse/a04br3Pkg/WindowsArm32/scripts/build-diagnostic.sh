@@ -6,6 +6,8 @@ if [[ $# != 5 ]]; then
 fi
 canonical=$(realpath "$1"); oldtools=$(realpath "$2"); template=$(realpath "$3"); gccprefix=$4; output=$5
 three=${A04_DIAGNOSTIC_THREE_CPU:-0}
+battery=${A04_DIAGNOSTIC_BATTERY:-0}
+[[ $battery == 0 || $battery == 1 ]] || exit 2
 a64prefix=${A04_AARCH64_PREFIX:-aarch64-linux-gnu-}
 overlay=${A04_LIBGCC_OVERLAY:-}
 [[ $three == 0 || $three == 1 || $three == 2 ]] || exit 2
@@ -61,6 +63,7 @@ if [[ $three != 0 ]]; then
   buildflags=(-D A04BR3_EXPERIMENTAL_THREE_CPU=1 -D A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT=1)
 fi
 if [[ $three == 2 ]]; then buildflags+=(-D A04BR3_BOOT_DIAGNOSTIC=1); fi
+if [[ $battery == 1 ]]; then buildflags+=(-D A04BR3_BATTERY_PROVIDER=1); fi
 "$EDK_TOOLS_PATH/BinWrappers/PosixLike/build" -p a04br3Pkg/WindowsArm32/WindowsArm32.dsc -a ARM -b DEBUG -t GCC5 -D FD_BASE=0x41080000 -D FD_SIZE=0x00300000 -D FD_BLOCKS=0x300 -D "A04_BUILD_OUTPUT=Build/$output" "${buildflags[@]}"
 if [[ $three != 0 ]]; then
   fv="$root/Build/$output/DEBUG_GCC5/FV"
@@ -89,10 +92,10 @@ EOF
   fi
   "$a64prefix"objcopy -O binary "$shimobj" "$fv/BootShim.bin"
 fi
-python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" <<'PY'
+python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" <<'PY'
 from pathlib import Path
 import hashlib,json,subprocess,sys
-root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay=sys.argv[1:]
+root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery=sys.argv[1:]
 def sha(path):
  h=hashlib.sha256()
  with open(path,'rb') as f:
@@ -125,6 +128,8 @@ result={'status':'diagnostic-only-not-for-device','source_commit':git(root,'rev-
  'build_defines':{'FD_BASE':'0x41080000','FD_SIZE':'0x00300000','FD_BLOCKS':'0x300'},
  'inputs':{str(p):sha(p) for p in inputs},'fd_sha256':sha(fd),'fd_bytes':fd.stat().st_size,
  'limitations':['single CPU only','watchdog worker and parking not connected','RP attribute unsupported','MMU runtime, cache and NVS unverified','libgcc ABI warnings unreviewed']}
+result['build_defines']['A04BR3_BATTERY_PROVIDER']=battery
+if battery == '1': result['limitations'].append('LC709203F ACPI and I2C2 handoff have not been validated on this firmware')
 if three != '0':
  import shutil,struct
  obj=fd.parent/('BootShim.linked' if three == '2' else 'BootShim.o'); shim=fd.parent/'BootShim.bin'; data=shim.read_bytes()
