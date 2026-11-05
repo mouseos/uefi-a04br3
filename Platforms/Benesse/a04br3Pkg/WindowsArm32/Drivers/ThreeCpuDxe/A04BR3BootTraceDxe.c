@@ -216,6 +216,7 @@ STATIC VOID ProbeSecondaryA64 (VOID)
 STATIC VOID EFIAPI A04BeforeExit(EFI_EVENT Event, VOID *Context)
 {
   (VOID)Event; (VOID)Context;
+  DEBUG ((DEBUG_ERROR, "A04TRACE ExitBootServices event signaled; completion not yet known\n"));
 #if A04BR3_BOOT_DIAGNOSTIC == 1
   DEBUG ((DEBUG_ERROR, "A04DIAG ExitBootServices blocked\n"));
   CpuDeadLoop ();
