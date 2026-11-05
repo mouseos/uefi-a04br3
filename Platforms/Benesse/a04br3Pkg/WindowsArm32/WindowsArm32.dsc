@@ -117,6 +117,10 @@
 !if $(A04BR3_CHARGER_OWNER) != 0 && $(A04BR3_CHARGER_OWNER) != 1
   !error A04BR3_CHARGER_OWNER must be 0 or 1
 !endif
+# Both paths program I2C2 at ExitBootServices and have no common owner.
+!if $(A04BR3_CHARGER_OWNER) == 1 && $(A04BR3_BATTERY_PROVIDER) == 1
+  !error The charger owner and battery provider cannot share I2C2
+!endif
 
 !ifndef A04BR3_EARLY_FAULT
   DEFINE A04BR3_EARLY_FAULT      = 0
