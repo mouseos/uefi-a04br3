@@ -28,6 +28,14 @@ with tempfile.TemporaryDirectory(prefix='a04-worker-') as tmp:
     unbounded = compile_case({**flags,'A04BR3_OFFLINE_WDT_UNBOUNDED':'1'})
     assert 'cmp\tx10, x6' in bounded and 'cmp\tx10, x6' not in unbounded
     assert 'str\tw16, [x7, #12]' in bounded
+    four = compile_case({**flags, 'A04BR3_FOUR_CPU_TEST':'1', 'A04BR3_OFFLINE_WDT_UNBOUNDED':'0'})
+    # Machine code must examine TOPRGU_MODE before the final kick and branch
+    # to the disabled path instead of transferring CPU1 with no watchdog.
+    mode=four.index('ldur\tw16, [x7, #-8]')
+    final_kick=four.index('str\tw8, [x7]',mode)
+    assert 'tbnz\tw16, #0' in four[mode:final_kick]
+    assert 'str\tw16, [x19, #48]' in four[mode:final_kick]
+    assert '<_A64HandoffMark>' in four[mode:final_kick]
     diagnostic = compile_case({**flags, 'A04BR3_KERNEL_MARKER':'0', 'A04BR3_FB_MONITOR':'0',
                                'A04BR3_A64_WDT_SECONDS':'120', 'A04BR3_OFFLINE_WDT_UNBOUNDED':'0',
                                'A04BR3_WORKER_NO_UART_RESET':'0', 'A04BR3_WORKER_HEARTBEAT':'1'})
