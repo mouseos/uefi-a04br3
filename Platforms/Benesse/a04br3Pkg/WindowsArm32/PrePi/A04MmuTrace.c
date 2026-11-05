@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Base.h>
 #include <Library/DebugLib.h>
+#include <Library/MemoryMapLib.h>
+#include <Library/IoLib.h>
 #include <A04ArmLib.h>
 #include <Library/A04BR3TestCycleLib.h>
 
@@ -33,6 +35,22 @@ VOID EFIAPI __wrap_ArmEnableMmu (VOID)
   __asm__ volatile ("mrc p15, 0, %0, c2, c0, 2" : "=r" (Ttbcr));
   __asm__ volatile ("mrc p15, 0, %0, c3, c0, 0" : "=r" (Dacr));
   __asm__ volatile ("mrc p15, 0, %0, c1, c0, 0" : "=r" (Sctlr));
+  {
+    EFI_MEMORY_REGION_DESCRIPTOR *Regions;
+    UINT8 Count, Index;
+    GetMemoryMap (&Regions, &Count);
+    for (Index = 0; Index < Count; ++Index) {
+      if (Regions[Index].Address == 0x11005000 ||
+          Regions[Index].Address == 0x10310000 ||
+          Regions[Index].Address == 0x10007000) {
+        DEBUG ((DEBUG_ERROR, "A04MAP input %a addr=%08x arm=%u dev=%u hob=%u\n",
+                Regions[Index].Name, (UINT32)Regions[Index].Address,
+                (UINT32)Regions[Index].ArmAttributes,
+                (UINT32)ARM_MEMORY_REGION_ATTRIBUTE_DEVICE, (UINT32)Regions[Index].HobOption));
+      }
+    }
+  }
+  DEBUG ((DEBUG_ERROR, "A04MAP uart lsr before=%08x\n", MmioRead32 (0x11005014)));
   DEBUG ((DEBUG_ERROR, "A04MAP ttbcr=%08x dacr=%08x sctlr=%08x\n", Ttbcr,Dacr,Sctlr));
   UINT32 *Table = (UINT32 *)(UINTN)(Ttbr & 0xffffc000);
   DEBUG ((DEBUG_ERROR, "A04MAP table=%08x\n", Ttbr));

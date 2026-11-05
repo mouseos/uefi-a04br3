@@ -51,6 +51,7 @@
   IoLib
   MemoryAllocationLib
   MemoryInitPeiLib
+  MemoryMapLib
   PlatformPeiLib
   PlatformSecLib
   PrePiHobListPointerLib
