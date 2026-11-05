@@ -223,3 +223,22 @@ reset GPIO は、この機種の eMMC ノードに接続されていると推定
 `Nothing to build` で停止した。共有側の AML ホスト試験は成功したが、FD は
 生成できていない。試行ログは `port/gsi/logs/ios-feasibility/`
 `windows-canonical-shared-acpi-arm32-build.log`。
+
+## 2026-11-05 正本UEFIでの実機到達点
+
+`windows-rt/servicing-canonical` の `1b705d65` で、EDK2・Mu共通コードを変更せず、
+端末固有のARM32構成から搭載Windows RTのスタート画面に到達した。Windows側UARTは
+`A04RGU D0 active CPUs>=4`、watchdog給餌、BU21025のハードウェア初期化成功を示す。
+タッチ実操作、長期安定、スリープ復帰は未確認。通常EFIの既存派生コピーを使用した。
+
+別の同一４CPU WinPE起動ではWindows側のCPU1引継ぎ、GE8300を使う固定サイズ画面転送、
+LC709203Fの有効サンプル、MMA8652値取得を確認した。通常Windows上のGPU加速・燃料計は
+未確認。GPUの汎用3D、充電判定、給電の成立はこの試験で証明されない。燃料計の初回通信が
+別の２起動で失敗しており、安定性は未解決。
+
+試験したUEFIの設定は `A04_DIAGNOSTIC_THREE_CPU=4`、
+`A04_DIAGNOSTIC_BATTERY=1`、`A04_DIAGNOSTIC_GPU=1`、
+`A04_DIAGNOSTIC_DISPLAY=1`、`A04_DIAGNOSTIC_TOUCH=1` と、ソース・ツール・overlayの
+ハッシュを持つ生成manifestを参照。４CPUへの移行ではCPU1が最後にwatchdogを給餌して
+Windowsへ移り、OSの早期TOPRGUドライバが引き継ぐ。適切な早期ドライバがなければ
+watchdogでリセットされ得る。ブート先や回復経路を確認せずに一般向けイメージとして扱わない。
