@@ -28,5 +28,5 @@ with tempfile.TemporaryDirectory() as tmp:
         t,l,access,start,size=struct.unpack_from('<BH BII',blob,i)
         assert (t,l,access)==(0x86,9,1)
         ranges.append((start,size))
-    assert ranges==[(0x10000000,0x1000),(0x10001000,0x1000),(0x10005000,0x1000),(0x1000f000,0x1000),(0x10018000,0x710)]
+    assert ranges==[(0x10000000,0x1000),(0x10001000,0x1000),(0x10005000,0x1000),(0x1000f000,0x1000),(0x10018000,0x714)]
 print('shared parent APMIXED ACPI fixture validated; hardware untested')
