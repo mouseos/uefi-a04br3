@@ -400,14 +400,6 @@
   # Processor Core Services
   #
   a04br3Pkg/WindowsArm32/Drivers/CpuDxe/CpuDxe.inf
-  ArmPkg/Drivers/ArmGicDxe/ArmGicDxe.inf {
-    <LibraryClasses>
-      NULL|a04br3Pkg/WindowsArm32/Library/GicV3Compat/GicV3Compat.inf
-    # Mu's public ArmLib header is AArch64-only; prioritize the board ARM32
-    # compatibility wrapper before MdePkg's include path for this module.
-    <BuildOptions>
-      GCC:*_*_ARM_CC_FLAGS = -I$(WORKSPACE)/Platforms/Benesse/a04br3Pkg/WindowsArm32/Include
-  }
   ArmPkg/Drivers/TimerDxe/TimerDxe.inf
 
   #
