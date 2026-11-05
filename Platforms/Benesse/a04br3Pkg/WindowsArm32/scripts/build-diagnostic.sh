@@ -160,7 +160,6 @@ result['build_defines']['A04BR3_TOUCH_PROVIDER']=touch
 result['build_defines']['A04BR3_SHARED_PARENT']=shared
 result['build_defines']['A04BR3_SHARED_APMIXED']=apmixed
 result['build_defines']['A04BR3_BQ_HANDOFF']=bq
-if bq == '1': result['limitations'].append('BQHR stopped record transport untested; BQ communication remains disabled')
 if three != '0':
  import shutil,struct
  obj=fd.parent/('BootShim.linked' if three in ('2','3','4') else 'BootShim.o'); shim=fd.parent/'BootShim.bin'; data=shim.read_bytes()
@@ -199,6 +198,7 @@ if three != '0':
   result['limitations'].append('bounded watchdog; RTC fastboot flag is modified')
   result['limitations'].append('UEFI ReadyToBoot and ExitBootServices block OS launch' if three == '2' else ('four CPU handoff stops worker; Windows watchdog must take over; unvalidated' if three == '4' else 'OS entry enabled; automatic watchdog reset after bounded feed; hardware behavior unverified'))
 if battery == '1': result['limitations'].append('LC709203F ACPI and I2C2 handoff have not been validated on this firmware')
+if bq == '1': result['limitations'].append('BQHR stopped record transport untested; BQ communication remains disabled')
 (fd.parent/'diagnostic-manifest.json').write_text(json.dumps(result,indent=2)+'\n')
 print(json.dumps(result,indent=2))
 PY
