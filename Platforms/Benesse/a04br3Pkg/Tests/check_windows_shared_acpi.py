@@ -8,13 +8,51 @@ import tempfile
 pkg=Path(__file__).resolve().parents[1]/'WindowsArm32'
 dsc=(pkg/'WindowsArm32.dsc').read_text();fdf=(pkg/'WindowsArm32.fdf').read_text()
 assert 'DEFINE A04BR3_SHARED_PARENT = 0' in dsc
-assert '$(A04BR3_BUTTON_PROVIDER) != 0 || $(A04BR3_TOUCH_PROVIDER) != 0' in dsc
-for text in (dsc,fdf):
-    assert re.search(r'!if \$\(A04BR3_SHARED_PARENT\) == 1\s+.*AcpiTablesShared\.inf\s+!else\s+.*AcpiTables\.inf\s+!endif',text)
-base=(pkg/'Acpi/AcpiTables.inf').read_text();shared=(pkg/'Acpi/AcpiTablesShared.inf').read_text()
-assert 'SharedParent.asl' not in base and 'SharedParent.asl' in shared
-assert 'ButtonArray.asl' not in base and 'ButtonArray.asl' in shared
-assert not any(x in shared for x in ('ButtonProvider.asl','TouchProvider.asl'))
+assert '$(A04BR3_TOUCH_PROVIDER) == 1 && $(A04BR3_SHARED_PARENT) == 1' in dsc
+assert '$(A04BR3_BUTTON_PROVIDER) != 0' in dsc
+
+# Evaluate the ACPI selection subtree in both build descriptions. This models
+# only the equality conditionals in that subtree; unknown syntax must fail.
+def selection(text, values):
+    lines=text.splitlines()
+    start=next(i for i,line in enumerate(lines) if line.strip() == '!if $(A04BR3_SHARED_PARENT) == 1' and any('AcpiTablesShared' in x for x in lines[i:i+12]))
+    stack=[]; selected=[]
+    for line in lines[start:]:
+        line=line.strip()
+        if line.startswith('!if '):
+            match=re.fullmatch(r'!if \$\((A04BR3_[A-Z_]+)\) == 1',line)
+            assert match, line
+            stack.append(bool(values[match.group(1)]))
+        elif line == '!else':
+            assert stack
+            stack[-1]=not stack[-1]
+        elif line == '!endif':
+            assert stack
+            stack.pop()
+            if not stack: break
+        elif all(stack):
+            match=re.search(r'(AcpiTables[A-Za-z]*\.inf)',line)
+            if match: selected.append(match.group(1))
+    else:
+        raise AssertionError('unclosed ACPI selection')
+    assert len(selected)==1,selected
+    return selected[0]
+
+import itertools
+names=('A04BR3_SHARED_PARENT','A04BR3_BATTERY_PROVIDER','A04BR3_GPU_HANDOFF','A04BR3_DISPLAY_PROVIDER','A04BR3_TOUCH_PROVIDER')
+for bits in itertools.product((0,1),repeat=len(names)):
+    values=dict(zip(names,bits))
+    if values['A04BR3_SHARED_PARENT'] and values['A04BR3_TOUCH_PROVIDER']: continue
+    if values['A04BR3_DISPLAY_PROVIDER'] and not values['A04BR3_GPU_HANDOFF']: continue
+    chosen=selection(dsc,values)
+    assert chosen==selection(fdf,values)
+    table=(pkg/'Acpi'/chosen).read_text()
+    assert ('SharedParent.asl' in table)==bool(values['A04BR3_SHARED_PARENT'])
+    assert ('ButtonArray.asl' in table)==bool(values['A04BR3_SHARED_PARENT'])
+    assert ('TouchProvider.asl' in table)==bool(values['A04BR3_TOUCH_PROVIDER'])
+    assert 'ButtonProvider.asl' not in table
+    for name,source in [('A04BR3_BATTERY_PROVIDER','BatteryGauge.asl'),('A04BR3_GPU_HANDOFF','GpuProvider.asl'),('A04BR3_DISPLAY_PROVIDER','DisplayProvider.asl')]:
+        assert (source in table)==bool(values[name]),(values,chosen,source)
 with tempfile.TemporaryDirectory() as tmp:
     files=[]
     for name in ('Dsdt','SharedParent','ButtonArray'):

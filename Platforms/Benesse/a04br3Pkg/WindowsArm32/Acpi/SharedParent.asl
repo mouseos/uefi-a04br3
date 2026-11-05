@@ -1,4 +1,4 @@
-/* Offline namespace fixture only. Do not install or merge with legacy nodes. */
+/* Opt-in diagnostic parent. Never expose with legacy shared-resource owners. */
 DefinitionBlock ("shared-parent.aml", "SSDT", 2, "BENESS", "A04SHR  ", 1)
 {
     Scope (_SB)

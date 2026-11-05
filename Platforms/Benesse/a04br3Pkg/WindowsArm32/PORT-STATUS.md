@@ -184,13 +184,14 @@ ARM/GCC5の再試行は以前のPCDとMMUのメタデータ検査を越えた後
 ## 共有親 ACPI の選択試作
 
 `A04BR3_SHARED_PARENT=1` は Windows ARM32 DSC/FDF で、基底テーブルに
-`BEN0001` 共有親 SSDT を追加する。既定値は 0。現行正本には旧 `MOU0003`／
-`MOU0004` provider テーブルが存在しないため、未実装の
-`A04BR3_BUTTON_PROVIDER` と `A04BR3_TOUCH_PROVIDER` は 0 以外を拒否する。
+`BEN0001` 共有親 SSDT を追加する。既定値は 0。現行正本は `MOU0003` button provider を持たず、その指定を拒否する。
+旧 `MOU0004` touch provider は通常構成で選択可能だが、共有親との
+同時指定は拒否する。
 これは当該ビルド構成内の排他であり、外部から別の SSDT が追加されないことや
 ファームウェア・他ドライバの MMIO アクセス停止を保証しない。旧ポートと同じ通知用 MOU0002 button array は共有親モードで追加するが、
-touch 電源 handoff や複数 CPU の各表はこの変更では追加しない。
-共有親ドライバは D0 を拒否中であり、入力も eMMC も動作可能にならない。
+共有親選択時は旧 touch 電源 handoff を含めない。
+共有親ドライバは既定で D0 を拒否し、診断ビルドのみ WACS2 の
+準備確認後にボタン用 PWRAP を受け付ける。給電維持や実機動作は未確認。
 
 ホスト試験は ACPICA で DSDT と共有 SSDT をコンパイル・評価し、`BEN0001`、
 4 つの資源、旧2 ID の不在、AML チェックサムを調べる。ARM32 用の正本
