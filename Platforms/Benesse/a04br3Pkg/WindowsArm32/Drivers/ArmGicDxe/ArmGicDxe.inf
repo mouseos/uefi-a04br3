@@ -1,0 +1,49 @@
+# Board-specific wrappers compile the unchanged upstream ArmGicDxe sources.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = ArmGicDxe
+  FILE_GUID                      = DE371F7C-DEC4-4D21-ADF1-593ABCC15882
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = InterruptDxeInitialize
+
+[Sources.common]
+  ArmGicDxe.c
+  ArmGicCommonDxe.c
+
+  ArmGicV2Dxe.c
+  ArmGicV3Dxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  ArmPkg/ArmPkg.dec
+
+[LibraryClasses]
+  ArmLib
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  PrintLib
+  MemoryAllocationLib
+  UefiDriverEntryPoint
+  IoLib
+  PcdLib
+  TimerLib
+
+[Protocols]
+  gHardwareInterruptProtocolGuid  ## PRODUCES
+  gHardwareInterrupt2ProtocolGuid ## PRODUCES
+  gEfiCpuArchProtocolGuid         ## CONSUMES
+
+[Pcd.common]
+  gArmTokenSpaceGuid.PcdGicDistributorBase
+  gArmTokenSpaceGuid.PcdGicRedistributorsBase
+  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
+  gArmTokenSpaceGuid.PcdGicIrsConfigFrameBase
+
+[Depex]
+  gEfiCpuArchProtocolGuid
