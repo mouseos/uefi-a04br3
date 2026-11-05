@@ -29,7 +29,10 @@ InitializeExceptions (
   }
 
   // initialize the CpuExceptionHandlerLib so we take over the exception vector table from the DXE Core
-  InitializeCpuExceptionHandlers (VectorInfo);
+  Status = InitializeCpuExceptionHandlers (VectorInfo);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   Status = EFI_SUCCESS;
 
