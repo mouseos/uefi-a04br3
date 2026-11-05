@@ -132,7 +132,7 @@ result={'status':'diagnostic-only-not-for-device','source_commit':git(root,'rev-
 result['build_defines']['A04BR3_BATTERY_PROVIDER']=battery
 if three != '0':
  import shutil,struct
- obj=fd.parent/('BootShim.linked' if three == '2' else 'BootShim.o'); shim=fd.parent/'BootShim.bin'; data=shim.read_bytes()
+ obj=fd.parent/('BootShim.linked' if three in ('2','3') else 'BootShim.o'); shim=fd.parent/'BootShim.bin'; data=shim.read_bytes()
  rel=subprocess.check_output([a64prefix+'readelf','-r',str(obj)],text=True)
  if 'There are no relocations' not in rel: raise SystemExit('BootShim contains relocations')
  nm=subprocess.check_output([a64prefix+'nm','-n',str(obj)],text=True)
