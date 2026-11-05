@@ -3,6 +3,7 @@
 #include <Uefi.h>
 #include <Library/DebugLib.h>
 #include <Library/BaseLib.h>
+#include <Library/ArmLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/CacheMaintenanceLib.h>
 #include <Library/IoLib.h>
@@ -128,6 +129,19 @@ STATIC VOID EFIAPI A04PublishSmp (EFI_EVENT Event, VOID *Context)
     DEBUG ((DEBUG_ERROR, "A04SMP mailbox monitoring armed\n"));
 #endif
     mThreeCpuReady = TRUE;
+#if A04BR3_CACHE_TEST == 1 && A04BR3_BOOT_DIAGNOSTIC == 0
+    {
+      UINT32 Before, After;
+      __asm__ volatile ("mrc p15, 0, %0, c1, c0, 0" : "=r" (Before));
+      if ((Before & (BIT2 | BIT12)) == 0) {
+        ArmInvalidateInstructionCache ();
+        ArmEnableInstructionCache ();
+        ArmEnableDataCache ();
+      }
+      __asm__ volatile ("mrc p15, 0, %0, c1, c0, 0" : "=r" (After));
+      DEBUG ((DEBUG_ERROR, "A04CACHE before=%08x after=%08x\n", Before, After));
+    }
+#endif
 #if A04BR3_BOOT_DIAGNOSTIC == 1
     DEBUG ((DEBUG_ERROR, "A04DIAG CPU0/2/3 tables installed; OS entry blocked; watchdog bounded\n"));
     CpuDeadLoop ();

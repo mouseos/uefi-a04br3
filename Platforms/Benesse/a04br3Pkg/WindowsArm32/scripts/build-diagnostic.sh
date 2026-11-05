@@ -63,6 +63,7 @@ if [[ $three != 0 ]]; then
   buildflags=(-D A04BR3_EXPERIMENTAL_THREE_CPU=1 -D A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT=1)
 fi
 if [[ $three == 2 ]]; then buildflags+=(-D A04BR3_BOOT_DIAGNOSTIC=1); fi
+if [[ $three == 3 ]]; then buildflags+=(-D A04BR3_CACHE_TEST=1); fi
 if [[ $three == 2 || $three == 3 ]]; then buildflags+=(-D A04BR3_BOUNDED_RECOVERY=1); fi
 if [[ $battery == 1 ]]; then buildflags+=(-D A04BR3_BATTERY_PROVIDER=1); fi
 "$EDK_TOOLS_PATH/BinWrappers/PosixLike/build" -p a04br3Pkg/WindowsArm32/WindowsArm32.dsc -a ARM -b DEBUG -t GCC5 -D FD_BASE=0x41080000 -D FD_SIZE=0x00300000 -D FD_BLOCKS=0x300 -D "A04_BUILD_OUTPUT=Build/$output" "${buildflags[@]}"
@@ -162,6 +163,7 @@ if three != '0':
  if three in ('2','3'):
   result['build_defines']['A04BR3_BOOT_DIAGNOSTIC']='1' if three == '2' else '0'
   result['build_defines']['A04BR3_BOUNDED_RECOVERY']='1'
+  result['build_defines']['A04BR3_CACHE_TEST']='1' if three == '3' else '0'
   result['shim_c_flags']=['-O2','-ffreestanding','-fno-stack-protector','-fno-builtin','-fno-pic','-fno-pie',
                           '-fno-asynchronous-unwind-tables','-fno-unwind-tables','-mgeneral-regs-only','-mstrict-align','-DA04_FDT_TRACE=1']
   result['limitations'].append('bounded watchdog; RTC fastboot flag is modified')
