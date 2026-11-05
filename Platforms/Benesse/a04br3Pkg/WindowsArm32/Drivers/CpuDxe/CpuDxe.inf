@@ -67,5 +67,7 @@
 [FeaturePcd.common]
   gA04BR3WindowsTokenSpaceGuid.PcdA04WinDebuggerException
 
+# CPU protocol must be available before ArmGicDxe can register its IRQ
+# handler. Match the upstream ArmPkg CpuDxe dependency, avoiding a cycle.
 [Depex]
-  gHardwareInterruptProtocolGuid OR gHardwareInterrupt2ProtocolGuid
+  TRUE
