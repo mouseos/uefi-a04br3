@@ -101,6 +101,8 @@ def main():
                                'watchdog automatically resets after the finite feed deadline',
                                'DTB and stock boot inputs require provenance review',
                                'LK runtime FDT growth, initrd placement and dynamic reservations are unverified']}
+        if m['build_defines'].get('A04BR3_THERMAL_HANDOFF_RECORD') == '1':
+            result['limitations'].append('thermal observation is not firmware or EL3 ownership release')
         if m['build_defines'].get('A04BR3_BQ_HANDOFF') == '1':
             result['limitations'].append('BQHR stopped record transport untested; BQ communication remains disabled')
         if m['build_defines'].get('A04BR3_SHARED_PARENT') == '1':
