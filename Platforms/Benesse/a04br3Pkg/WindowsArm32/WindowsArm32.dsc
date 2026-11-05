@@ -75,6 +75,18 @@
 !ifndef A04BR3_BOOT_DIAGNOSTIC
   DEFINE A04BR3_BOOT_DIAGNOSTIC = 0
 !endif
+!if $(A04BR3_FOUR_CPU_TEST) != 0 && $(A04BR3_FOUR_CPU_TEST) != 1
+  !error A04BR3_FOUR_CPU_TEST must be 0 or 1
+!endif
+!if $(A04BR3_FOUR_CPU_TEST) == 1 && ($(A04BR3_EXPERIMENTAL_THREE_CPU) != 1 || $(A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT) != 1 || $(A04BR3_BOUNDED_RECOVERY) != 1 || $(A04BR3_BOOT_DIAGNOSTIC) != 0)
+  !error Four CPU trial requires bounded recovery, a worker heartbeat and OS entry
+!endif
+!if $(A04BR3_GPU_HANDOFF) != 0 && $(A04BR3_GPU_HANDOFF) != 1
+  !error A04BR3_GPU_HANDOFF must be 0 or 1
+!endif
+!if $(A04BR3_DISPLAY_PROVIDER) != 0 && $(A04BR3_DISPLAY_PROVIDER) != 1
+  !error A04BR3_DISPLAY_PROVIDER must be 0 or 1
+!endif
 !if $(A04BR3_BOOT_DIAGNOSTIC) != 0 && $(A04BR3_BOOT_DIAGNOSTIC) != 1
   !error A04BR3_BOOT_DIAGNOSTIC must be 0 or 1
 !endif
