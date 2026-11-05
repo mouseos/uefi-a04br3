@@ -6,7 +6,7 @@ APRIORI DXE {
   INF MdeModulePkg/Universal/StatusCodeHandler/RuntimeDxe/StatusCodeHandlerRuntimeDxe.inf
   INF MdeModulePkg/Core/RuntimeDxe/RuntimeDxe.inf
   INF a04br3Pkg/WindowsArm32/Drivers/CpuDxe/CpuDxe.inf
-  INF ArmPkg/Drivers/ArmGicDxe/ArmGicDxe.inf
+  INF a04br3Pkg/WindowsArm32/Drivers/ArmGicDxe/ArmGicDxe.inf
   INF EmbeddedPkg/MetronomeDxe/MetronomeDxe.inf
   INF ArmPkg/Drivers/TimerDxe/TimerDxe.inf
 

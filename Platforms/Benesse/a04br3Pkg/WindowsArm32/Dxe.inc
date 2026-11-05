@@ -19,7 +19,7 @@
   INF MdeModulePkg/Universal/Console/ConSplitterDxe/ConSplitterDxe.inf
   INF MdeModulePkg/Universal/Console/GraphicsConsoleDxe/GraphicsConsoleDxe.inf
   INF MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
-  INF ArmPkg/Drivers/ArmGicDxe/ArmGicDxe.inf
+  INF a04br3Pkg/WindowsArm32/Drivers/ArmGicDxe/ArmGicDxe.inf
   INF ArmPkg/Drivers/TimerDxe/TimerDxe.inf
 
 !if $(A04BR3_CHARGER_OWNER) == 1
