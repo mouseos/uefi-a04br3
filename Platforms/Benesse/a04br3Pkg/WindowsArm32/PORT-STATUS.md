@@ -243,3 +243,17 @@ LC709203Fの有効サンプル、MMA8652値取得を確認した。通常Windows
 ハッシュを持つ生成manifestを参照。４CPUへの移行ではCPU1が最後にwatchdogを給餌して
 Windowsへ移り、OSの早期TOPRGUドライバが引き継ぐ。適切な早期ドライバがなければ
 watchdogでリセットされ得る。ブート先や回復経路を確認せずに一般向けイメージとして扱わない。
+
+## APMIXED資源の排他列挙試作
+
+`A04BR3_SHARED_APMIXED=1` は既定0。明示指定時は共有親用の別SSDTに
+`0x10018000+0x710` を加える。Windows共有親の
+`A04_SHARED_APMIXED_RESOURCE=1` が期待する5資源と対応する。
+共有親の指定を必須とし、thermal・GPU・display・battery providerの
+同時指定を拒否する。機種固有の現在の構成にはthermal SSDTを含まない。
+この検査は当該ビルド内の選択だけを制御し、外部SSDT、ファームウェア、
+他ドライバによる直接MMIOや実際の給電・クロックを管理しない。
+従って排他所有、codec mute、DMA drain、実機動作の証明ではない。
+Windows側のclock・codec leaseと通電は拒否したまま。
+Linux MT8167 DTSはAPMIXEDの範囲、機種DTSはcodecのAPMIXED・
+AFE・PWRAP・TOP audio依存を記述する。

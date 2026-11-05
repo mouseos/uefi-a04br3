@@ -104,6 +104,20 @@
 !ifndef A04BR3_SHARED_PARENT
   DEFINE A04BR3_SHARED_PARENT = 0
 !endif
+# APMIXED is shared with thermal and other firmware/OS users. This is an
+# offline resource-arbitration experiment, not a clock ownership proof.
+!ifndef A04BR3_SHARED_APMIXED
+  DEFINE A04BR3_SHARED_APMIXED = 0
+!endif
+!ifndef A04BR3_THERMAL_PROVIDER
+  DEFINE A04BR3_THERMAL_PROVIDER = 0
+!endif
+!if $(A04BR3_SHARED_APMIXED) != 0 && $(A04BR3_SHARED_APMIXED) != 1
+  !error A04BR3_SHARED_APMIXED must be 0 or 1
+!endif
+!if $(A04BR3_SHARED_APMIXED) == 1 && ($(A04BR3_SHARED_PARENT) != 1 || $(A04BR3_THERMAL_PROVIDER) != 0 || $(A04BR3_GPU_HANDOFF) != 0 || $(A04BR3_BATTERY_PROVIDER) != 0 || $(A04BR3_DISPLAY_PROVIDER) != 0)
+  !error APMIXED experiment requires shared parent and excludes thermal, GPU, display and battery providers
+!endif
 !ifndef A04BR3_BUTTON_PROVIDER
   DEFINE A04BR3_BUTTON_PROVIDER = 0
 !endif
@@ -373,6 +387,9 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
       GCC:*_*_ARM_CC_FLAGS = -DA04BR3_BOOT_DIAGNOSTIC=$(A04BR3_BOOT_DIAGNOSTIC) -DA04BR3_BOUNDED_RECOVERY=$(A04BR3_BOUNDED_RECOVERY) -DA04BR3_CACHE_TEST=$(A04BR3_CACHE_TEST)
   }
 !if $(A04BR3_SHARED_PARENT) == 1
+!if $(A04BR3_SHARED_APMIXED) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedApmixed.inf
+!else
 !if $(A04BR3_BATTERY_PROVIDER) == 1
 !if $(A04BR3_GPU_HANDOFF) == 1
 !if $(A04BR3_DISPLAY_PROVIDER) == 1
@@ -392,6 +409,7 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
 !endif
 !else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesShared.inf
+!endif
 !endif
 !endif
 !else
