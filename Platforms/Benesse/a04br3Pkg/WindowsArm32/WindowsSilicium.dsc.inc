@@ -238,7 +238,7 @@
   # BDS Libraries
   #
   MsBootOptionsLib|SiliciumPkg/Library/MsBootOptionsLib/MsBootOptionsLib.inf
-  DeviceBootManagerLib|SiliciumNullPkg/Library/PlatformBootManagerLibNull/PlatformBootManagerLibNull.inf
+  DeviceBootManagerLib|a04br3Pkg/WindowsArm32/Library/DeviceBootManager/DeviceBootManager.inf
   PlatformBootManagerLib|SiliciumPkg/Library/BootManagerLib/BootManagerLib.inf
   PlatformBootOptionsLib|SiliciumNullPkg/Library/PlatformBootOptionsLibNull/PlatformBootOptionsLibNull.inf
   UefiBootManagerLib|MdeModulePkg/Library/UefiBootManagerLib/UefiBootManagerLib.inf

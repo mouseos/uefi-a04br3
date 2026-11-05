@@ -1,0 +1,16 @@
+[Defines]
+  INF_VERSION = 0x00010005
+  BASE_NAME = A04BR3DeviceBootManager
+  FILE_GUID = B60EF8B1-88DE-4F02-A6EE-1DF07EE1CB1E
+  MODULE_TYPE = DXE_DRIVER
+  VERSION_STRING = 1.0
+  LIBRARY_CLASS = DeviceBootManagerLib|DXE_DRIVER
+[Sources]
+  DeviceBootManager.c
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MsCorePkg/MsCorePkg.dec
+[LibraryClasses]
+  DebugLib
+  UefiBootManagerLib

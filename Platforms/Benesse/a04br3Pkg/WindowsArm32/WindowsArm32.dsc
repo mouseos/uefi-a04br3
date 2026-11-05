@@ -330,13 +330,20 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
       GCC:*_*_ARM_CC_FLAGS = -DA04BR3_BOOT_DIAGNOSTIC=$(A04BR3_BOOT_DIAGNOSTIC)
   }
 !if $(A04BR3_SHARED_PARENT) == 1
+!if $(A04BR3_BATTERY_PROVIDER) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedBattery.inf
+!else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesShared.inf
+!endif
+!else
+!if $(A04BR3_BATTERY_PROVIDER) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesBattery.inf
 !else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTables.inf
 !endif
+!endif
   a04br3Pkg/Drivers/I2c1HandoffDxe/I2c1HandoffDxe.inf
 !if $(A04BR3_BATTERY_PROVIDER) == 1
-  a04br3Pkg/WindowsArm32/Acpi/BatteryGauge.inf
   a04br3Pkg/WindowsArm32/Drivers/I2c2HandoffDxe/I2c2HandoffDxe.inf
 !endif
 !if $(A04BR3_EXPERIMENTAL_THREE_CPU) == 1
