@@ -120,9 +120,10 @@ PrePiMain(
 
   DEBUG(
       (EFI_D_INFO | EFI_D_LOAD,
-       "UEFI Memory Base = 0x%llx, Size = 0x%llx \n"
-       "Stack Base = 0x%llx, Stack Size = 0x%llx \n",
-       UefiMemoryBase, UefiMemorySize, StackBase, StackSize));
+       "UEFI Memory Base = 0x%08x, Size = 0x%08x \n"
+       "Stack Base = 0x%08x, Stack Size = 0x%08x \n",
+       (UINT32)UefiMemoryBase, (UINT32)UefiMemorySize,
+       (UINT32)(UINTN)StackBase, (UINT32)StackSize));
 
   // Set up HOB
   HobList = HobConstructor(
