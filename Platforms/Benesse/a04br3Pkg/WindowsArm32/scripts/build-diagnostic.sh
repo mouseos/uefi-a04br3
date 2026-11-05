@@ -13,6 +13,8 @@ touch=${A04_DIAGNOSTIC_TOUCH:-0}
 shared=${A04_DIAGNOSTIC_SHARED:-0}
 apmixed=${A04_DIAGNOSTIC_SHARED_APMIXED:-0}
 bq=${A04_DIAGNOSTIC_BQ_HANDOFF:-0}
+thermal=${A04_DIAGNOSTIC_THERMAL_HANDOFF_RECORD:-0}
+[[ $thermal == 0 || $thermal == 1 ]] || exit 2
 [[ $bq == 0 || ($bq == 1 && $battery == 1) ]] || exit 2
 [[ $shared == 0 || $shared == 1 ]] || exit 2
 [[ $apmixed == 0 || ($apmixed == 1 && $shared == 1) ]] || exit 2
@@ -81,6 +83,7 @@ if [[ $three == 4 ]]; then buildflags+=(-D A04BR3_FOUR_CPU_TEST=1); fi
 if [[ $three == 2 || $three == 3 || $three == 4 ]]; then buildflags+=(-D A04BR3_BOUNDED_RECOVERY=1); fi
 if [[ $battery == 1 ]]; then buildflags+=(-D A04BR3_BATTERY_PROVIDER=1); fi
 if [[ $bq == 1 ]]; then buildflags+=(-D A04BR3_BQ_HANDOFF=1); fi
+if [[ $thermal == 1 ]]; then buildflags+=(-D A04BR3_THERMAL_HANDOFF_RECORD=1); fi
 if [[ $gpu == 1 ]]; then buildflags+=(-D A04BR3_GPU_HANDOFF=1); fi
 if [[ $display == 1 ]]; then buildflags+=(-D A04BR3_DISPLAY_PROVIDER=1); fi
 if [[ $touch == 1 ]]; then buildflags+=(-D A04BR3_TOUCH_PROVIDER=1); fi
@@ -117,10 +120,10 @@ EOF
   fi
   "$a64prefix"objcopy -O binary "$shimobj" "$fv/BootShim.bin"
 fi
-python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" <<'PY'
+python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" <<'PY'
 from pathlib import Path
 import hashlib,json,subprocess,sys
-root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq=sys.argv[1:]
+root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal=sys.argv[1:]
 def sha(path):
  h=hashlib.sha256()
  with open(path,'rb') as f:
@@ -160,6 +163,7 @@ result['build_defines']['A04BR3_TOUCH_PROVIDER']=touch
 result['build_defines']['A04BR3_SHARED_PARENT']=shared
 result['build_defines']['A04BR3_SHARED_APMIXED']=apmixed
 result['build_defines']['A04BR3_BQ_HANDOFF']=bq
+result['build_defines']['A04BR3_THERMAL_HANDOFF_RECORD']=thermal
 if three != '0':
  import shutil,struct
  obj=fd.parent/('BootShim.linked' if three in ('2','3','4') else 'BootShim.o'); shim=fd.parent/'BootShim.bin'; data=shim.read_bytes()
@@ -198,6 +202,7 @@ if three != '0':
   result['limitations'].append('bounded watchdog; RTC fastboot flag is modified')
   result['limitations'].append('UEFI ReadyToBoot and ExitBootServices block OS launch' if three == '2' else ('four CPU handoff stops worker; Windows watchdog must take over; unvalidated' if three == '4' else 'OS entry enabled; automatic watchdog reset after bounded feed; hardware behavior unverified'))
 if battery == '1': result['limitations'].append('LC709203F ACPI and I2C2 handoff have not been validated on this firmware')
+if thermal == '1': result['limitations'].append('thermal observation is not firmware or EL3 ownership release')
 if bq == '1': result['limitations'].append('BQHR stopped record transport untested; BQ communication remains disabled')
 (fd.parent/'diagnostic-manifest.json').write_text(json.dumps(result,indent=2)+'\n')
 print(json.dumps(result,indent=2))

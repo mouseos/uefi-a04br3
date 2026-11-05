@@ -189,6 +189,9 @@ READ_LOCK_STATUS   = TRUE
 !endif
 !endif
 !endif
+!if $(A04BR3_THERMAL_HANDOFF_RECORD) == 1
+  INF a04br3Pkg/WindowsArm32/Drivers/ThermalHandoffDxe/ThermalHandoffDxe.inf
+!endif
   INF a04br3Pkg/Drivers/I2c1HandoffDxe/I2c1HandoffDxe.inf
 !if $(A04BR3_TOUCH_PROVIDER) == 1
   INF a04br3Pkg/WindowsArm32/Drivers/TouchPowerDxe/TouchPowerDxe.inf

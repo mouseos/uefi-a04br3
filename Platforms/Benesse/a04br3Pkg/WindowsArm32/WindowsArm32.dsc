@@ -158,6 +158,14 @@
   !error A04BR3_DISK_SERVICING forbids A04BR3_TEST_CYCLE
 !endif
 
+# Observation only: no ownership or EL3 handoff is asserted.
+!ifndef A04BR3_THERMAL_HANDOFF_RECORD
+  DEFINE A04BR3_THERMAL_HANDOFF_RECORD = 0
+!endif
+!if $(A04BR3_THERMAL_HANDOFF_RECORD) != 0 && $(A04BR3_THERMAL_HANDOFF_RECORD) != 1
+  !error A04BR3_THERMAL_HANDOFF_RECORD must be 0 or 1
+!endif
+
 # Optional BQHR stop record; mutually exclusive I2C2 owner and battery ACPI required.
 !ifndef A04BR3_BQ_HANDOFF
   DEFINE A04BR3_BQ_HANDOFF = 0
@@ -484,6 +492,9 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
 !endif
 !endif
 !endif
+!endif
+!if $(A04BR3_THERMAL_HANDOFF_RECORD) == 1
+  a04br3Pkg/WindowsArm32/Drivers/ThermalHandoffDxe/ThermalHandoffDxe.inf
 !endif
   a04br3Pkg/Drivers/I2c1HandoffDxe/I2c1HandoffDxe.inf
 !if $(A04BR3_TOUCH_PROVIDER) == 1
