@@ -92,7 +92,7 @@ def main():
         out.mkdir(parents=True)
         shutil.copyfile(candidate,out/'boot.img')
         result={'status':'bounded-os-entry-unvalidated' if m['build_defines']['A04BR3_BOOT_DIAGNOSTIC'] == '0' else 'bounded-diagnostic-not-validated-on-device','uefi_source_commit':m['source_commit'],
-                'firmware_manifest_sha256':sha(mf),'firmware_sha256':sha(fw),'stock_boot_sha256':sha(stock),
+                'firmware_manifest_sha256':sha(mf),'firmware_sha256':sha(fw),'firmware_build_defines':m['build_defines'],'stock_boot_sha256':sha(stock),
                 'dtb_sha256':sha(dtb),'stock_ramdisk_sha256':sha(ramdisk),'boot_img_sha256':sha(out/'boot.img'),
                 'packager_sha256':sha(Path(__file__)),'abootimg_sha256':sha(Path(abootimg)),
                 'gzip_sha256':sha(Path(gzip)),
@@ -101,6 +101,10 @@ def main():
                                'watchdog automatically resets after the finite feed deadline',
                                'DTB and stock boot inputs require provenance review',
                                'LK runtime FDT growth, initrd placement and dynamic reservations are unverified']}
+        if m['build_defines'].get('A04BR3_SHARED_PARENT') == '1':
+            result['limitations'].append('legacy touch provider disabled; shared touch child is not validated')
+        if m['build_defines'].get('A04BR3_SHARED_APMIXED') == '1':
+            result['limitations'].append('shared parent APMIXED ownership and GPU/USB/audio coexistence unverified')
         if template is not None:
             result['template_boot_sha256'] = result.pop('stock_boot_sha256')
             result['template_ramdisk_sha256'] = result.pop('stock_ramdisk_sha256')
