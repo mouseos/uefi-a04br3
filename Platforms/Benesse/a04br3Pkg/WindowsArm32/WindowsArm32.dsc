@@ -321,7 +321,7 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
     <LibraryClasses>
       NULL|a04br3Pkg/WindowsArm32/Library/GicV3Compat/GicV3Compat.inf
     <BuildOptions>
-      GCC:*_*_ARM_CC_FLAGS = -I$(WORKSPACE)/Platforms/Benesse/a04br3Pkg/WindowsArm32/Include
+      GCC:DEBUG_GCC5_ARM_CC_FLAGS = -I$(WORKSPACE)/Platforms/Benesse/a04br3Pkg/WindowsArm32/Include
   }
   a04br3Pkg/WindowsArm32/PrePi/PrePi.inf {
     <LibraryClasses>
