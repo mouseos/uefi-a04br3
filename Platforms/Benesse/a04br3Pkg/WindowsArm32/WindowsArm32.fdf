@@ -98,18 +98,37 @@ READ_LOCK_STATUS   = TRUE
   INF MdeModulePkg/Universal/Acpi/AcpiPlatformDxe/AcpiPlatformDxe.inf
 !if $(A04BR3_SHARED_PARENT) == 1
 !if $(A04BR3_BATTERY_PROVIDER) == 1
+!if $(A04BR3_GPU_HANDOFF) == 1
+  INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedBatteryGpu.inf
+!else
   INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedBattery.inf
+!endif
+!else
+!if $(A04BR3_GPU_HANDOFF) == 1
+  INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedGpu.inf
 !else
   INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesShared.inf
 !endif
+!endif
 !else
 !if $(A04BR3_BATTERY_PROVIDER) == 1
+!if $(A04BR3_GPU_HANDOFF) == 1
+  INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesBatteryGpu.inf
+!else
   INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesBattery.inf
+!endif
+!else
+!if $(A04BR3_GPU_HANDOFF) == 1
+  INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesGpu.inf
 !else
   INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTables.inf
 !endif
 !endif
+!endif
   INF a04br3Pkg/Drivers/I2c1HandoffDxe/I2c1HandoffDxe.inf
+!if $(A04BR3_GPU_HANDOFF) == 1
+  INF a04br3Pkg/WindowsArm32/Drivers/GpuPowerDxe/GpuPowerDxe.inf
+!endif
 !if $(A04BR3_BATTERY_PROVIDER) == 1
   INF a04br3Pkg/WindowsArm32/Drivers/I2c2HandoffDxe/I2c2HandoffDxe.inf
 !endif

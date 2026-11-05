@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+  INF_VERSION = 0x00010019
+  BASE_NAME = A04Br3GpuPowerDxe
+  FILE_GUID = 8185C65A-799F-4CD0-84DC-630E31193D34
+  MODULE_TYPE = DXE_DRIVER
+  VERSION_STRING = 1.0
+  ENTRY_POINT = GpuPowerEntry
+[Sources]
+  GpuPowerDxe.c
+  rogue_power.h
+[Packages]
+  MdePkg/MdePkg.dec
+[LibraryClasses]
+  DebugLib
+  IoLib
+  TimerLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+[Guids]
+  gEfiEventBeforeExitBootServicesGuid
+[Depex]
+  TRUE
