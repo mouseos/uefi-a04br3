@@ -26,11 +26,19 @@ def main():
     p.add_argument('dtb', type=Path)
     p.add_argument('output_dir', type=Path)
     p.add_argument('--worker-seconds', type=int, help='Explicit three-CPU bounded recovery interval (420..1800 seconds)')
+    p.add_argument('--template-manifest', type=Path, help='Manifest identifying an existing diagnostic boot template (not stock)')
     a = p.parse_args()
     fw, mf, stock, dtb = (x.resolve(strict=True) for x in (a.firmware, a.firmware_manifest, a.stock_boot, a.dtb))
     out = a.output_dir.resolve()
     if out.exists(): raise SystemExit('output already exists')
     m = json.loads(mf.read_text())
+    template_manifest = None
+    template = None
+    if a.template_manifest:
+        template_manifest = a.template_manifest.resolve(strict=True)
+        template = json.loads(template_manifest.read_text())
+        if template.get('boot_img_sha256') != sha(stock):
+            raise SystemExit('template boot hash does not match its manifest')
     s = m.get('shim_defines', {})
     expected_seconds = 120 if m.get('build_defines', {}).get('A04BR3_BOOT_DIAGNOSTIC') == '1' else 420
     if a.worker_seconds is not None:
@@ -65,6 +73,8 @@ def main():
         if kernel_addr + len(fw.read_bytes()) > 0x41080000:
             raise SystemExit('expanded kernel overlaps FD destination')
         _, kernel, ramdisk = extract(stock, 'stock')
+        if template is not None and template.get('stock_ramdisk_sha256', template.get('template_ramdisk_sha256')) != sha(ramdisk):
+            raise SystemExit('template ramdisk hash does not match its manifest')
         old=kernel.read_bytes()
         if len(old)<512 or old[8:15]!=b'KERNEL\0' or struct.unpack_from('<I',old,4)[0]!=len(old)-512:
             raise SystemExit('stock MTK kernel header mismatch')
@@ -91,6 +101,16 @@ def main():
                                'watchdog automatically resets after the finite feed deadline',
                                'DTB and stock boot inputs require provenance review',
                                'LK runtime FDT growth, initrd placement and dynamic reservations are unverified']}
+        if template is not None:
+            result['template_boot_sha256'] = result.pop('stock_boot_sha256')
+            result['template_ramdisk_sha256'] = result.pop('stock_ramdisk_sha256')
+            result['template_origin'] = {
+                'kind': 'previously generated diagnostic boot image, not stock',
+                'manifest_sha256': sha(template_manifest),
+                'recorded_original_stock_boot_sha256': template.get('stock_boot_sha256', template.get('template_origin', {}).get('recorded_original_stock_boot_sha256')),
+                'recorded_original_stock_ramdisk_sha256': template.get('stock_ramdisk_sha256', template.get('template_origin', {}).get('recorded_original_stock_ramdisk_sha256')),
+            }
+            result['limitations'].append('derived template provenance follows previous manifest; original stock image was not reverified')
         (out/'manifest.json').write_text(json.dumps(result,indent=2)+'\n')
         print(json.dumps(result,indent=2))
 if __name__ == '__main__': main()
