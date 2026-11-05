@@ -538,6 +538,7 @@ _A64SecondaryProbe:
 4:
 #if A04BR3_FOUR_CPU_TEST == 1
     // CPU1 keeps the watchdog/UART worker until Windows requests its mailbox.
+_A64HandoffTestStart:
     ldr w20, [x19, #36]
     cbz w20, 57f
     ldr w21, [x20]
@@ -549,19 +550,37 @@ _A64SecondaryProbe:
     cbz w21, 57f
     tst w21, #3
     b.ne 57f
+_A64HandoffTestCurrentEL:
     mrs x22, CurrentEL
     cmp x22, #8
     b.ne 57f
+    // The Windows boot-start owner can only take over after CPU1 leaves.
+    // Do not relinquish the last known feeder if TOPRGU has meanwhile been
+    // disabled by another actor; a kick to a disabled watchdog is no guard.
+    ldur w16, [x7, #-8]      // TOPRGU_MODE; x7 points to TOPRGU_RESTART.
+    tbnz w16, #0, 58f
+    ldr w16, [x19, #48]      // One-shot disabled-state diagnostic.
+    cbnz w16, 57f
+    mov w16, #1
+    str w16, [x19, #48]
+    dsb sy
+    mov w26, #'6'
+    bl _A64HandoffMark
+    b 57f
+58: mov w26, #'5'
+    bl _A64HandoffMark
     // Start a full hardware timeout before relinquishing the worker. If the
     // Windows watchdog does not take over, RTC routes the reset to fastboot.
     str w8, [x7]
     dsb sy
     mov x19, x20
+_A64HandoffTestInvalidate:
     ic iallu
     dsb sy
     isb
     b _A64EnterA32Parking
 57:
+_A64HandoffTestSkip:
 #endif
 #if A04BR3_KERNEL_MARKER == 1
     // Slots are armed only after the BSP flushes their addresses and baselines.
@@ -650,6 +669,33 @@ _A64SecondaryProbe:
     cmp x9, x12
     b.lo 3b
     b 1b
+#if A04BR3_FOUR_CPU_TEST == 1
+// Bounded UART trace before CPU1 leaves firmware. No stack; never write DLAB.
+// w26 selects '~5' (handoff) or '~6' (watchdog disabled). x20 (mailbox),
+// x4 (counter frequency), x7/x8 (watchdog), and x12 (deadline) are preserved.
+_A64HandoffMark:
+    ldr w16, [x15, #0x0c]
+    tbnz w16, #7, 64f
+    mov w22, #3
+    mov w21, #'~'
+60: mov w17, #4096
+61: ldr w16, [x15, #0x14]
+    tbnz w16, #5, 62f
+    subs w17, w17, #1
+    b.ne 61b
+    ret
+62: str w21, [x15]
+    dsb sy
+    subs w22, w22, #1
+    b.eq 64f
+    cmp w22, #2
+    csel w21, w26, wzr, eq
+    cmp w22, #1
+    mov w16, #10
+    csel w21, w16, w21, eq
+    b 60b
+64: ret
+#endif
 #if A04BR3_KERNEL_MARKER == 1
 _A64ReportKernelChange:
     mov x23, x30
