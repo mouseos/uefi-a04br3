@@ -53,6 +53,7 @@
 
 !if $(USE_CUSTOM_DISPLAY_DRIVER) == 0
   INF SiliciumPkg/Drivers/SimpleFbDxe/SimpleFbDxe.inf
+  INF a04br3Pkg/WindowsArm32/Drivers/DisplayOverlayDxe/DisplayOverlayDxe.inf
 !endif
   INF SiliciumPkg/Drivers/KeypadDeviceDxe/KeypadDeviceDxe.inf
   INF SiliciumPkg/Drivers/KeypadDxe/KeypadDxe.inf
