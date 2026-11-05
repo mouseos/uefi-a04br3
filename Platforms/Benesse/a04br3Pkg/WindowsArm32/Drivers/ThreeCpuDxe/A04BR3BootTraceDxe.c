@@ -182,8 +182,9 @@ STATIC VOID ProbeSecondaryA64 (VOID)
       if (Changes < 2) { DEBUG ((DEBUG_ERROR, "A04TRACE CPU1 feed counter stopped\n")); CpuDeadLoop (); }
       DEBUG ((DEBUG_ERROR, "A04TRACE CPU1 feed writes changed twice; TOPRGU mode=%08x\n", MmioRead32 (0x10007000)));
 #if A04BR3_BOOT_DIAGNOSTIC == 1
-      if (A04BR3WatchdogEnabled ()) { DEBUG ((DEBUG_ERROR, "A04DIAG watchdog already owned\n")); CpuDeadLoop (); }
-      if (!A04BR3SetFastbootFlag ()) { DEBUG ((DEBUG_ERROR, "A04DIAG RTC fastboot flag FAILED; watchdog not armed\n")); CpuDeadLoop (); }
+      /* PrePi armed this before entering DXE; verify RTC and re-arm once
+       * the CPU1 feed worker has demonstrated two writes. */
+      if (!A04BR3SetFastbootFlag ()) { DEBUG ((DEBUG_ERROR, "A04DIAG RTC fastboot flag FAILED\n")); CpuDeadLoop (); }
       A04BR3WatchdogArm (A04BR3_WATCHDOG_SECONDS);
       if (!A04BR3WatchdogEnabled ()) { DEBUG ((DEBUG_ERROR, "A04DIAG watchdog enable FAILED\n")); CpuDeadLoop (); }
       InvalidateDataCacheRange ((VOID *)Marker, 64);

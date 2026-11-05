@@ -69,3 +69,5 @@ bootとDTBを使ってAndroid boot imageを生成し、再抽出してkernelとr
 する。DTBは旧機種リポジトリ由来で、正本UEFIソースそのものではない。stock
 boot・DTBのハッシュと出自、LK実行時のメモリ配置の検査は別途確認が必要。作成済み
 `boot.img` も実機投入前の試作品として扱う。
+
+`df465ebd` の実機診断では、FDT guardの後にDXEのIRQ例外らしい出力が出てfastbootへ戻らなかった。従来はPrePiの `PlatformInitialize()` がwatchdogを停止し、後のBootTraceDxeまで再武装しないため、その間の障害をカバーできなかった。有限診断構成だけはPlatformInitialize直後にRTC fastbootフラグの設定・読戻しを確認して31秒watchdogを武装し、DXE到達後はCPU1 workerのカウンタ変化を確認して再武装する。最初の31秒以内にworkerが給餌を開始しなければfastboot復帰を試みる。新しい順序の実機動作・復帰は未検証であり、RTCやTOPRGU障害時の復帰は保証しない。

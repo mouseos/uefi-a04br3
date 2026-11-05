@@ -235,6 +235,20 @@ CEntryPoint(
   // The canonical SEC hook stops the inherited watchdog. Run it before any
   // opt-in test-cycle arm, never after it.
   PlatformInitialize();
+#if defined (MDE_CPU_ARM) && A04BR3_BOOT_DIAGNOSTIC == 1
+  /* PlatformInitialize disables the inherited watchdog. Arm immediately
+   * after it, before DXE can fault and before its CPU1 worker is started. */
+  if (!A04BR3SetFastbootFlag ()) {
+    DEBUG ((DEBUG_ERROR, "A04DIAG early RTC fastboot flag FAILED\n"));
+    CpuDeadLoop ();
+  }
+  A04BR3WatchdogArm (A04BR3_WATCHDOG_SECONDS);
+  if (!A04BR3WatchdogEnabled ()) {
+    DEBUG ((DEBUG_ERROR, "A04DIAG early watchdog enable FAILED\n"));
+    CpuDeadLoop ();
+  }
+  DEBUG ((DEBUG_ERROR, "A04DIAG early bounded watchdog armed\n"));
+#endif
   // The canonical board SEC hook owns recovery watchdog setup; do not arm
   // a second time here. Its build-time policy controls servicing mode.
 
