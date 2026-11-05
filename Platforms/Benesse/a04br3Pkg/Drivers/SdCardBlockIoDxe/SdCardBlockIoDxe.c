@@ -1797,6 +1797,11 @@ SdReadBlocks (
   UINT8       *Bytes;
   UINTN       BlockCount;
   UINTN       BlocksThisPass;
+#if defined (A04BR3_EMMC_BUILD) && A04BR3_IO_PROGRESS == 1
+  STATIC UINT64 TotalRead;
+  STATIC UINT64 NextReport = 0x1000000;
+  UINTN OriginalSize = BufferSize;
+#endif
 
   if (MediaId != mSdMedia.MediaId) {
     return EFI_MEDIA_CHANGED;
@@ -1853,6 +1858,13 @@ SdReadBlocks (
     BlockCount   -= BlocksThisPass;
   }
 
+#if defined (A04BR3_EMMC_BUILD) && A04BR3_IO_PROGRESS == 1
+  TotalRead += OriginalSize;
+  if (TotalRead >= NextReport) {
+    DEBUG ((DEBUG_ERROR, "A04IO eMMC bytes=%lu next-lba=%lx\n", TotalRead, Lba));
+    NextReport = (TotalRead & ~((UINT64)0xffffff)) + 0x1000000;
+  }
+#endif
   return EFI_SUCCESS;
 }
 

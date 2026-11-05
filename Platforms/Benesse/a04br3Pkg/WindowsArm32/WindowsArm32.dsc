@@ -287,7 +287,10 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
   # Board Drivers (ported from edk2-mtk A04BR3Pkg)
   #
   a04br3Pkg/Drivers/DisplayInitDxe/DisplayInitDxe.inf
-  a04br3Pkg/Drivers/EmmcBlockIoDxe/EmmcBlockIoDxe.inf
+  a04br3Pkg/Drivers/EmmcBlockIoDxe/EmmcBlockIoDxe.inf {
+    <BuildOptions>
+      GCC:*_*_ARM_CC_FLAGS = -DA04BR3_IO_PROGRESS=$(A04BR3_BOUNDED_RECOVERY)
+  }
   a04br3Pkg/Drivers/SdCardBlockIoDxe/SdCardBlockIoDxe.inf
 
   #
