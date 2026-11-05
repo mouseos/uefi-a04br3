@@ -16,7 +16,7 @@ touch=${A04_DIAGNOSTIC_TOUCH:-0}
 [[ $battery == 0 || $battery == 1 ]] || exit 2
 a64prefix=${A04_AARCH64_PREFIX:-aarch64-linux-gnu-}
 overlay=${A04_LIBGCC_OVERLAY:-}
-[[ $three == 0 || $three == 1 || $three == 2 || $three == 3 ]] || exit 2
+[[ $three == 0 || $three == 1 || $three == 2 || $three == 3 || $three == 4 || $three == 4 ]] || exit 2
 if [[ -n $overlay ]]; then
   overlay=$(realpath "$overlay")
   [[ $three != 0 && $overlay != *[[:space:]]* && -f $overlay/libgcc.a && -f $overlay/manifest.json ]] || exit 2
@@ -69,8 +69,9 @@ if [[ $three != 0 ]]; then
   buildflags=(-D A04BR3_EXPERIMENTAL_THREE_CPU=1 -D A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT=1)
 fi
 if [[ $three == 2 ]]; then buildflags+=(-D A04BR3_BOOT_DIAGNOSTIC=1); fi
-if [[ $three == 3 ]]; then buildflags+=(-D A04BR3_CACHE_TEST=1); fi
-if [[ $three == 2 || $three == 3 ]]; then buildflags+=(-D A04BR3_BOUNDED_RECOVERY=1); fi
+if [[ $three == 3 || $three == 4 ]]; then buildflags+=(-D A04BR3_CACHE_TEST=1); fi
+if [[ $three == 4 ]]; then buildflags+=(-D A04BR3_FOUR_CPU_TEST=1); fi
+if [[ $three == 2 || $three == 3 || $three == 4 ]]; then buildflags+=(-D A04BR3_BOUNDED_RECOVERY=1); fi
 if [[ $battery == 1 ]]; then buildflags+=(-D A04BR3_BATTERY_PROVIDER=1); fi
 if [[ $gpu == 1 ]]; then buildflags+=(-D A04BR3_GPU_HANDOFF=1); fi
 if [[ $display == 1 ]]; then buildflags+=(-D A04BR3_DISPLAY_PROVIDER=1); fi
@@ -79,13 +80,14 @@ if [[ $touch == 1 ]]; then buildflags+=(-D A04BR3_TOUCH_PROVIDER=1); fi
 if [[ $three != 0 ]]; then
   fv="$root/Build/$output/DEBUG_GCC5/FV"
   offline=1; no_uart=1; seconds=420
-  if [[ $three == 2 || $three == 3 ]]; then offline=0; no_uart=0; fi
+  if [[ $three == 2 || $three == 3 || $three == 4 ]]; then offline=0; no_uart=0; fi
   if [[ $three == 2 ]]; then seconds=120; fi
-  guard=0; if [[ $three == 2 || $three == 3 ]]; then guard=1; fi
-  framebuffer=0; if [[ $three == 3 ]]; then framebuffer=1; fi
+  guard=0; if [[ $three == 2 || $three == 3 || $three == 4 ]]; then guard=1; fi
+  framebuffer=0; if [[ $three == 3 || $three == 4 ]]; then framebuffer=1; fi
+  four=0; if [[ $three == 4 ]]; then four=1; fi
   "$a64prefix"gcc -c "$root/Platforms/Benesse/a04br3Pkg/WindowsArm32/BootShim/BootShim.S" -o "$fv/BootShim.o" \
     -DUEFI_BASE=0x41080000 -DUEFI_SIZE=0x300000 -DA04BR3_A64_CPU_TEST=1 -DA04BR3_A32_SECONDARY_TEST=1 \
-    -DA04BR3_PARK_TEST=1 -DA04BR3_SMP_TEST=1 -DA04BR3_WDT_HANDOFF_TEST=0 -DA04BR3_FOUR_CPU_TEST=0 \
+    -DA04BR3_PARK_TEST=1 -DA04BR3_SMP_TEST=1 -DA04BR3_WDT_HANDOFF_TEST=0 -DA04BR3_FOUR_CPU_TEST="$four" \
     -DA04BR3_A64_WDT_TEST=1 -DA04BR3_A64_WDT_SECONDS="$seconds" -DA04BR3_KERNEL_MARKER="$framebuffer" -DA04BR3_FB_MONITOR="$framebuffer" \
     -DA04BR3_OFFLINE_WDT_UNBOUNDED="$offline" -DA04BR3_WORKER_NO_UART_RESET="$no_uart" -DA04BR3_WORKER_HEARTBEAT=1 \
     -DA04BR3_EARLY_FDT_GUARD="$guard"
@@ -147,7 +149,7 @@ result['build_defines']['A04BR3_DISPLAY_PROVIDER']=display
 result['build_defines']['A04BR3_TOUCH_PROVIDER']=touch
 if three != '0':
  import shutil,struct
- obj=fd.parent/('BootShim.linked' if three in ('2','3') else 'BootShim.o'); shim=fd.parent/'BootShim.bin'; data=shim.read_bytes()
+ obj=fd.parent/('BootShim.linked' if three in ('2','3','4') else 'BootShim.o'); shim=fd.parent/'BootShim.bin'; data=shim.read_bytes()
  rel=subprocess.check_output([a64prefix+'readelf','-r',str(obj)],text=True)
  if 'There are no relocations' not in rel: raise SystemExit('BootShim contains relocations')
  nm=subprocess.check_output([a64prefix+'nm','-n',str(obj)],text=True)
@@ -162,25 +164,26 @@ if three != '0':
  result['build_defines'].update(A04BR3_EXPERIMENTAL_THREE_CPU='1',A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT='1')
  result['shim_defines']={'UEFI_BASE':'0x41080000','UEFI_SIZE':'0x300000','A04BR3_A64_CPU_TEST':1,
   'A04BR3_A32_SECONDARY_TEST':1,'A04BR3_PARK_TEST':1,'A04BR3_SMP_TEST':1,'A04BR3_WDT_HANDOFF_TEST':0,
-  'A04BR3_FOUR_CPU_TEST':0,'A04BR3_A64_WDT_TEST':1,'A04BR3_A64_WDT_SECONDS':120 if three == '2' else 420,'A04BR3_KERNEL_MARKER':1 if three == '3' else 0,
-  'A04BR3_FB_MONITOR':1 if three == '3' else 0,'A04BR3_OFFLINE_WDT_UNBOUNDED':0 if three in ('2','3') else 1,'A04BR3_WORKER_NO_UART_RESET':0 if three in ('2','3') else 1,'A04BR3_WORKER_HEARTBEAT':1}
- result['shim_defines']['A04BR3_EARLY_FDT_GUARD']=1 if three in ('2','3') else 0
+  'A04BR3_FOUR_CPU_TEST':1 if three == '4' else 0,'A04BR3_A64_WDT_TEST':1,'A04BR3_A64_WDT_SECONDS':120 if three == '2' else 420,'A04BR3_KERNEL_MARKER':1 if three in ('3','4') else 0,
+  'A04BR3_FB_MONITOR':1 if three in ('3','4') else 0,'A04BR3_OFFLINE_WDT_UNBOUNDED':0 if three in ('2','3','4') else 1,'A04BR3_WORKER_NO_UART_RESET':0 if three in ('2','3','4') else 1,'A04BR3_WORKER_HEARTBEAT':1}
+ result['shim_defines']['A04BR3_EARLY_FDT_GUARD']=1 if three in ('2','3','4') else 0
  result.update(shim_sha256=sha(shim),shim_bytes=len(data),shimmed_fd_sha256=sha(combined),shimmed_fd_bytes=combined.stat().st_size)
- result['limitations']=['experimental three CPU; no runtime validation','worker heartbeat is not proof of watchdog operation',
+ result['limitations']=[('experimental four CPU; requires verified boot-start watchdog' if three == '4' else 'experimental three CPU; no runtime validation'),'worker heartbeat is not proof of watchdog operation',
   'other reset sources not excluded','DISM forbidden','RP attribute unsupported',
   'MMU runtime, cache and NVS unverified','libgcc ABI warnings unreviewed']
  if overlay:
   result['libgcc_overlay']={'libgcc_sha256':sha(Path(overlay)/'libgcc.a'),
                             'manifest_sha256':sha(Path(overlay)/'manifest.json')}
   result['limitations'][-1]='experimental libgcc overlay; firmware link and target ABI not verified'
- if three in ('2','3'):
+ if three in ('2','3','4'):
   result['build_defines']['A04BR3_BOOT_DIAGNOSTIC']='1' if three == '2' else '0'
   result['build_defines']['A04BR3_BOUNDED_RECOVERY']='1'
-  result['build_defines']['A04BR3_CACHE_TEST']='1' if three == '3' else '0'
+  result['build_defines']['A04BR3_FOUR_CPU_TEST']='1' if three == '4' else '0'
+  result['build_defines']['A04BR3_CACHE_TEST']='1' if three in ('3','4') else '0'
   result['shim_c_flags']=['-O2','-ffreestanding','-fno-stack-protector','-fno-builtin','-fno-pic','-fno-pie',
                           '-fno-asynchronous-unwind-tables','-fno-unwind-tables','-mgeneral-regs-only','-mstrict-align','-DA04_FDT_TRACE=1']
   result['limitations'].append('bounded watchdog; RTC fastboot flag is modified')
-  result['limitations'].append('UEFI ReadyToBoot and ExitBootServices block OS launch' if three == '2' else 'OS entry enabled; automatic watchdog reset after bounded feed; hardware behavior unverified')
+  result['limitations'].append('UEFI ReadyToBoot and ExitBootServices block OS launch' if three == '2' else ('four CPU handoff stops worker; Windows watchdog must take over; unvalidated' if three == '4' else 'OS entry enabled; automatic watchdog reset after bounded feed; hardware behavior unverified'))
 if battery == '1': result['limitations'].append('LC709203F ACPI and I2C2 handoff have not been validated on this firmware')
 (fd.parent/'diagnostic-manifest.json').write_text(json.dumps(result,indent=2)+'\n')
 print(json.dumps(result,indent=2))

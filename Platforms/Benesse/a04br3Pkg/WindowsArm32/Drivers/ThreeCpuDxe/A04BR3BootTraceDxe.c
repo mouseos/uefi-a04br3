@@ -14,11 +14,19 @@
 #include <Protocol/AcpiSystemDescriptionTable.h>
 #include <Protocol/AcpiTable.h>
 #include "CpuParkingSsdt.h"
+#include "FourCpuTables.h"
+#ifndef A04BR3_FOUR_CPU_TEST
 #define A04BR3_FOUR_CPU_TEST 0
+#endif
 #define A04BR3_A64_WDT_TEST 1
 #define A04BR3_KERNEL_MARKER 1
+#if A04BR3_FOUR_CPU_TEST == 1
+#define A04_SMP_CPU_COUNT 4
+#define A04_SMP_FIRST_AP 1
+#else
 #define A04_SMP_CPU_COUNT 3
 #define A04_SMP_FIRST_AP 2
+#endif
 #ifndef A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT
 #define A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT 0
 #endif
@@ -53,6 +61,9 @@ STATIC VOID EFIAPI A04PublishSmp (EFI_EVENT Event, VOID *Context)
   A04_SINGLE_MADT Original;
   A04_SMP_MADT New;
   UINTN Index, Key, NewKey, SsdtKey, Cpu, Poll, Length;
+#if A04BR3_FOUR_CPU_TEST == 1
+  UINTN WatchdogKey;
+#endif
   EFI_STATUS Status;
   volatile UINT32 *Mailbox;
   UINT32 Result;
@@ -109,14 +120,21 @@ STATIC VOID EFIAPI A04PublishSmp (EFI_EVENT Event, VOID *Context)
     New.Cpu[Cpu + 1].ParkingProtocolVersion = 1;
     New.Cpu[Cpu + 1].ParkedAddress = Page[Cpu];
   }
+#if A04BR3_FOUR_CPU_TEST == 1
+  Status = Tables->InstallAcpiTable (Tables, (VOID *)mToprguSsdt, sizeof(mToprguSsdt), &WatchdogKey);
+  if (EFI_ERROR (Status)) { DEBUG ((DEBUG_ERROR, "A04SMP TOPRGU SSDT install %r\n", Status)); CpuDeadLoop (); }
+  Status = Tables->InstallAcpiTable (Tables, (VOID *)mFourCpuSsdt, sizeof(mFourCpuSsdt), &SsdtKey);
+  if (EFI_ERROR (Status)) Tables->UninstallAcpiTable (Tables, WatchdogKey);
+#else
   Status = Tables->InstallAcpiTable (Tables, (VOID *)mThreeCpuSsdt, sizeof(mThreeCpuSsdt), &SsdtKey);
+#endif
   if (EFI_ERROR (Status)) { DEBUG ((DEBUG_ERROR, "A04SMP SSDT install %r\n", Status)); CpuDeadLoop (); }
   Status = Tables->UninstallAcpiTable (Tables, Key);
   if (EFI_ERROR (Status)) { Tables->UninstallAcpiTable (Tables, SsdtKey); DEBUG ((DEBUG_ERROR, "A04SMP remove MADT %r\n", Status)); CpuDeadLoop (); }
   Status = Tables->InstallAcpiTable (Tables, &New, sizeof (New), &NewKey);
   DEBUG ((DEBUG_ERROR, "A04SMP install MADT %r\n", Status));
   if (!EFI_ERROR (Status) && mProbePage != NULL) {
-#if A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT != 1
+#if A04BR3_EXPERIMENTAL_WORKER_HEARTBEAT != 1 || A04BR3_FOUR_CPU_TEST == 1
 #if A04BR3_FOUR_CPU_TEST == 1
     mProbePage[7] = (UINT32)(Page[1] + 0xffc);
     mProbePage[8] = (UINT32)(Page[2] + 0xffc);

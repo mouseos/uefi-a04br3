@@ -9,6 +9,7 @@
 [Sources]
   A04BR3BootTraceDxe.c
   CpuParkingSsdt.h
+  FourCpuTables.h
   SecondaryProbe.S
   SecondaryParking.S
 [Packages]
