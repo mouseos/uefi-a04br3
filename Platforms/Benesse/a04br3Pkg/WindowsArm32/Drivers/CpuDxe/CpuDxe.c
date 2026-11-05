@@ -168,7 +168,12 @@ CpuRegisterInterruptHandler (
   IN EFI_CPU_INTERRUPT_HANDLER  InterruptHandler
   )
 {
-  return RegisterInterruptHandler (InterruptType, InterruptHandler);
+  EFI_STATUS Status;
+  Status = RegisterInterruptHandler (InterruptType, InterruptHandler);
+  DEBUG ((DEBUG_ERROR, "A04IRQ register type=%u handler=%08x status=%r vbar=%08x\n",
+          (UINT32)InterruptType, (UINT32)(UINTN)InterruptHandler,
+          Status, (UINT32)ArmReadVBar ()));
+  return Status;
 }
 
 EFI_STATUS
@@ -244,6 +249,7 @@ CpuDxeInitialize (
     return Status;
   }
 
+  DEBUG ((DEBUG_ERROR, "A04IRQ vectors initialized vbar=%08x\n", (UINT32)ArmReadVBar ()));
   InitializeDma (&mCpu);
 
   Status = gBS->InstallMultipleProtocolInterfaces (
