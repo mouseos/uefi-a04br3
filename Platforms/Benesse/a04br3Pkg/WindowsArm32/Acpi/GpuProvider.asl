@@ -9,6 +9,10 @@ DefinitionBlock ("GpuProvider.aml", "SSDT", 2, "BENESS", "A04GPU  ", 1)
         {
             Name (_HID, "MOU0006")
             Name (_UID, Zero)
+            // The board Linux device tree does not describe GPU DMA as
+            // coherent. Conservatively request non-coherent DMA treatment;
+            // this does not assert that any fabric path snoops CPU caches.
+            Name (_CCA, Zero)
             // Read-only snapshots of shared power and clock registers. ACPI
             // owns these SystemMemory operation regions; the GPU driver does
             // not claim or write the shared register banks. A snapshot is not
