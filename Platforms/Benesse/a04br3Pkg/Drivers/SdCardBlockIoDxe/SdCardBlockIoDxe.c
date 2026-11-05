@@ -25,6 +25,11 @@
 #include <Protocol/BlockIo.h>
 #include <Protocol/DevicePath.h>
 
+// Optional board-package hook. The shared SD/eMMC path has no default action.
+#ifndef A04BR3_EMMC_CID_OBSERVED
+#define A04BR3_EMMC_CID_OBSERVED(Cid)  ((VOID)0)
+#endif
+
 //
 // HS200 for the internal eMMC (EmmcBlockIoDxe only), off by default:
 // A04BR3_EMMC_HS200=1 in the build environment (a04br3.dsc, DeviceBuild.py).
@@ -1592,6 +1597,7 @@ SdInitializeCard (
   if (EFI_ERROR (Status)) {
     return Status;
   }
+  A04BR3_EMMC_CID_OBSERVED (Cid);
 
   mSdRca = 1;
   Status = SdSendCommand (

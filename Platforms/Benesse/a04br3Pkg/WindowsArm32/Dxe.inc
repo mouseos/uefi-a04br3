@@ -37,7 +37,7 @@
 
   # A04BR3 board drivers ported from edk2-mtk A04BR3Pkg
   INF a04br3Pkg/Drivers/DisplayInitDxe/DisplayInitDxe.inf
-  INF a04br3Pkg/Drivers/EmmcBlockIoDxe/EmmcBlockIoDxe.inf
+  INF a04br3Pkg/WindowsArm32/Drivers/EmmcBlockIoDxe/EmmcBlockIoDxe.inf
   INF a04br3Pkg/Drivers/SdCardBlockIoDxe/SdCardBlockIoDxe.inf
 
   # Boot image ramdisk as a read-only block device (UniXNU payload volume)

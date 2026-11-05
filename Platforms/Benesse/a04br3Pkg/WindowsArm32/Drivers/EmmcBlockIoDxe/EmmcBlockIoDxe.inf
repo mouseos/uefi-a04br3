@@ -1,0 +1,34 @@
+## Windows ARM32 board wrapper for the MT8167 eMMC Block I/O driver.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+  INF_VERSION = 0x0001001c
+  BASE_NAME = EmmcBlockIoDxe
+  FILE_GUID = 8D71B670-A9EF-4D82-A4CB-22A25B87FDD9
+  MODULE_TYPE = DXE_DRIVER
+  VERSION_STRING = 0.1
+  ENTRY_POINT = SdCardBlockIoDxeEntryPoint
+[Sources]
+  EmmcBlockIoDxe.c
+[Packages]
+  MdePkg/MdePkg.dec
+  MT8167Pkg/MT8167Pkg.dec
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  CacheMaintenanceLib
+  DebugLib
+  IoLib
+  PcdLib
+  TimerLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  UefiDriverEntryPoint
+[Protocols]
+  gEfiBlockIoProtocolGuid
+  gEfiDevicePathProtocolGuid
+[Guids]
+  gEfiEventReadyToBootGuid
+[FixedPcd]
+  gMt8167TokenSpaceGuid.PcdMt8167SdCardBlockSize
+[Depex]
+  gEfiCpuArchProtocolGuid

@@ -36,7 +36,7 @@ APRIORI DXE {
   INF MdeModulePkg/Universal/Disk/DiskIoDxe/DiskIoDxe.inf
   INF MdeModulePkg/Universal/Disk/PartitionDxe/PartitionDxe.inf
 
-  INF a04br3Pkg/Drivers/EmmcBlockIoDxe/EmmcBlockIoDxe.inf
+  INF a04br3Pkg/WindowsArm32/Drivers/EmmcBlockIoDxe/EmmcBlockIoDxe.inf
   INF a04br3Pkg/Drivers/SdCardBlockIoDxe/SdCardBlockIoDxe.inf
 
 
