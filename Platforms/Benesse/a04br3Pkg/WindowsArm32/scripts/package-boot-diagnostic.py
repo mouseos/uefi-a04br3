@@ -25,16 +25,22 @@ def main():
     p.add_argument('stock_boot', type=Path)
     p.add_argument('dtb', type=Path)
     p.add_argument('output_dir', type=Path)
+    p.add_argument('--worker-seconds', type=int, help='Explicit three-CPU bounded recovery interval (420..1800 seconds)')
     a = p.parse_args()
     fw, mf, stock, dtb = (x.resolve(strict=True) for x in (a.firmware, a.firmware_manifest, a.stock_boot, a.dtb))
     out = a.output_dir.resolve()
     if out.exists(): raise SystemExit('output already exists')
     m = json.loads(mf.read_text())
     s = m.get('shim_defines', {})
+    expected_seconds = 120 if m.get('build_defines', {}).get('A04BR3_BOOT_DIAGNOSTIC') == '1' else 420
+    if a.worker_seconds is not None:
+        if not 420 <= a.worker_seconds <= 1800 or s.get('A04BR3_FOUR_CPU_TEST') != 0 or m.get('build_defines', {}).get('A04BR3_BOOT_DIAGNOSTIC') != '0':
+            raise SystemExit('extended interval requires bounded three-CPU OS-entry firmware')
+        expected_seconds = a.worker_seconds
     if (m.get('status') != 'diagnostic-only-not-for-device' or m.get('shimmed_fd_sha256') != sha(fw) or
         m.get('build_defines', {}).get('A04BR3_BOOT_DIAGNOSTIC') not in ('0', '1') or
         m.get('build_defines', {}).get('A04BR3_BOUNDED_RECOVERY') != '1' or
-        s.get('A04BR3_A64_WDT_SECONDS') != (120 if m['build_defines']['A04BR3_BOOT_DIAGNOSTIC'] == '1' else 420) or s.get('A04BR3_OFFLINE_WDT_UNBOUNDED') != 0 or
+        s.get('A04BR3_A64_WDT_SECONDS') != expected_seconds or s.get('A04BR3_OFFLINE_WDT_UNBOUNDED') != 0 or
         s.get('A04BR3_WORKER_HEARTBEAT') != 1 or s.get('A04BR3_WORKER_NO_UART_RESET') != 0 or
         s.get('A04BR3_EARLY_FDT_GUARD') != 1):
         raise SystemExit('firmware manifest is not the bounded diagnostic')
