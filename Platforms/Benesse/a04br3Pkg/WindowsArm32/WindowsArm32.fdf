@@ -193,7 +193,7 @@ READ_LOCK_STATUS   = TRUE
   INF a04br3Pkg/WindowsArm32/Drivers/ThermalHandoffDxe/ThermalHandoffDxe.inf
 !endif
   INF a04br3Pkg/Drivers/I2c1HandoffDxe/I2c1HandoffDxe.inf
-!if $(A04BR3_TOUCH_PROVIDER) == 1
+!if $(A04BR3_TOUCH_PROVIDER) == 1 || $(A04BR3_SHARED_TOUCH_POWER) == 1
   INF a04br3Pkg/WindowsArm32/Drivers/TouchPowerDxe/TouchPowerDxe.inf
 !endif
 !if $(A04BR3_GPU_HANDOFF) == 1
