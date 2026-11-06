@@ -104,6 +104,17 @@
 !ifndef A04BR3_SHARED_PARENT
   DEFINE A04BR3_SHARED_PARENT = 0
 !endif
+# Opt in only when the shared-parent touch child is installed.  The legacy
+# touch provider already selects the same power handoff independently.
+!ifndef A04BR3_SHARED_TOUCH_POWER
+  DEFINE A04BR3_SHARED_TOUCH_POWER = 0
+!endif
+!if $(A04BR3_SHARED_TOUCH_POWER) != 0 && $(A04BR3_SHARED_TOUCH_POWER) != 1
+  !error A04BR3_SHARED_TOUCH_POWER must be 0 or 1
+!endif
+!if $(A04BR3_SHARED_TOUCH_POWER) == 1 && $(A04BR3_SHARED_PARENT) != 1
+  !error Shared touch power requires the shared parent
+!endif
 !ifndef A04BR3_SHARED_APMIXED
   DEFINE A04BR3_SHARED_APMIXED = 0
 !endif
@@ -497,7 +508,7 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
   a04br3Pkg/WindowsArm32/Drivers/ThermalHandoffDxe/ThermalHandoffDxe.inf
 !endif
   a04br3Pkg/Drivers/I2c1HandoffDxe/I2c1HandoffDxe.inf
-!if $(A04BR3_TOUCH_PROVIDER) == 1
+!if $(A04BR3_TOUCH_PROVIDER) == 1 || $(A04BR3_SHARED_TOUCH_POWER) == 1
   a04br3Pkg/WindowsArm32/Drivers/TouchPowerDxe/TouchPowerDxe.inf
 !endif
 !if $(A04BR3_GPU_HANDOFF) == 1
