@@ -56,12 +56,11 @@ trap 'rm -r -- "$conf"' EXIT
 cp "$template"/{target.txt,tools_def.txt,build_rule.txt} "$conf/"
 python3 - "$conf/tools_def.txt" "$root" "$oldtools" "$overlay" "$display_gce" <<'PY'
 from pathlib import Path
-import sys
+import sys,re
 p=Path(sys.argv[1]); s=p.read_text(); root=Path(sys.argv[2]); old=Path(sys.argv[3])
 if sys.argv[5]=='1':
- needle='DEFINE GCC_ASLPP_FLAGS                 = -x c -E -include AutoGen.h'
- assert s.count(needle)==1
- s=s.replace(needle,needle+' -DA04BR3_DISPLAY_GCE_RESOURCES=1')
+ s,n=re.subn(r'(?m)^(DEFINE GCC_ASLPP_FLAGS\s*=\s*[^\r\n]+)',r'\1 -DA04BR3_DISPLAY_GCE_RESOURCES=1',s)
+ assert n==1
 needle='DEFINE GCC5_ARM_CC_FLAGS             = DEF(GCC49_ARM_CC_FLAGS)'
 assert s.count(needle)==1
 inc=root/'Platforms/Benesse/a04br3Pkg/WindowsArm32/Include'
