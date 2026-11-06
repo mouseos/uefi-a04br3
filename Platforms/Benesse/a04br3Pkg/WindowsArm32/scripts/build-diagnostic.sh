@@ -19,6 +19,8 @@ touch=${A04_DIAGNOSTIC_TOUCH:-0}
 shared=${A04_DIAGNOSTIC_SHARED:-0}
 shared_touch_power=${A04_DIAGNOSTIC_SHARED_TOUCH_POWER:-0}
 apmixed=${A04_DIAGNOSTIC_SHARED_APMIXED:-0}
+shared_io=${A04_DIAGNOSTIC_SHARED_IO_PROFILE:-0}
+[[ $shared_io == 0 || ($shared_io == 1 && $shared == 1 && $apmixed == 1 && $battery == 1 && $gpu == 1 && $display == 1 && $shared_touch_power == 1) ]] || exit 2
 bq=${A04_DIAGNOSTIC_BQ_HANDOFF:-0}
 thermal=${A04_DIAGNOSTIC_THERMAL_HANDOFF_RECORD:-0}
 gce_observation=${A04_DIAGNOSTIC_GCE_OBSERVATION:-0}
@@ -110,6 +112,7 @@ if [[ $clear_lk_overlay == 1 ]]; then buildflags+=(-D A04BR3_CLEAR_LK_OVERLAY=1)
 if [[ $touch == 1 ]]; then buildflags+=(-D A04BR3_TOUCH_PROVIDER=1); fi
 if [[ $shared == 1 ]]; then buildflags+=(-D A04BR3_SHARED_PARENT=1); fi
 if [[ $shared_touch_power == 1 ]]; then buildflags+=(-D A04BR3_SHARED_TOUCH_POWER=1); fi
+if [[ $shared_io == 1 ]]; then buildflags+=(-D A04BR3_SHARED_IO_PROFILE=1); fi
 if [[ $apmixed == 1 ]]; then buildflags+=(-D A04BR3_SHARED_APMIXED=1); fi
 "$EDK_TOOLS_PATH/BinWrappers/PosixLike/build" -p a04br3Pkg/WindowsArm32/WindowsArm32.dsc -a ARM -b DEBUG -t GCC5 -D FD_BASE=0x41080000 -D FD_SIZE=0x00300000 -D FD_BLOCKS=0x300 -D "A04_BUILD_OUTPUT=Build/$output" "${buildflags[@]}"
 if [[ $three != 0 ]]; then
@@ -142,10 +145,10 @@ EOF
   fi
   "$a64prefix"objcopy -O binary "$shimobj" "$fv/BootShim.bin"
 fi
-python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" "$gce_observation" "$cpu1_l1" "$clear_lk_overlay" "$gpu_mmpll" <<'PY'
+python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" "$gce_observation" "$cpu1_l1" "$clear_lk_overlay" "$gpu_mmpll" "$shared_io" <<'PY'
 from pathlib import Path
 import hashlib,json,subprocess,sys
-root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce,gce_observation,cpu1_l1,clear_lk_overlay,gpu_mmpll=sys.argv[1:]
+root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce,gce_observation,cpu1_l1,clear_lk_overlay,gpu_mmpll,shared_io=sys.argv[1:]
 def sha(path):
  h=hashlib.sha256()
  with open(path,'rb') as f:
@@ -189,6 +192,11 @@ result['build_defines']['A04BR3_TOUCH_PROVIDER']=touch
 result['build_defines']['A04BR3_SHARED_PARENT']=shared
 result['build_defines']['A04BR3_SHARED_TOUCH_POWER']=shared_touch_power
 result['build_defines']['A04BR3_SHARED_APMIXED']=apmixed
+result['build_defines']['A04BR3_SHARED_IO_PROFILE']=shared_io
+if shared_io == '1':
+ contract=Path(root)/'Platforms/Benesse/a04br3Pkg/WindowsArm32/Acpi/shared-io-contract.json'
+ result['shared_io_contract']={'sha256':sha(contract),'contract':json.loads(contract.read_text())}
+ result['limitations'].extend(result['shared_io_contract']['contract']['limitations'])
 result['build_defines']['A04BR3_BQ_HANDOFF']=bq
 result['build_defines']['A04BR3_THERMAL_HANDOFF_RECORD']=thermal
 result['build_defines']['A04BR3_GCE_OBSERVATION']=gce_observation

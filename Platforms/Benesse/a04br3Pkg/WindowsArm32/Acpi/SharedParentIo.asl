@@ -1,0 +1,25 @@
+/* SPDX-License-Identifier: BSD-2-Clause-Patent
+ * Opt-in combined parent. USB/AFE/MSDC2 resources belong to synthetic PDOs;
+ * do not add ACPI child devices or duplicate their IRQ/memory ownership.
+ * IO_RESOURCE_DESCRIPTOR carries level mode, not polarity. SharedIoIrqDxe
+ * normalizes the board's level-low inputs to the GIC level-high contract. */
+DefinitionBlock ("shared-parent-io.aml", "SSDT", 2, "BENESS", "A04SHRIO", 1)
+{
+    Scope (_SB)
+    {
+        Device (SHR0)
+        {
+            Name (_HID, "BEN0001")
+            Name (_UID, Zero)
+            Name (_CCA, Zero)
+            Name (_CRS, ResourceTemplate ()
+            {
+                Memory32Fixed (ReadWrite, 0x10000000, 0x1000)
+                Memory32Fixed (ReadWrite, 0x10001000, 0x1000)
+                Memory32Fixed (ReadWrite, 0x10005000, 0x1000)
+                Memory32Fixed (ReadWrite, 0x1000F000, 0x1000)
+                Memory32Fixed (ReadWrite, 0x10018000, 0x0714)
+            })
+        }
+    }
+}

@@ -1,0 +1,137 @@
+{
+  "schema": 1,
+  "profile_flag": "A04BR3_SHARED_IO_PROFILE",
+  "default": 0,
+  "parent": {
+    "hid": "BEN0001",
+    "memory": [
+      [
+        268435456,
+        4096
+      ],
+      [
+        268439552,
+        4096
+      ],
+      [
+        268455936,
+        4096
+      ],
+      [
+        268496896,
+        4096
+      ],
+      [
+        268533760,
+        1812
+      ]
+    ],
+    "cca": 0,
+    "interrupt_resources": []
+  },
+  "children": [
+    {
+      "id": "MT6392\\Buttons",
+      "memory": [
+        [
+          268443648,
+          4096
+        ]
+      ]
+    },
+    {
+      "id": "MT8167\\BU21025",
+      "memory": [
+        [
+          285249536,
+          4096
+        ]
+      ]
+    },
+    {
+      "id": "MT8167\\USB20",
+      "memory": [
+        [
+          286261248,
+          65536
+        ],
+        [
+          286326784,
+          65536
+        ]
+      ],
+      "spi": 72,
+      "gsi": 104,
+      "source_type": "IRQ_TYPE_LEVEL_LOW",
+      "hal_type": "LevelSensitive/InterruptActiveHigh",
+      "pnp_polarity_field": false,
+      "sysirq_address": 270534184,
+      "sysirq_bit": 8
+    },
+    {
+      "id": "MT8167\\AFE",
+      "memory": [
+        [
+          286523392,
+          4096
+        ],
+        [
+          286527488,
+          36864
+        ]
+      ],
+      "spi": 120,
+      "gsi": 152,
+      "source_type": "IRQ_TYPE_LEVEL_LOW",
+      "hal_type": "LevelSensitive/InterruptActiveHigh",
+      "pnp_polarity_field": false,
+      "sysirq_address": 270534188,
+      "sysirq_bit": 24
+    },
+    {
+      "id": "A04BR3\\MT6630SDIO",
+      "memory": [
+        [
+          286720000,
+          4096
+        ]
+      ],
+      "spi": 109,
+      "gsi": 141,
+      "source_type": "IRQ_TYPE_LEVEL_LOW",
+      "hal_type": "LevelSensitive/InterruptActiveHigh",
+      "pnp_polarity_field": false,
+      "sysirq_address": 270534188,
+      "sysirq_bit": 13
+    }
+  ],
+  "preserved_acpi": [
+    "Dsdt.asl",
+    "GpuProvider.asl",
+    "DisplayProvider.asl",
+    "BatteryGauge.asl",
+    "ButtonArray.asl"
+  ],
+  "driver_sources": {
+    "repository": "https://github.com/mouseos/a04br3-windows-drivers",
+    "usb_before": "98775b4b6035acfe95df7de4531e06b9dc1cbd4b",
+    "usb_audio_parent": "d9d95dc6e036392ec2ef97d6fd26ee7de5140e3e",
+    "wifi": "c29fcbf2604bd309b2731f3ee23f6913dbdaf34c"
+  },
+  "linux_source": {
+    "repository": "https://github.com/s1204IT/CT3_GPL_LGPL_Src",
+    "commit": "7c4782127d4ea11965be00ce1343056be9bfb769",
+    "paths": [
+      "kernel-4.4/arch/arm64/boot/dts/mediatek/mt8167.dtsi",
+      "kernel-4.4/arch/arm64/boot/dts/mediatek/a04br3.dts",
+      "kernel-4.4/drivers/irqchip/irq-mtk-sysirq.c",
+      "kernel-4.4/drivers/irqchip/irq-gic.c"
+    ]
+  },
+  "limitations": [
+    "Synthetic PDO requirements have no polarity field; GIC level-high is the architectural target after SYSIRQ inversion, not a measured Windows HAL configuration",
+    "One parent SYS must combine USB/audio and Wi-Fi runtime lease implementation; do not install two BEN0001 parents",
+    "No GPIO5/EINT Wi-Fi combo wake IRQ is claimed",
+    "No physical PnP, IRQ delivery, simultaneous workload or power-coexistence validation"
+  ]
+}

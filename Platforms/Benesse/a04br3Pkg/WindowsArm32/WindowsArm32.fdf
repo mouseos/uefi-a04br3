@@ -96,6 +96,9 @@ READ_LOCK_STATUS   = TRUE
 
   INF MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf
   INF MdeModulePkg/Universal/Acpi/AcpiPlatformDxe/AcpiPlatformDxe.inf
+!if $(A04BR3_SHARED_IO_PROFILE) == 1
+  INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedIo.inf
+!else
 !if $(A04BR3_SHARED_PARENT) == 1
 !if $(A04BR3_BATTERY_PROVIDER) == 1
 !if $(A04BR3_GPU_HANDOFF) == 1
@@ -189,11 +192,15 @@ READ_LOCK_STATUS   = TRUE
 !endif
 !endif
 !endif
+!endif
 !if $(A04BR3_THERMAL_HANDOFF_RECORD) == 1
   INF a04br3Pkg/WindowsArm32/Drivers/ThermalHandoffDxe/ThermalHandoffDxe.inf
 !endif
 !if $(A04BR3_GCE_OBSERVATION) == 1
   INF a04br3Pkg/WindowsArm32/Drivers/GceObservationDxe/GceObservationDxe.inf
+!endif
+!if $(A04BR3_SHARED_IO_PROFILE) == 1
+  INF a04br3Pkg/WindowsArm32/Drivers/SharedIoIrqDxe/SharedIoIrqDxe.inf
 !endif
   INF a04br3Pkg/Drivers/I2c1HandoffDxe/I2c1HandoffDxe.inf
 !if $(A04BR3_TOUCH_PROVIDER) == 1 || $(A04BR3_SHARED_TOUCH_POWER) == 1
