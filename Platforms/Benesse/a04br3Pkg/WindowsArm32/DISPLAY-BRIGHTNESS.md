@@ -29,3 +29,8 @@ python3 Platforms/Benesse/a04br3Pkg/Tests/check_display_brightness.py \
 
 brightness OFF/ON × GCE OFF/ONの4組をiaslでcompileし、AML checksum、既存4領域保持、
 PWM領域のON限定出現とMMIO重複なしを確認する。実機/runner/REA/カメラは使用しない。
+
+ACPI格納fileの検証はGUID定数を再掲せず、実buildのGNUmakefileから選択INFを取得し、
+そのFILE_GUIDと使用した上流MdeModulePkg.decのPcdAcpiTableStorageFileをbytes_leで比較する。
+さらに生成済みAcpiPlatformDxe PCDとFFS存在を照合し、結果をfirmware manifestへ含める。
+不一致の旧cc7/profile1・未修正18d成果物は適用禁止。

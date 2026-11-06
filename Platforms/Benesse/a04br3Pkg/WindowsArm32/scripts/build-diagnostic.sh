@@ -120,6 +120,10 @@ if [[ $shared_touch_power == 1 ]]; then buildflags+=(-D A04BR3_SHARED_TOUCH_POWE
 if [[ $shared_io == 1 ]]; then buildflags+=(-D A04BR3_SHARED_IO_PROFILE=1); fi
 if [[ $apmixed == 1 ]]; then buildflags+=(-D A04BR3_SHARED_APMIXED=1); fi
 "$EDK_TOOLS_PATH/BinWrappers/PosixLike/build" -p a04br3Pkg/WindowsArm32/WindowsArm32.dsc -a ARM -b DEBUG -t GCC5 -D FD_BASE=0x41080000 -D FD_SIZE=0x00300000 -D FD_BLOCKS=0x300 -D "A04_BUILD_OUTPUT=Build/$output" "${buildflags[@]}"
+python3 "$root/Platforms/Benesse/a04br3Pkg/Tests/check_acpi_storage_guid.py" \
+  --build-output "$root/Build/$output/DEBUG_GCC5" \
+  --mde-module-dec "$canonical/Mu_Basecore/MdeModulePkg/MdeModulePkg.dec" \
+  --out "$root/Build/$output/DEBUG_GCC5/FV/acpi-storage-validation.json"
 if [[ $three != 0 ]]; then
   fv="$root/Build/$output/DEBUG_GCC5/FV"
   offline=1; no_uart=1; seconds=420
@@ -186,6 +190,7 @@ result={'status':'diagnostic-only-not-for-device','source_commit':git(root,'rev-
  'build_defines':{'FD_BASE':'0x41080000','FD_SIZE':'0x00300000','FD_BLOCKS':'0x300'},
  'inputs':{str(p):sha(p) for p in inputs},'fd_sha256':sha(fd),'fd_bytes':fd.stat().st_size,
  'limitations':['single CPU only','watchdog worker and parking not connected','RP attribute unsupported','MMU runtime, cache and NVS unverified','libgcc ABI warnings unreviewed']}
+result['acpi_storage_validation']=json.loads((fd.parent/'acpi-storage-validation.json').read_text())
 result['build_defines']['A04BR3_BATTERY_PROVIDER']=battery
 result['build_defines']['A04BR3_GPU_HANDOFF']=gpu
 result['build_defines']['A04BR3_GPU_MMPLL']=gpu_mmpll
