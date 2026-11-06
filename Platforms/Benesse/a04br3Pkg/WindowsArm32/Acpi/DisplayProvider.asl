@@ -33,7 +33,7 @@ DefinitionBlock ("DisplayProvider.aml", "SSDT", 2, "BENESS", "A04DISP ", 1)
         // Describing resources does not establish event/thread/clock ownership.
         Device (GCE0)
         {
-            Name (_HID, "MOU0011")
+            Name (_HID, "MOU0099")
             Name (_UID, Zero)
             Name (_CCA, Zero)
             Name (_CRS, ResourceTemplate ()
