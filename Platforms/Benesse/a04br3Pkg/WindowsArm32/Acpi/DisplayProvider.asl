@@ -22,16 +22,28 @@ DefinitionBlock ("DisplayProvider.aml", "SSDT", 2, "BENESS", "A04DISP ", 1)
                 Memory32Fixed (ReadWrite, 0x14012000, 0x00001000) // DSI0
                 Memory32Fixed (ReadWrite, 0x14015000, 0x00001000) // display mutex
 #ifdef A04BR3_DISPLAY_GCE_RESOURCES
-                // MT8167 DTS: non-secure GCE SPI 125 and OVL0 SPI 160. The GSI
-                // values include the GIC SPI offset of 32. This opt-in only
-                // describes resources; it does not claim a GCE thread or
-                // enable interrupts, clocks, or display register writes.
-                Memory32Fixed (ReadWrite, 0x1020A000, 0x00001000) // GCE
-                Interrupt (ResourceConsumer, Level, ActiveLow, Exclusive) { 157 }
-                // SPI 126 is the secure GCE interrupt, not claimed here.
+                // OVL0 SPI 160, translated to GSI 192.
                 Interrupt (ResourceConsumer, Level, ActiveLow, Exclusive) { 192 }
 #endif
             })
         }
+#ifdef A04BR3_DISPLAY_GCE_RESOURCES
+        // GCE is a distinct bus master. Its own PDO and _CCA permit a DMA
+        // adapter to be requested without using the OVL device's adapter.
+        // Describing resources does not establish event/thread/clock ownership.
+        Device (GCE0)
+        {
+            Name (_HID, "MOU0011")
+            Name (_UID, Zero)
+            Name (_CCA, Zero)
+            Name (_CRS, ResourceTemplate ()
+            {
+                Memory32Fixed (ReadWrite, 0x1020A000, 0x00001000)
+                // MT8167 DTS non-secure GCE SPI 125, GSI 157.
+                // SPI 126 is secure and is not claimed.
+                Interrupt (ResourceConsumer, Level, ActiveLow, Exclusive) { 157 }
+            })
+        }
+#endif
     }
 }
