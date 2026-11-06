@@ -11,12 +11,14 @@ gpu=${A04_DIAGNOSTIC_GPU:-0}
 display=${A04_DIAGNOSTIC_DISPLAY:-0}
 touch=${A04_DIAGNOSTIC_TOUCH:-0}
 shared=${A04_DIAGNOSTIC_SHARED:-0}
+shared_touch_power=${A04_DIAGNOSTIC_SHARED_TOUCH_POWER:-0}
 apmixed=${A04_DIAGNOSTIC_SHARED_APMIXED:-0}
 bq=${A04_DIAGNOSTIC_BQ_HANDOFF:-0}
 thermal=${A04_DIAGNOSTIC_THERMAL_HANDOFF_RECORD:-0}
 [[ $thermal == 0 || $thermal == 1 ]] || exit 2
 [[ $bq == 0 || ($bq == 1 && $battery == 1) ]] || exit 2
 [[ $shared == 0 || $shared == 1 ]] || exit 2
+[[ $shared_touch_power == 0 || ($shared_touch_power == 1 && $shared == 1) ]] || exit 2
 [[ $apmixed == 0 || ($apmixed == 1 && $shared == 1) ]] || exit 2
 [[ $shared == 0 || $touch == 0 ]] || exit 2
 [[ $touch == 0 || $touch == 1 ]] || exit 2
@@ -88,6 +90,7 @@ if [[ $gpu == 1 ]]; then buildflags+=(-D A04BR3_GPU_HANDOFF=1); fi
 if [[ $display == 1 ]]; then buildflags+=(-D A04BR3_DISPLAY_PROVIDER=1); fi
 if [[ $touch == 1 ]]; then buildflags+=(-D A04BR3_TOUCH_PROVIDER=1); fi
 if [[ $shared == 1 ]]; then buildflags+=(-D A04BR3_SHARED_PARENT=1); fi
+if [[ $shared_touch_power == 1 ]]; then buildflags+=(-D A04BR3_SHARED_TOUCH_POWER=1); fi
 if [[ $apmixed == 1 ]]; then buildflags+=(-D A04BR3_SHARED_APMIXED=1); fi
 "$EDK_TOOLS_PATH/BinWrappers/PosixLike/build" -p a04br3Pkg/WindowsArm32/WindowsArm32.dsc -a ARM -b DEBUG -t GCC5 -D FD_BASE=0x41080000 -D FD_SIZE=0x00300000 -D FD_BLOCKS=0x300 -D "A04_BUILD_OUTPUT=Build/$output" "${buildflags[@]}"
 if [[ $three != 0 ]]; then
@@ -120,10 +123,10 @@ EOF
   fi
   "$a64prefix"objcopy -O binary "$shimobj" "$fv/BootShim.bin"
 fi
-python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" <<'PY'
+python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" <<'PY'
 from pathlib import Path
 import hashlib,json,subprocess,sys
-root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal=sys.argv[1:]
+root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power=sys.argv[1:]
 def sha(path):
  h=hashlib.sha256()
  with open(path,'rb') as f:
@@ -161,6 +164,7 @@ result['build_defines']['A04BR3_GPU_HANDOFF']=gpu
 result['build_defines']['A04BR3_DISPLAY_PROVIDER']=display
 result['build_defines']['A04BR3_TOUCH_PROVIDER']=touch
 result['build_defines']['A04BR3_SHARED_PARENT']=shared
+result['build_defines']['A04BR3_SHARED_TOUCH_POWER']=shared_touch_power
 result['build_defines']['A04BR3_SHARED_APMIXED']=apmixed
 result['build_defines']['A04BR3_BQ_HANDOFF']=bq
 result['build_defines']['A04BR3_THERMAL_HANDOFF_RECORD']=thermal
