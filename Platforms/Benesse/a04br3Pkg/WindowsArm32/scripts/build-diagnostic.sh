@@ -54,6 +54,9 @@ fi
 root=$(git rev-parse --show-toplevel)
 [[ -z $(git -C "$root" -c core.filemode=false status --porcelain --untracked-files=normal --ignore-submodules=all) ]] || { echo 'source worktree must be clean' >&2; exit 2; }
 [[ ! -e "$root/Build/$output" ]] || { echo 'output already exists' >&2; exit 2; }
+if [[ $gpu == 1 ]]; then
+  python3 "$root/Platforms/Benesse/a04br3Pkg/Tests/check_gpu_sysirq_mapping.py"
+fi
 for f in "$template"/{target.txt,tools_def.txt,build_rule.txt} "$oldtools/ArmPkg/Library/GccLto/liblto-arm.a" "$oldtools/BaseTools/Source/C/bin/GenFw" "${gccprefix}gcc"; do [[ -f $f ]] || { echo "missing input $f" >&2; exit 2; }; done
 conf=$(mktemp -d "${TMPDIR:-/tmp}/a04-windows-build.XXXXXXXX")
 trap 'rm -r -- "$conf"' EXIT
