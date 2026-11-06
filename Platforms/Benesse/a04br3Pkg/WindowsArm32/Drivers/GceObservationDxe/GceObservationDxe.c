@@ -21,7 +21,11 @@ STATIC VOID EFIAPI ObserveBeforeExit(EFI_EVENT Event,VOID *Context)
   Record.top2_status=MmioRead32(0x1000003cu);
   Status=gRT->SetVariable((CHAR16 *)mName,&mRecordGuid,
     EFI_VARIABLE_BOOTSERVICE_ACCESS|EFI_VARIABLE_RUNTIME_ACCESS,sizeof(Record),&Record);
-  DEBUG((DEBUG_ERROR,"A04 GCE: top2=%08x record=%r thread/irq/secure ownership unknown\n",Record.top2_status,Status));
+  // Linux clk-mt8167 describes TOP2 bit 4 as the active-low GCE gate.
+  // A momentary gate read does not prove MMIO permission or ownership.
+  DEBUG((DEBUG_ERROR,"A04 GCE: top2=%08x gate_off=%u record=%r\n",Record.top2_status,
+         (Record.top2_status >> 4) & 1U,Status));
+  DEBUG((DEBUG_ERROR,"A04 GCE: owner=UNKNOWN threads=UNKNOWN events=UNKNOWN secure=UNKNOWN\n"));
 }
 EFI_STATUS EFIAPI GceObservationEntry(EFI_HANDLE ImageHandle,EFI_SYSTEM_TABLE *SystemTable)
 {

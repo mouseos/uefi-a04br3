@@ -15,3 +15,11 @@ or changes either display layer. A clear gate bit is insufficient to prove
 that nonsecure GCE MMIO is powered, accessible or exclusively owned. An EFI
 variable is neither an authenticated claim nor evidence of secure firmware
 quiescence. The Windows reader reports observations and never grants a lease.
+
+The UART line also reports `gate_off` from TOP2 bit 4 (Linux MT8167 clock
+driver: active-low gate) and explicitly marks owner, threads, events, and
+secure state UNKNOWN. The clock can change after this snapshot. In particular,
+Linux reads a token only after writing the controller-wide SYNC_TOKEN_ID
+selector, so this diagnostic must not probe event values without ownership.
+The GCE range is not mapped or read. This is a clock observation, not the
+requested thread/event ownership proof or a direct-scanout diagnostic.
