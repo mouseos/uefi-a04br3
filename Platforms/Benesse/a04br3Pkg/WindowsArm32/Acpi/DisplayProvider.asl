@@ -21,6 +21,16 @@ DefinitionBlock ("DisplayProvider.aml", "SSDT", 2, "BENESS", "A04DISP ", 1)
                 Memory32Fixed (ReadWrite, 0x14009000, 0x00001000) // RDMA0
                 Memory32Fixed (ReadWrite, 0x14012000, 0x00001000) // DSI0
                 Memory32Fixed (ReadWrite, 0x14015000, 0x00001000) // display mutex
+#ifdef A04BR3_DISPLAY_GCE_RESOURCES
+                // MT8167 DTS: non-secure GCE SPI 125 and OVL0 SPI 160. The GSI
+                // values include the GIC SPI offset of 32. This opt-in only
+                // describes resources; it does not claim a GCE thread or
+                // enable interrupts, clocks, or display register writes.
+                Memory32Fixed (ReadWrite, 0x1020A000, 0x00001000) // GCE
+                Interrupt (ResourceConsumer, Level, ActiveLow, Exclusive) { 157 }
+                // SPI 126 is the secure GCE interrupt, not claimed here.
+                Interrupt (ResourceConsumer, Level, ActiveLow, Exclusive) { 192 }
+#endif
             })
         }
     }

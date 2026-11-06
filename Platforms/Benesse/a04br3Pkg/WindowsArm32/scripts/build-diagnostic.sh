@@ -9,6 +9,7 @@ three=${A04_DIAGNOSTIC_THREE_CPU:-0}
 battery=${A04_DIAGNOSTIC_BATTERY:-0}
 gpu=${A04_DIAGNOSTIC_GPU:-0}
 display=${A04_DIAGNOSTIC_DISPLAY:-0}
+display_gce=${A04_DIAGNOSTIC_DISPLAY_GCE_RESOURCES:-0}
 touch=${A04_DIAGNOSTIC_TOUCH:-0}
 shared=${A04_DIAGNOSTIC_SHARED:-0}
 shared_touch_power=${A04_DIAGNOSTIC_SHARED_TOUCH_POWER:-0}
@@ -23,6 +24,7 @@ thermal=${A04_DIAGNOSTIC_THERMAL_HANDOFF_RECORD:-0}
 [[ $shared == 0 || $touch == 0 ]] || exit 2
 [[ $touch == 0 || $touch == 1 ]] || exit 2
 [[ $display == 0 || ($display == 1 && $gpu == 1) ]] || exit 2
+[[ $display_gce == 0 || ($display_gce == 1 && $display == 1) ]] || exit 2
 [[ $gpu == 0 || $gpu == 1 ]] || exit 2
 [[ $battery == 0 || $battery == 1 ]] || exit 2
 a64prefix=${A04_AARCH64_PREFIX:-aarch64-linux-gnu-}
@@ -52,10 +54,14 @@ for f in "$template"/{target.txt,tools_def.txt,build_rule.txt} "$oldtools/ArmPkg
 conf=$(mktemp -d "${TMPDIR:-/tmp}/a04-windows-build.XXXXXXXX")
 trap 'rm -r -- "$conf"' EXIT
 cp "$template"/{target.txt,tools_def.txt,build_rule.txt} "$conf/"
-python3 - "$conf/tools_def.txt" "$root" "$oldtools" "$overlay" <<'PY'
+python3 - "$conf/tools_def.txt" "$root" "$oldtools" "$overlay" "$display_gce" <<'PY'
 from pathlib import Path
 import sys
 p=Path(sys.argv[1]); s=p.read_text(); root=Path(sys.argv[2]); old=Path(sys.argv[3])
+if sys.argv[5]=='1':
+ needle='DEFINE GCC_ASLPP_FLAGS                 = -x c -E -include AutoGen.h'
+ assert s.count(needle)==1
+ s=s.replace(needle,needle+' -DA04BR3_DISPLAY_GCE_RESOURCES=1')
 needle='DEFINE GCC5_ARM_CC_FLAGS             = DEF(GCC49_ARM_CC_FLAGS)'
 assert s.count(needle)==1
 inc=root/'Platforms/Benesse/a04br3Pkg/WindowsArm32/Include'
@@ -123,10 +129,10 @@ EOF
   fi
   "$a64prefix"objcopy -O binary "$shimobj" "$fv/BootShim.bin"
 fi
-python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" <<'PY'
+python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" <<'PY'
 from pathlib import Path
 import hashlib,json,subprocess,sys
-root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power=sys.argv[1:]
+root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce=sys.argv[1:]
 def sha(path):
  h=hashlib.sha256()
  with open(path,'rb') as f:
@@ -162,6 +168,7 @@ result={'status':'diagnostic-only-not-for-device','source_commit':git(root,'rev-
 result['build_defines']['A04BR3_BATTERY_PROVIDER']=battery
 result['build_defines']['A04BR3_GPU_HANDOFF']=gpu
 result['build_defines']['A04BR3_DISPLAY_PROVIDER']=display
+result['build_defines']['A04BR3_DISPLAY_GCE_RESOURCES']=display_gce
 result['build_defines']['A04BR3_TOUCH_PROVIDER']=touch
 result['build_defines']['A04BR3_SHARED_PARENT']=shared
 result['build_defines']['A04BR3_SHARED_TOUCH_POWER']=shared_touch_power
