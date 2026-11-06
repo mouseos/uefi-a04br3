@@ -917,7 +917,7 @@ ConfigureA04Br3Scanout (
   for (Index = 0; Index < A04BR3_FRAME_SIZE / sizeof (UINT32); ++Index) {
     if (Overlay[Index] != 0U) { ++Nonzero; }
   }
-  DEBUG ((DEBUG_INFO, "A04DISP LK overlay clear pixels=%u nonzero=%u first_before=%08x\n",
+  DEBUG ((DEBUG_ERROR, "A04DISP LK overlay clear pixels=%u nonzero=%u first_before=%08x\n",
     A04BR3_FRAME_SIZE / sizeof (UINT32), Nonzero, FirstBefore));
   // A clear mismatch is reported, not converted into a boot-stopping assert.
 #endif
