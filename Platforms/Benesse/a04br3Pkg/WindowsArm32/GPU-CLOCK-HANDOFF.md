@@ -23,3 +23,13 @@ MMPLLはAPMIXED `0x10018000` のcon0 `+0x160`、con1 `+0x164`、power `+0x170`�
 起動時に既存変数を削除し、OFF時は公開しない。変数不在はparent4/26MHz互換。parent7のpower-on完了、実際のmux経路、選択前後のPLL/rail snapshot一致を確認してから公開する。runtime変数は状態の観測値であり、将来のクロック所有権を保証しない。Windows側はstage時とstart直前に実レジスタを再読出しし、recordおよびGPST parentと突合する（対応Windowsコミット `628998f`、ユーザー報告によるpush/build成功）。
 
 ホスト試験: `TMPDIR=<作業ルート内の一時ディレクトリ> python3 Platforms/Benesse/a04br3Pkg/Tests/check_gpu_clock.py`。実コードのcallbackを模擬MMIO・PWRAP・変数サービス上で実行し、ON/OFF、ABI、電圧範囲、失敗時復帰を確認する。実機paired試験は別工程。
+
+## 一度だけの診断出力
+
+BeforeExitBootServices callbackの既存Attemptedガードを維持し、処理終端でbefore snapshot、実施した場合のみafter snapshot、outcomeを各1回DEBUG_ERRORへ出す。bounded poll内では出力しない。選択・公開前にUART出力を追加しない。
+
+snapshotはcon0/con1/power/rail_control/rail_status/sel0/sel1、算出Hz、WACS、成功したrail読出しのbitmask、失敗PMIC addressとEFI_STATUS、PLL再読出し値を含む。rail_maskのbit0..3はcontrol/status/sel0/sel1に対応し、maskが0の値は未取得であり実測0を意味しない。PWRAP未準備でもPLL生値は記録する。
+
+outcomeにはstageとreason、parent7 power-on result、publish status、parent4 fallback resultを残す。reasonはflag-off / pwrap-not-ready / pwrap-read / pll-disabled / pll-power / rail-status / rail-voltage / pll-rate / pll-unstable / power-on / clock-route / snapshot-changed / publish / accepted。parent4-requestedはfallback要求を意味し、fallback自体の成功はfallback_resultと区別する。record ABI・許可判定・PMIC/PLL設定書込み禁止は維持。
+
+2026-11-07のユーザー指示により、この診断追加後のbootは生成しない。run18/run19で使用するb737a0f1の成果物を固定する。診断追加はホスト試験とcommit/pushまで。
