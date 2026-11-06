@@ -257,6 +257,10 @@
   # fastboot flag. Without A04BR3_TEST_CYCLE it arms the watchdog only around
   # the switch and stops it again. Off by default.
   #
+!ifndef A04BR3_WINDOWS_CPU_1300
+  # Windows ARM32 PrePi: raise VPROC to 1.30 V then ARMPLL to 1300 MHz (stock max OPP). Default off.
+  DEFINE A04BR3_WINDOWS_CPU_1300 = 0
+!endif
 !ifndef A04BR3_CPU_1300
   DEFINE A04BR3_CPU_1300 = 0
 !endif
@@ -415,7 +419,7 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
       NULL|MdeModulePkg/Library/LzmaCustomDecompressLib/LzmaCustomDecompressLib.inf
       NULL|a04br3Pkg/WindowsArm32/Library/EarlyStackGuard/EarlyStackGuard.inf
     <BuildOptions>
-      GCC:*_*_ARM_CC_FLAGS = -DA04BR3_BOOT_DIAGNOSTIC=$(A04BR3_BOOT_DIAGNOSTIC) -DA04BR3_BOUNDED_RECOVERY=$(A04BR3_BOUNDED_RECOVERY) -DA04BR3_CACHE_TEST=$(A04BR3_CACHE_TEST)
+      GCC:*_*_ARM_CC_FLAGS = -DA04BR3_BOOT_DIAGNOSTIC=$(A04BR3_BOOT_DIAGNOSTIC) -DA04BR3_BOUNDED_RECOVERY=$(A04BR3_BOUNDED_RECOVERY) -DA04BR3_CACHE_TEST=$(A04BR3_CACHE_TEST) -DA04BR3_WINDOWS_CPU_1300=$(A04BR3_WINDOWS_CPU_1300)
   }
 !if $(A04BR3_SHARED_PARENT) == 1
 !if $(A04BR3_BATTERY_PROVIDER) == 1

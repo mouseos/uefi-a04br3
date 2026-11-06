@@ -7,6 +7,8 @@ fi
 canonical=$(realpath "$1"); oldtools=$(realpath "$2"); template=$(realpath "$3"); gccprefix=$4; output=$5
 three=${A04_DIAGNOSTIC_THREE_CPU:-0}
 cpu1_l1=${A04_DIAGNOSTIC_FOUR_CPU_L1_CLEAN:-0}
+cpu1300=${A04_DIAGNOSTIC_CPU_1300:-0}
+[[ $cpu1300 == 0 || ($cpu1300 == 1 && ($three == 2 || $three == 3 || $three == 4)) ]] || exit 2
 battery=${A04_DIAGNOSTIC_BATTERY:-0}
 gpu=${A04_DIAGNOSTIC_GPU:-0}
 display=${A04_DIAGNOSTIC_DISPLAY:-0}
@@ -102,6 +104,7 @@ if [[ $touch == 1 ]]; then buildflags+=(-D A04BR3_TOUCH_PROVIDER=1); fi
 if [[ $shared == 1 ]]; then buildflags+=(-D A04BR3_SHARED_PARENT=1); fi
 if [[ $shared_touch_power == 1 ]]; then buildflags+=(-D A04BR3_SHARED_TOUCH_POWER=1); fi
 if [[ $apmixed == 1 ]]; then buildflags+=(-D A04BR3_SHARED_APMIXED=1); fi
+if [[ $cpu1300 == 1 ]]; then buildflags+=(-D A04BR3_WINDOWS_CPU_1300=1); fi
 "$EDK_TOOLS_PATH/BinWrappers/PosixLike/build" -p a04br3Pkg/WindowsArm32/WindowsArm32.dsc -a ARM -b DEBUG -t GCC5 -D FD_BASE=0x41080000 -D FD_SIZE=0x00300000 -D FD_BLOCKS=0x300 -D "A04_BUILD_OUTPUT=Build/$output" "${buildflags[@]}"
 if [[ $three != 0 ]]; then
   fv="$root/Build/$output/DEBUG_GCC5/FV"
@@ -133,10 +136,10 @@ EOF
   fi
   "$a64prefix"objcopy -O binary "$shimobj" "$fv/BootShim.bin"
 fi
-python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" "$gce_observation" "$cpu1_l1" <<'PY'
+python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" "$gce_observation" "$cpu1_l1" "$cpu1300" <<'PY'
 from pathlib import Path
 import hashlib,json,subprocess,sys
-root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce,gce_observation,cpu1_l1=sys.argv[1:]
+root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce,gce_observation,cpu1_l1,cpu1300=sys.argv[1:]
 def sha(path):
  h=hashlib.sha256()
  with open(path,'rb') as f:
@@ -200,6 +203,7 @@ if three != '0':
   'A04BR3_FOUR_CPU_TEST':1 if three == '4' else 0,'A04BR3_A64_WDT_TEST':1,'A04BR3_A64_WDT_SECONDS':120 if three == '2' else 420,'A04BR3_KERNEL_MARKER':1 if three in ('3','4') else 0,
   'A04BR3_FB_MONITOR':1 if three in ('3','4') else 0,'A04BR3_OFFLINE_WDT_UNBOUNDED':0 if three in ('2','3','4') else 1,'A04BR3_WORKER_NO_UART_RESET':0 if three in ('2','3','4') else 1,'A04BR3_WORKER_HEARTBEAT':1}
  result['shim_defines']['A04BR3_FOUR_CPU_L1_CLEAN']=int(cpu1_l1)
+ result['build_defines']['A04BR3_WINDOWS_CPU_1300']=cpu1300
  result['shim_defines']['A04BR3_EARLY_FDT_GUARD']=1 if three in ('2','3','4') else 0
  result.update(shim_sha256=sha(shim),shim_bytes=len(data),shimmed_fd_sha256=sha(combined),shimmed_fd_bytes=combined.stat().st_size)
  result['limitations']=[('experimental four CPU; requires verified boot-start watchdog' if three == '4' else 'experimental three CPU; no runtime validation'),'worker heartbeat is not proof of watchdog operation',

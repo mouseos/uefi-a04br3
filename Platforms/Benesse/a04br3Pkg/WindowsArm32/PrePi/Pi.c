@@ -45,10 +45,6 @@ STATIC VOID CaptureThermalCal (UINT32 Address) {
 #endif
 #if A04BR3_WINDOWS_CPU_1300 == 1
 INT32 A04BR3WindowsCpu1300 (VOID);
-#include <A04BR3CpuHandoff.h>
-#include <Library/HobLib.h>
-STATIC EFI_GUID mCpuHandoffGuid = A04BR3_CPU_HANDOFF_GUID;
-STATIC UINT32 mCpuHandoffValue;
 #endif
 
 #define IS_XIP()  (((UINT64)FixedPcdGet64 (PcdFdBaseAddress) > mSystemMemoryEnd) ||\
@@ -131,13 +127,6 @@ PrePiMain(
       StackBase);
 
   PrePeiSetHobList (HobList);
-#if A04BR3_WINDOWS_CPU_1300 == 1 && A04BR3_A64_WDT_TEST == 1
-  if (mCpuHandoffValue == A04BR3_CPU_HANDOFF_COMPLETE) {
-    if (BuildGuidDataHob (&mCpuHandoffGuid, &mCpuHandoffValue, sizeof(mCpuHandoffValue)) == NULL) {
-      DEBUG ((DEBUG_ERROR, "A04 CPU1300 handoff HOB allocation failed\n"));
-    }
-  }
-#endif
 
   // Invalidate cache
   InvalidateDataCacheRange(
@@ -249,6 +238,11 @@ CEntryPoint(
     CpuDeadLoop ();
   }
   DEBUG ((DEBUG_ERROR, "A04DIAG early bounded watchdog armed\n"));
+#endif
+#if A04BR3_WINDOWS_CPU_1300 == 1
+  /* Raise VPROC, then ARMPLL to the stock 1300 MHz OPP. Runs after the
+   * recovery watchdog so that a hang returns to fastboot. */
+  (VOID)A04BR3WindowsCpu1300 ();
 #endif
   // The canonical board SEC hook owns recovery watchdog setup; do not arm
   // a second time here. Its build-time policy controls servicing mode.
