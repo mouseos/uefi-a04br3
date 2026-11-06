@@ -38,7 +38,7 @@ EFI_STATUS EFIAPI ThermalHandoffEntry(EFI_HANDLE ImageHandle,EFI_SYSTEM_TABLE *S
   if(!A04AdcObservationBuild(First,Second,&Observation)) {
     Status=gRT->SetVariable((CHAR16 *)mAdcName,&mAdcGuid,
       EFI_VARIABLE_BOOTSERVICE_ACCESS|EFI_VARIABLE_RUNTIME_ACCESS,sizeof(Observation),&Observation);
-    DEBUG((DEBUG_ERROR,"A04 ADC: early clock observation=%r; secure release unknown\n",Status));
+    DEBUG((DEBUG_ERROR,"A04 ADC: early clock=%08x publish=%r; secure release unknown\n",First,Status));
   }
   return gBS->CreateEventEx(EVT_NOTIFY_SIGNAL,TPL_CALLBACK,RecordBeforeExit,NULL,
                             &gEfiEventBeforeExitBootServicesGuid,&Event);
