@@ -21,6 +21,11 @@ DefinitionBlock ("DisplayProvider.aml", "SSDT", 2, "BENESS", "A04DISP ", 1)
                 Memory32Fixed (ReadWrite, 0x14009000, 0x00001000) // RDMA0
                 Memory32Fixed (ReadWrite, 0x14012000, 0x00001000) // DSI0
                 Memory32Fixed (ReadWrite, 0x14015000, 0x00001000) // display mutex
+#ifdef A04BR3_DISPLAY_BRIGHTNESS_RESOURCES
+                // Linux mt8167.dtsi disp_pwm0; exclusive display brightness owner.
+                // GPIO1 enable, TOPCK and MMSYS remain with their existing owners.
+                Memory32Fixed (ReadWrite, 0x1100F000, 0x00001000) // DISP_PWM0
+#endif
 #ifdef A04BR3_DISPLAY_GCE_RESOURCES
                 // OVL0 SPI 160, translated to GSI 192.
                 Interrupt (ResourceConsumer, Level, ActiveLow, Exclusive) { 192 }
