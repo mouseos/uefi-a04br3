@@ -60,6 +60,12 @@
 !ifndef A04BR3_DISPLAY_PROVIDER
   DEFINE A04BR3_DISPLAY_PROVIDER = 0
 !endif
+!ifndef A04BR3_CLEAR_LK_OVERLAY
+  DEFINE A04BR3_CLEAR_LK_OVERLAY = 0
+!endif
+!if $(A04BR3_CLEAR_LK_OVERLAY) != 0 && $(A04BR3_CLEAR_LK_OVERLAY) != 1
+  !error A04BR3_CLEAR_LK_OVERLAY must be 0 or 1
+!endif
 !ifndef A04BR3_GCE_OBSERVATION
   DEFINE A04BR3_GCE_OBSERVATION = 0
 !endif
@@ -366,7 +372,10 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
   #
   # Board Drivers (ported from edk2-mtk A04BR3Pkg)
   #
-  a04br3Pkg/Drivers/DisplayInitDxe/DisplayInitDxe.inf
+  a04br3Pkg/Drivers/DisplayInitDxe/DisplayInitDxe.inf {
+    <BuildOptions>
+      GCC:*_*_ARM_CC_FLAGS = -DA04BR3_CLEAR_LK_OVERLAY=$(A04BR3_CLEAR_LK_OVERLAY)
+  }
   a04br3Pkg/WindowsArm32/Drivers/EmmcBlockIoDxe/EmmcBlockIoDxe.inf {
     <BuildOptions>
       GCC:*_*_ARM_CC_FLAGS = -DA04BR3_IO_PROGRESS=$(A04BR3_BOUNDED_RECOVERY)

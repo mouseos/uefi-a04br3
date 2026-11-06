@@ -23,6 +23,10 @@
 #include <Library/PcdLib.h>
 #include <Library/TimerLib.h>
 
+#ifndef A04BR3_CLEAR_LK_OVERLAY
+#define A04BR3_CLEAR_LK_OVERLAY 0
+#endif
+
 #define A04BR3_WIDTH                 800U
 #define A04BR3_HEIGHT                1280U
 #define A04BR3_PITCH                 (A04BR3_WIDTH * sizeof (UINT32))
@@ -892,9 +896,31 @@ ConfigureA04Br3Scanout (
 {
   UINT32  FrameBuffer;
   UINT32  Layer3FrameBuffer;
+#if A04BR3_CLEAR_LK_OVERLAY
+  volatile UINT32 *Overlay;
+  UINT32 Index, Nonzero, FirstBefore;
+#endif
 
   FrameBuffer       = mFrameBufferAddress;
   Layer3FrameBuffer = FrameBuffer + A04BR3_FRAME_SIZE;
+#if A04BR3_CLEAR_LK_OVERLAY
+  // DisplayConfigurationIsValid has established ownership of both complete
+  // reserved frames. LK's retained layer 3 uses per-pixel ARGB alpha; clear
+  // that surface to transparent without changing OVL/GCE routing or timing.
+  Overlay = (volatile UINT32 *)(UINTN)Layer3FrameBuffer;
+  FirstBefore = Overlay[0];
+  for (Index = 0; Index < A04BR3_FRAME_SIZE / sizeof (UINT32); ++Index) {
+    Overlay[Index] = 0U;
+  }
+  MemoryFence ();
+  Nonzero = 0U;
+  for (Index = 0; Index < A04BR3_FRAME_SIZE / sizeof (UINT32); ++Index) {
+    if (Overlay[Index] != 0U) { ++Nonzero; }
+  }
+  DEBUG ((DEBUG_INFO, "A04DISP LK overlay clear pixels=%u nonzero=%u first_before=%08x\n",
+    A04BR3_FRAME_SIZE / sizeof (UINT32), Nonzero, FirstBefore));
+  // A clear mismatch is reported, not converted into a boot-stopping assert.
+#endif
 
   // Linux installs the OVL IRQ before its CRTC state exists. Do not hand off
   // the frame-complete interrupt left enabled by LK.
