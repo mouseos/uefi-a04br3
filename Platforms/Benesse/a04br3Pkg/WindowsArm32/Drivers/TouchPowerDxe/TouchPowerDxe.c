@@ -9,30 +9,10 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Guid/EventGroup.h>
 
-#define WACS_CMD 0x1000F0A0U
-#define WACS_DATA 0x1000F0A4U
-#define WACS_CLEAR 0x1000F0A8U
+#include "../../Include/PwrapRead.h"
 #define VGP_ENABLE 0x050AU
 #define VGP_VOLTAGE 0x0530U
 
-STATIC EFI_STATUS WaitFsm(UINT32 Target) {
-  UINTN n;
-  for (n=0; n<10000; ++n) {
-    if (((MmioRead32(WACS_DATA)>>16)&7U)==Target) return EFI_SUCCESS;
-    MicroSecondDelay(1);
-  }
-  return EFI_TIMEOUT;
-}
-STATIC EFI_STATUS ReadPmic(UINT16 Address, UINT16 *Value) {
-  EFI_STATUS Status=WaitFsm(0);
-  if (EFI_ERROR(Status)) return Status;
-  MmioWrite32(WACS_CMD, ((UINT32)Address>>1)<<16);
-  Status=WaitFsm(6);
-  if (EFI_ERROR(Status)) return Status;
-  *Value=(UINT16)MmioRead32(WACS_DATA);
-  MmioWrite32(WACS_CLEAR,1);
-  return WaitFsm(0);
-}
 STATIC EFI_STATUS WritePmic(UINT16 Address, UINT16 Value) {
   EFI_STATUS Status=WaitFsm(0);
   if (EFI_ERROR(Status)) return Status;

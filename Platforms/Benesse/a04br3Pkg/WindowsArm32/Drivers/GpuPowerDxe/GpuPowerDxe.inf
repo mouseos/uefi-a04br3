@@ -9,12 +9,15 @@
 [Sources]
   GpuPowerDxe.c
   rogue_power.h
+  GpuClockRecord.h
+  ../../Include/PwrapRead.h
 [Packages]
   MdePkg/MdePkg.dec
 [LibraryClasses]
   DebugLib
   IoLib
   TimerLib
+  UefiRuntimeServicesTableLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
 [Guids]

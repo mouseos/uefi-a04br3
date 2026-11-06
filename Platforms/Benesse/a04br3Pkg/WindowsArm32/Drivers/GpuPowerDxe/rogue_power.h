@@ -35,6 +35,23 @@ static int a04_rgx_domain(const struct a04_rgx_io *io,unsigned off,UINT32 status
         if(a04_rgx_wait(io,A04_RGX_SPM,off,0xf000,0))return 2;}
     return 0;
 }
+/* MT8167 clk-pll.c: MMPLL has 21 PCW bits, 7 integer bits and CON1 postdiv at bit 24.
+ * Only accept an already-running parent at the stock <=390-MHz / >=1.15-V operating point.
+ * No PLL/PMIC writes are performed by this policy. VCORE is shared with the SoC.
+ */
+static UINT32 a04_rgx_mmpll_hz(UINT32 con0,UINT32 con1,UINT32 power,
+                               UINT16 rail_control,UINT16 rail_status,UINT16 selector0,UINT16 selector1)
+{
+    if(!(con0&1) || (power&3)!=1 || (rail_status&0x2001)!=0x2001)return 0;
+    UINT32 selector=((rail_control&2)?selector1:selector0)&0x7f;
+    UINT32 uv=700000+6250*selector;
+    if(uv<1150000 || uv>1300000)return 0;
+    UINT32 pcw=con1&0x1fffff,divisor=1u<<((con1>>24)&7);
+    UINT64 vco=((UINT64)26000000*pcw+16383)/16384;
+    UINT64 hz=(vco+divisor-1)/divisor;
+    if(hz<253500000 || hz>390000000)return 0;
+    return (UINT32)hz;
+}
 static int a04_rgx_power_on_parent(const struct a04_rgx_io *io,unsigned parent)
 {
     if(parent!=4 && parent!=7)return 6;
@@ -67,4 +84,6 @@ static int a04_rgx_power_on_parent(const struct a04_rgx_io *io,unsigned parent)
 }
 static int a04_rgx_power_on(const struct a04_rgx_io *io)
 { return a04_rgx_power_on_parent(io,4); }
+static int a04_rgx_power_on_parent7(const struct a04_rgx_io *io)
+{ return a04_rgx_power_on_parent(io,7); }
 #endif

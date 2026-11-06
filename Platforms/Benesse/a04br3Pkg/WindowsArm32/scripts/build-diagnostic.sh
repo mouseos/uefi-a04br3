@@ -9,6 +9,8 @@ three=${A04_DIAGNOSTIC_THREE_CPU:-0}
 cpu1_l1=${A04_DIAGNOSTIC_FOUR_CPU_L1_CLEAN:-0}
 battery=${A04_DIAGNOSTIC_BATTERY:-0}
 gpu=${A04_DIAGNOSTIC_GPU:-0}
+gpu_mmpll=${A04_DIAGNOSTIC_GPU_MMPLL:-0}
+[[ $gpu_mmpll == 0 || ($gpu_mmpll == 1 && $gpu == 1) ]] || exit 2
 display=${A04_DIAGNOSTIC_DISPLAY:-0}
 clear_lk_overlay=${A04_DIAGNOSTIC_CLEAR_LK_OVERLAY:-0}
 [[ $clear_lk_overlay == 0 || $clear_lk_overlay == 1 ]] || exit 2
@@ -101,6 +103,7 @@ if [[ $battery == 1 ]]; then buildflags+=(-D A04BR3_BATTERY_PROVIDER=1); fi
 if [[ $bq == 1 ]]; then buildflags+=(-D A04BR3_BQ_HANDOFF=1); fi
 if [[ $thermal == 1 ]]; then buildflags+=(-D A04BR3_THERMAL_HANDOFF_RECORD=1); fi
 if [[ $gce_observation == 1 ]]; then buildflags+=(-D A04BR3_GCE_OBSERVATION=1); fi
+if [[ $gpu_mmpll == 1 ]]; then buildflags+=(-D A04BR3_GPU_MMPLL=1); fi
 if [[ $gpu == 1 ]]; then buildflags+=(-D A04BR3_GPU_HANDOFF=1); fi
 if [[ $display == 1 ]]; then buildflags+=(-D A04BR3_DISPLAY_PROVIDER=1); fi
 if [[ $clear_lk_overlay == 1 ]]; then buildflags+=(-D A04BR3_CLEAR_LK_OVERLAY=1); fi
@@ -139,10 +142,10 @@ EOF
   fi
   "$a64prefix"objcopy -O binary "$shimobj" "$fv/BootShim.bin"
 fi
-python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" "$gce_observation" "$cpu1_l1" "$clear_lk_overlay" <<'PY'
+python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" "$gce_observation" "$cpu1_l1" "$clear_lk_overlay" "$gpu_mmpll" <<'PY'
 from pathlib import Path
 import hashlib,json,subprocess,sys
-root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce,gce_observation,cpu1_l1,clear_lk_overlay=sys.argv[1:]
+root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce,gce_observation,cpu1_l1,clear_lk_overlay,gpu_mmpll=sys.argv[1:]
 def sha(path):
  h=hashlib.sha256()
  with open(path,'rb') as f:
@@ -177,6 +180,8 @@ result={'status':'diagnostic-only-not-for-device','source_commit':git(root,'rev-
  'limitations':['single CPU only','watchdog worker and parking not connected','RP attribute unsupported','MMU runtime, cache and NVS unverified','libgcc ABI warnings unreviewed']}
 result['build_defines']['A04BR3_BATTERY_PROVIDER']=battery
 result['build_defines']['A04BR3_GPU_HANDOFF']=gpu
+result['build_defines']['A04BR3_GPU_MMPLL']=gpu_mmpll
+result['gpu_clock_record']={'name':'Mt8167GpuClock','guid':'9c50bc94-6c80-4fa2-939d-9278d07f7010','version':1,'bytes':44,'attributes':6,'fields':['version','bytes','parent','clock_hz','con0','con1','power','rail_control','rail_status','sel0','sel1'],'publish':'validated-parent7-only','fallback_hz':26000000}
 result['build_defines']['A04BR3_DISPLAY_PROVIDER']=display
 result['build_defines']['A04BR3_CLEAR_LK_OVERLAY']=clear_lk_overlay
 result['build_defines']['A04BR3_DISPLAY_GCE_RESOURCES']=display_gce

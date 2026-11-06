@@ -75,6 +75,15 @@
 !ifndef A04BR3_GPU_HANDOFF
   DEFINE A04BR3_GPU_HANDOFF = 0
 !endif
+!ifndef A04BR3_GPU_MMPLL
+  DEFINE A04BR3_GPU_MMPLL = 0
+!endif
+!if $(A04BR3_GPU_MMPLL) != 0 && $(A04BR3_GPU_MMPLL) != 1
+  !error A04BR3_GPU_MMPLL must be 0 or 1
+!endif
+!if $(A04BR3_GPU_MMPLL) == 1 && $(A04BR3_GPU_HANDOFF) != 1
+  !error A04BR3_GPU_MMPLL requires A04BR3_GPU_HANDOFF
+!endif
 !if $(A04BR3_DISPLAY_PROVIDER) == 1 && $(A04BR3_GPU_HANDOFF) != 1
   !error A04BR3_DISPLAY_PROVIDER requires A04BR3_GPU_HANDOFF
 !endif
@@ -530,7 +539,10 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
   a04br3Pkg/WindowsArm32/Drivers/TouchPowerDxe/TouchPowerDxe.inf
 !endif
 !if $(A04BR3_GPU_HANDOFF) == 1
-  a04br3Pkg/WindowsArm32/Drivers/GpuPowerDxe/GpuPowerDxe.inf
+  a04br3Pkg/WindowsArm32/Drivers/GpuPowerDxe/GpuPowerDxe.inf {
+    <BuildOptions>
+      GCC:*_*_ARM_CC_FLAGS = -DA04BR3_GPU_MMPLL=$(A04BR3_GPU_MMPLL)
+  }
 !endif
 !if $(A04BR3_BATTERY_PROVIDER) == 1
 !if $(A04BR3_BQ_HANDOFF) == 1
