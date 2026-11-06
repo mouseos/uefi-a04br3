@@ -11,6 +11,10 @@ DefinitionBlock ("DisplayProvider.aml", "SSDT", 2, "BENESS", "A04DISP ", 1)
         {
             Name (_HID, "MOU0007")
             Name (_UID, Zero)
+            // OVL/RDMA read system memory. ARM DMA devices must report
+            // coherency; the board does not establish hardware snooping.
+            // Zero conservatively requests non-coherent DMA treatment.
+            Name (_CCA, Zero)
             Name (_CRS, ResourceTemplate ()
             {
                 Memory32Fixed (ReadWrite, 0x14007000, 0x00001000) // OVL0
