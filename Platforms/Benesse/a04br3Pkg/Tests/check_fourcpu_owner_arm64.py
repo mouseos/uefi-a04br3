@@ -13,7 +13,7 @@ flags={'UEFI_BASE':'0x41080000','UEFI_SIZE':'0x300000','A04BR3_A64_CPU_TEST':'1'
  'A04BR3_A32_SECONDARY_TEST':'1','A04BR3_PARK_TEST':'1','A04BR3_SMP_TEST':'1',
  'A04BR3_WDT_HANDOFF_TEST':'0','A04BR3_FOUR_CPU_TEST':'1','A04BR3_A64_WDT_TEST':'1',
  'A04BR3_A64_WDT_SECONDS':'420','A04BR3_KERNEL_MARKER':'1','A04BR3_FB_MONITOR':'1',
- 'A04BR3_OFFLINE_WDT_UNBOUNDED':'0','A04BR3_WORKER_NO_UART_RESET':'0',
+ 'A04BR3_OFFLINE_WDT_UNBOUNDED':'0','A04BR3_FOUR_CPU_L1_CLEAN':os.environ.get('A04_TEST_CPU1_L1','0'),'A04BR3_WORKER_NO_UART_RESET':'0',
  'A04BR3_WORKER_HEARTBEAT':'1','A04BR3_EARLY_FDT_GUARD':'0'}
 with tempfile.TemporaryDirectory(prefix='fourcpu-owner-',dir=scratch) as d:
  t=Path(d); obj=t/'shim.o';binary=t/'shim.bin'
@@ -24,7 +24,7 @@ with tempfile.TemporaryDirectory(prefix='fourcpu-owner-',dir=scratch) as d:
           if len(parts:=line.split())==3 and parts[1].lower()=='t'}
  start=symbols['_A64HandoffTestStart'];currentel=symbols['_A64HandoffTestCurrentEL']
  ic=symbols['_A64HandoffTestInvalidate'];skip=symbols['_A64HandoffTestSkip']
- entry=symbols['_A64EnterA32Parking']
+ entry=symbols['_A64EnterA32Parking']; helper=symbols.get('_A64CleanInvalidateLocalL1')
  code=binary.read_bytes(); base=0x100000
  def run(enabled,mailbox=1,dlab=False,ready=True):
   u=Uc(UC_ARCH_ARM64,UC_MODE_ARM)
@@ -36,18 +36,21 @@ with tempfile.TemporaryDirectory(prefix='fourcpu-owner-',dir=scratch) as d:
   for reg,val in ((UC_ARM64_REG_X7,0x10007008),(UC_ARM64_REG_X8,0x1971),(UC_ARM64_REG_X15,0x11005000),
                   (UC_ARM64_REG_X19,0x500000),(UC_ARM64_REG_X4,26000000),(UC_ARM64_REG_X12,123456)):
    u.reg_write(reg,val)
-  writes=[];reached=[]
+  writes=[];reached=[];cleaned=[]
   def mem(uc,access,address,size,value,user):
    if address in (0x10007008,0x11005000):writes.append((address,value))
   def hook(uc,address,size,user):
    off=address-base
    if off==currentel:uc.reg_write(UC_ARM64_REG_X22,8);uc.reg_write(UC_ARM64_REG_PC,address+4)
+   elif helper is not None and off==helper:
+    cleaned.append(True);uc.reg_write(UC_ARM64_REG_PC,uc.reg_read(UC_ARM64_REG_X30))
    elif off==ic:uc.reg_write(UC_ARM64_REG_PC,address+4)
    elif off in (skip,entry):reached.append(off);uc.emu_stop()
   u.hook_add(UC_HOOK_CODE,hook);u.hook_add(UC_HOOK_MEM_WRITE,mem)
   u.emu_start(base+start,base+len(code),count=20000)
   assert reached, 'handoff did not terminate in the bounded instruction budget'
   assert u.reg_read(UC_ARM64_REG_X4)==26000000 and u.reg_read(UC_ARM64_REG_X12)==123456
+  assert bool(cleaned)==(helper is not None and reached[0]==entry), 'L1 maintenance must run only on a valid handoff'
   return reached[0],writes,bytes(u.mem_read(0x500030,4))
  stop,writes,flag=run(0)
  assert stop==skip and flag==b'\1\0\0\0' and (0x10007008,0x1971) not in writes

@@ -36,3 +36,18 @@ MODEが無効のままの場合、worker期限後の自動復帰は保証でき�
 ドライバと対応WinPE媒体、外部reset主体の排他、復旧手段を主担当が用意し、
 実機UARTと次bootのBOOT_REASONを観測するまでは未検証。RTC・電源・UART・watchdog
 障害時の復帰も保証しない。3 CPU構成やGPU既存動作の成功と混同しない。
+
+## CPU1のL1保守実験
+
+CPU2・CPU3はparkingに入る前にcacheのclean/invalidateを実行する一方、CPU1の
+watchdog workerからの引継ぎは命令キャッシュをinvalidateするだけで、データ側の
+状態を明示していなかった。CPU1で実際にdirtyなL1が存在したことや、これがWindows
+不安定の原因であることは未観測。実験フラグ `A04BR3_FOUR_CPU_L1_CLEAN=1` は、
+CPU1が有効なmailboxと有効なwatchdogを確認し最後のkickをした後、AArch32へ
+切り替える前にCPU1のL1データ／統合cacheだけをset/wayでclean・invalidateする。
+他のCPUが既にWindowsで動作し得るため、共有L2のset/way保守は行わない。
+CLIDRでL1データcacheの存在を確認し、CCSIDRの従来形式とCCIDX形式を扱う。
+ビルドでは `A04_DIAGNOSTIC_FOUR_CPU_L1_CLEAN=1` を使用し、4 CPU診断時だけ
+有効にできる。既定値は0。ホストの命令エミュレーションは状態遷移と演算を
+検査するが、実機cacheの同一性・共有性、OSとのcoherency、実行時間、停止・復帰や
+長時間の4 CPU安定を保証しない。実機試験は主担当が別途行う。

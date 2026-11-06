@@ -6,6 +6,7 @@ if [[ $# != 5 ]]; then
 fi
 canonical=$(realpath "$1"); oldtools=$(realpath "$2"); template=$(realpath "$3"); gccprefix=$4; output=$5
 three=${A04_DIAGNOSTIC_THREE_CPU:-0}
+cpu1_l1=${A04_DIAGNOSTIC_FOUR_CPU_L1_CLEAN:-0}
 battery=${A04_DIAGNOSTIC_BATTERY:-0}
 gpu=${A04_DIAGNOSTIC_GPU:-0}
 display=${A04_DIAGNOSTIC_DISPLAY:-0}
@@ -32,6 +33,7 @@ gce_observation=${A04_DIAGNOSTIC_GCE_OBSERVATION:-0}
 a64prefix=${A04_AARCH64_PREFIX:-aarch64-linux-gnu-}
 overlay=${A04_LIBGCC_OVERLAY:-}
 [[ $three == 0 || $three == 1 || $three == 2 || $three == 3 || $three == 4 || $three == 4 ]] || exit 2
+[[ $cpu1_l1 == 0 || ($cpu1_l1 == 1 && $three == 4) ]] || exit 2
 if [[ -n $overlay ]]; then
   overlay=$(realpath "$overlay")
   [[ $three != 0 && $overlay != *[[:space:]]* && -f $overlay/libgcc.a && -f $overlay/manifest.json ]] || exit 2
@@ -111,7 +113,7 @@ if [[ $three != 0 ]]; then
   four=0; if [[ $three == 4 ]]; then four=1; fi
   "$a64prefix"gcc -c "$root/Platforms/Benesse/a04br3Pkg/WindowsArm32/BootShim/BootShim.S" -o "$fv/BootShim.o" \
     -DUEFI_BASE=0x41080000 -DUEFI_SIZE=0x300000 -DA04BR3_A64_CPU_TEST=1 -DA04BR3_A32_SECONDARY_TEST=1 \
-    -DA04BR3_PARK_TEST=1 -DA04BR3_SMP_TEST=1 -DA04BR3_WDT_HANDOFF_TEST=0 -DA04BR3_FOUR_CPU_TEST="$four" \
+    -DA04BR3_PARK_TEST=1 -DA04BR3_SMP_TEST=1 -DA04BR3_WDT_HANDOFF_TEST=0 -DA04BR3_FOUR_CPU_TEST="$four" -DA04BR3_FOUR_CPU_L1_CLEAN="$cpu1_l1" \
     -DA04BR3_A64_WDT_TEST=1 -DA04BR3_A64_WDT_SECONDS="$seconds" -DA04BR3_KERNEL_MARKER="$framebuffer" -DA04BR3_FB_MONITOR="$framebuffer" \
     -DA04BR3_OFFLINE_WDT_UNBOUNDED="$offline" -DA04BR3_WORKER_NO_UART_RESET="$no_uart" -DA04BR3_WORKER_HEARTBEAT=1 \
     -DA04BR3_EARLY_FDT_GUARD="$guard"
@@ -131,10 +133,10 @@ EOF
   fi
   "$a64prefix"objcopy -O binary "$shimobj" "$fv/BootShim.bin"
 fi
-python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" "$gce_observation" <<'PY'
+python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" "$gce_observation" "$cpu1_l1" <<'PY'
 from pathlib import Path
 import hashlib,json,subprocess,sys
-root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce,gce_observation=sys.argv[1:]
+root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce,gce_observation,cpu1_l1=sys.argv[1:]
 def sha(path):
  h=hashlib.sha256()
  with open(path,'rb') as f:
@@ -197,6 +199,7 @@ if three != '0':
   'A04BR3_A32_SECONDARY_TEST':1,'A04BR3_PARK_TEST':1,'A04BR3_SMP_TEST':1,'A04BR3_WDT_HANDOFF_TEST':0,
   'A04BR3_FOUR_CPU_TEST':1 if three == '4' else 0,'A04BR3_A64_WDT_TEST':1,'A04BR3_A64_WDT_SECONDS':120 if three == '2' else 420,'A04BR3_KERNEL_MARKER':1 if three in ('3','4') else 0,
   'A04BR3_FB_MONITOR':1 if three in ('3','4') else 0,'A04BR3_OFFLINE_WDT_UNBOUNDED':0 if three in ('2','3','4') else 1,'A04BR3_WORKER_NO_UART_RESET':0 if three in ('2','3','4') else 1,'A04BR3_WORKER_HEARTBEAT':1}
+ result['shim_defines']['A04BR3_FOUR_CPU_L1_CLEAN']=int(cpu1_l1)
  result['shim_defines']['A04BR3_EARLY_FDT_GUARD']=1 if three in ('2','3','4') else 0
  result.update(shim_sha256=sha(shim),shim_bytes=len(data),shimmed_fd_sha256=sha(combined),shimmed_fd_bytes=combined.stat().st_size)
  result['limitations']=[('experimental four CPU; requires verified boot-start watchdog' if three == '4' else 'experimental three CPU; no runtime validation'),'worker heartbeat is not proof of watchdog operation',

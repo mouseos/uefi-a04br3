@@ -1,4 +1,13 @@
 /* The servicing worker reserves CPU1; no watchdog-handoff or four-CPU path. */
+#ifndef A04BR3_FOUR_CPU_L1_CLEAN
+#define A04BR3_FOUR_CPU_L1_CLEAN 0
+#endif
+#if A04BR3_FOUR_CPU_L1_CLEAN != 0 && A04BR3_FOUR_CPU_L1_CLEAN != 1
+#error Invalid CPU1 cache handoff option
+#endif
+#if A04BR3_FOUR_CPU_L1_CLEAN == 1 && A04BR3_FOUR_CPU_TEST != 1
+#error CPU1 cache handoff requires four CPU mode
+#endif
 #ifndef A04BR3_OFFLINE_WDT_UNBOUNDED
 #define A04BR3_OFFLINE_WDT_UNBOUNDED 0
 #endif
@@ -574,6 +583,11 @@ _A64HandoffTestCurrentEL:
     str w8, [x7]
     dsb sy
     mov x19, x20
+#if A04BR3_FOUR_CPU_L1_CLEAN == 1
+    // Other CPUs may already be executing Windows. Only maintain this core's
+    // private L1, never the shared cache levels used by those CPUs.
+    bl _A64CleanInvalidateLocalL1
+#endif
 _A64HandoffTestInvalidate:
     ic iallu
     dsb sy
@@ -670,6 +684,42 @@ _A64HandoffTestSkip:
     b.lo 3b
     b 1b
 #if A04BR3_FOUR_CPU_TEST == 1
+#if A04BR3_FOUR_CPU_L1_CLEAN == 1
+// CPU1 is still at EL2, x19 is the mailbox. Clobbers x0-x11; never touches
+// shared cache levels. No stack. CCSIDR formats selected by FEAT_CCIDX.
+_A64CleanInvalidateLocalL1:
+    dmb sy
+    mrs x0, clidr_el1
+    and x0, x0, #7
+    cmp x0, #2
+    b.lt 74f
+    msr csselr_el1, xzr
+    isb
+    mrs x1, ccsidr_el1
+    and x2, x1, #7
+    add x2, x2, #4
+    mrs x0, id_aa64mmfr2_el1
+    ubfx x0, x0, #20, #4
+    cbz x0, 70f
+    ubfx x4, x1, #3, #21
+    ubfx x7, x1, #32, #24
+    b 71f
+70: ubfx x4, x1, #3, #10
+    ubfx x7, x1, #13, #15
+71: clz w5, w4
+72: mov x9, x4
+73: lsl x11, x9, x5
+    lsl x6, x7, x2
+    orr x11, x11, x6
+    dc cisw, x11
+    subs x9, x9, #1
+    b.ge 73b
+    subs x7, x7, #1
+    b.ge 72b
+74: dsb sy
+    isb
+    ret
+#endif
 // Bounded UART trace before CPU1 leaves firmware. No stack; never write DLAB.
 // w26 selects '~5' (handoff) or '~6' (watchdog disabled). x20 (mailbox),
 // x4 (counter frequency), x7/x8 (watchdog), and x12 (deadline) are preserved.
