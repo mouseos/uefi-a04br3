@@ -27,12 +27,25 @@ STATIC VOID DelayUs(VOID *Context, unsigned Usec) {
 }
 STATIC VOID EFIAPI GpuBeforeExit(EFI_EVENT Event, VOID *Context) {
   struct a04_rgx_io Io = { NULL, ReadBank, WriteBank, DelayUs };
-  UINT32 Low, High, Revision;
+  UINT32 Low, High, Revision, PolarityBefore, PolarityAfter;
   int Result;
   (VOID)Event;
   (VOID)Context;
   if (Attempted) return;
   Attempted = TRUE;
+  /* MT8167 Linux routes GPU SPI185 through the sysirq polarity inverter.
+   * irq-mtk-sysirq.c maps LEVEL_LOW to GIC LEVEL_HIGH and sets bit185.
+   * Establish that SoC-specific stage before Windows' generic GIC owns IRQ217.
+   * Preserve every unrelated interrupt-polarity bit. */
+  PolarityBefore = MmioRead32(0x10200634U);
+  MmioWrite32(0x10200634U, PolarityBefore | BIT25);
+  PolarityAfter = MmioRead32(0x10200634U);
+  DEBUG((DEBUG_ERROR, "A04GPU SYSIRQ185 polarity before=%08x after=%08x\n",
+    PolarityBefore, PolarityAfter));
+  if ((PolarityAfter & BIT25) == 0) {
+    DEBUG((DEBUG_ERROR, "A04GPU SYSIRQ185 polarity unavailable\n"));
+    return;
+  }
   Result = a04_rgx_power_on(&Io);
   DEBUG((DEBUG_ERROR, "A04GPU power result=%d\n", Result));
   if (Result != 0) return;

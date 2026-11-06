@@ -48,8 +48,9 @@ DefinitionBlock ("GpuProvider.aml", "SSDT", 2, "BENESS", "A04GPU  ", 1)
             {
                 Memory32Fixed (ReadWrite, 0x13000000, 0x00080000)
                 Memory32Fixed (ReadWrite, 0x13FFE000, 0x00001000)
-                // Device-tree GIC SPI 185 becomes GSIV 217.
-                Interrupt (ResourceConsumer, Level, ActiveLow, Exclusive) { 217 }
+                // Linux SPI185 LEVEL_LOW is inverted by MT8167 SYSIRQ bit185.
+                // GPU handoff programs INT_POL_CTL5 bit25; GIC sees level high.
+                Interrupt (ResourceConsumer, Level, ActiveHigh, Exclusive) { 217 }
             })
         }
     }
