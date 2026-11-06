@@ -60,6 +60,12 @@
 !ifndef A04BR3_DISPLAY_PROVIDER
   DEFINE A04BR3_DISPLAY_PROVIDER = 0
 !endif
+!ifndef A04BR3_GCE_OBSERVATION
+  DEFINE A04BR3_GCE_OBSERVATION = 0
+!endif
+!if $(A04BR3_GCE_OBSERVATION) != 0 && $(A04BR3_GCE_OBSERVATION) != 1
+  !error A04BR3_GCE_OBSERVATION must be 0 or 1
+!endif
 !ifndef A04BR3_GPU_HANDOFF
   DEFINE A04BR3_GPU_HANDOFF = 0
 !endif
@@ -506,6 +512,9 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
 !endif
 !if $(A04BR3_THERMAL_HANDOFF_RECORD) == 1
   a04br3Pkg/WindowsArm32/Drivers/ThermalHandoffDxe/ThermalHandoffDxe.inf
+!endif
+!if $(A04BR3_GCE_OBSERVATION) == 1
+  a04br3Pkg/WindowsArm32/Drivers/GceObservationDxe/GceObservationDxe.inf
 !endif
   a04br3Pkg/Drivers/I2c1HandoffDxe/I2c1HandoffDxe.inf
 !if $(A04BR3_TOUCH_PROVIDER) == 1 || $(A04BR3_SHARED_TOUCH_POWER) == 1

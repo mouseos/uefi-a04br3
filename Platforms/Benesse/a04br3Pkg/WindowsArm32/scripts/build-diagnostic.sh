@@ -16,6 +16,8 @@ shared_touch_power=${A04_DIAGNOSTIC_SHARED_TOUCH_POWER:-0}
 apmixed=${A04_DIAGNOSTIC_SHARED_APMIXED:-0}
 bq=${A04_DIAGNOSTIC_BQ_HANDOFF:-0}
 thermal=${A04_DIAGNOSTIC_THERMAL_HANDOFF_RECORD:-0}
+gce_observation=${A04_DIAGNOSTIC_GCE_OBSERVATION:-0}
+[[ $gce_observation == 0 || $gce_observation == 1 ]] || exit 2
 [[ $thermal == 0 || $thermal == 1 ]] || exit 2
 [[ $bq == 0 || ($bq == 1 && $battery == 1) ]] || exit 2
 [[ $shared == 0 || $shared == 1 ]] || exit 2
@@ -91,6 +93,7 @@ if [[ $three == 2 || $three == 3 || $three == 4 ]]; then buildflags+=(-D A04BR3_
 if [[ $battery == 1 ]]; then buildflags+=(-D A04BR3_BATTERY_PROVIDER=1); fi
 if [[ $bq == 1 ]]; then buildflags+=(-D A04BR3_BQ_HANDOFF=1); fi
 if [[ $thermal == 1 ]]; then buildflags+=(-D A04BR3_THERMAL_HANDOFF_RECORD=1); fi
+if [[ $gce_observation == 1 ]]; then buildflags+=(-D A04BR3_GCE_OBSERVATION=1); fi
 if [[ $gpu == 1 ]]; then buildflags+=(-D A04BR3_GPU_HANDOFF=1); fi
 if [[ $display == 1 ]]; then buildflags+=(-D A04BR3_DISPLAY_PROVIDER=1); fi
 if [[ $touch == 1 ]]; then buildflags+=(-D A04BR3_TOUCH_PROVIDER=1); fi
@@ -128,10 +131,10 @@ EOF
   fi
   "$a64prefix"objcopy -O binary "$shimobj" "$fv/BootShim.bin"
 fi
-python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" <<'PY'
+python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" "$gce_observation" <<'PY'
 from pathlib import Path
 import hashlib,json,subprocess,sys
-root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce=sys.argv[1:]
+root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce,gce_observation=sys.argv[1:]
 def sha(path):
  h=hashlib.sha256()
  with open(path,'rb') as f:
@@ -174,6 +177,7 @@ result['build_defines']['A04BR3_SHARED_TOUCH_POWER']=shared_touch_power
 result['build_defines']['A04BR3_SHARED_APMIXED']=apmixed
 result['build_defines']['A04BR3_BQ_HANDOFF']=bq
 result['build_defines']['A04BR3_THERMAL_HANDOFF_RECORD']=thermal
+result['build_defines']['A04BR3_GCE_OBSERVATION']=gce_observation
 if three != '0':
  import shutil,struct
  obj=fd.parent/('BootShim.linked' if three in ('2','3','4') else 'BootShim.o'); shim=fd.parent/'BootShim.bin'; data=shim.read_bytes()

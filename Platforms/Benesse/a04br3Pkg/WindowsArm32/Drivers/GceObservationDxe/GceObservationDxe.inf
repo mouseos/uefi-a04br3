@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MIT
+[Defines]
+  INF_VERSION = 0x00010019
+  BASE_NAME = A04Br3GceObservationDxe
+  FILE_GUID = 886E68DD-83E7-4C5B-83C2-6F7A893353E9
+  MODULE_TYPE = DXE_DRIVER
+  VERSION_STRING = 1.0
+  ENTRY_POINT = GceObservationEntry
+[Sources]
+  GceObservationDxe.c
+  GceObservationRecord.h
+[Packages]
+  MdePkg/MdePkg.dec
+[LibraryClasses]
+  DebugLib
+  IoLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  UefiDriverEntryPoint
+[Guids]
+  gEfiEventBeforeExitBootServicesGuid
+[Depex]
+  TRUE
