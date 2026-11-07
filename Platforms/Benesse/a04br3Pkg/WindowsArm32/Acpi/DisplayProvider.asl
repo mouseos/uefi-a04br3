@@ -21,6 +21,11 @@ DefinitionBlock ("DisplayProvider.aml", "SSDT", 2, "BENESS", "A04DISP ", 1)
                 Memory32Fixed (ReadWrite, 0x14009000, 0x00001000) // RDMA0
                 Memory32Fixed (ReadWrite, 0x14012000, 0x00001000) // DSI0
                 Memory32Fixed (ReadWrite, 0x14015000, 0x00001000) // display mutex
+                // GOP/MemoryMapLib reserve the LK scanout at this address.
+                // Assign it to the display PDO, so Windows can match POST
+                // ownership using real framebuffer resource containment.
+                // Do not give this RAM to GPU0 or the shared platform parent.
+                Memory32Fixed (ReadWrite, 0xBE9C0000, 0x01000000) // POST framebuffer
 #ifdef A04BR3_DISPLAY_BRIGHTNESS_RESOURCES
                 // Linux mt8167.dtsi disp_pwm0; exclusive display brightness owner.
                 // GPIO1 enable, TOPCK and MMSYS remain with their existing owners.
