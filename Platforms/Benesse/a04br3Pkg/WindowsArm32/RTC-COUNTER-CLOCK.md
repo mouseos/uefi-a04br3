@@ -110,3 +110,12 @@ host試験は既存boot/counter harnessを拡張し、Caps出力保持、停止/
 未handoff、実RTCとcounter採用の区別、SetTimeのexact-match/no-op/invalid/mismatchを確認する。
 `RTC_COUNTER_TEST=1 RTC_TEST_ACCURACY=123456789`の値はhost専用synthetic値で、
 Capabilities fieldの経路だけを試す。実FDの精度根拠として使わない。
+
+## CNTPCT読出しの命令同期
+
+固定Linux 7c4782127d4ea11965be00ce1343056be9bfb769の
+`arch/arm/include/asm/arch_timer.h:arch_counter_get_cntpct`はISB→MRRCで読む。
+機種ArmLibのArmReadCntPctはMRRCだけなので、RTC内のRtcReadCounterで各read前に
+ArmInstructionSynchronizationBarrierを呼ぶ。共通ArmLibやtimer利用者全体は変更しない。
+seedとruntimeの進行probe両方へ適用し、host mockで各counter read前のISBを要求する。
+命令同期は実周波数/精度/suspend連続性やWindows採用を証明しない。

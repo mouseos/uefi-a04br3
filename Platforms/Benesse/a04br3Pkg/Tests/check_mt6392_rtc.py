@@ -56,9 +56,10 @@ static void (*before_exit)(EFI_EVENT,VOID*);
 static EFI_STATUS EventEx(unsigned type,EFI_TPL tpl,void(*fn)(EFI_EVENT,VOID*),VOID*ctx,EFI_GUID*guid,EFI_EVENT*out){assert((!runtime || pre_exit_phase) && type==1 && tpl==8 && !ctx && guid==&gEfiEventBeforeExitBootServicesGuid);before_exit=fn;*out=(void*)1;return 0;}
 static EFI_STATUS CloseEvent(EFI_EVENT e){assert((!runtime || pre_exit_phase) && e==(void*)1);before_exit=0;return 0;}
 #if A04BR3_MT6392_RTC_RUNTIME_COUNTER
-static int counter_stopped;static UINT64 counter_ticks;static UINTN counter_freq=13000000;
+static int counter_isb,counter_stopped;static UINT64 counter_ticks;static UINTN counter_freq=13000000;
 static void ArmDataMemoryBarrier(void){__sync_synchronize();}
-static UINT64 ArmReadCntPct(void){return counter_stopped?counter_ticks:counter_ticks++;}
+static void ArmInstructionSynchronizationBarrier(void){counter_isb=1;}
+static UINT64 ArmReadCntPct(void){assert(counter_isb);counter_isb=0;return counter_stopped?counter_ticks:counter_ticks++;}
 static UINTN ArmReadCntFrq(void){return counter_freq;}
 #endif
 static BOOLEAN EfiAtRuntime(void){return runtime;}

@@ -11,10 +11,17 @@ STATIC UINT32 RtcMonthDays(UINT32 Year,UINT32 Month)
   STATIC CONST UINT8 Days[12]={31,28,31,30,31,30,31,31,30,31,30,31};
   return Days[Month-1]+(Month==2 && Year%4==0 && (Year%100!=0 || Year%400==0));
 }
+STATIC UINT64 RtcReadCounter(VOID)
+{
+  /* Linux ARM arch_timer.h arch_counter_get_cntpct orders the CP15 read
+   * with ISB. Keep this in the board RTC caller, not the shared ArmLib. */
+  ArmInstructionSynchronizationBarrier();
+  return ArmReadCntPct();
+}
 STATIC BOOLEAN CounterAdvances(UINT64 *Count)
 {
-  UINT64 First=ArmReadCntPct(),Next;UINTN i;
-  for(i=0;i<64;++i){Next=ArmReadCntPct();if(Next<First)return FALSE;if(Next>First){*Count=Next;return TRUE;}}
+  UINT64 First=RtcReadCounter(),Next;UINTN i;
+  for(i=0;i<64;++i){Next=RtcReadCounter();if(Next<First)return FALSE;if(Next>First){*Count=Next;return TRUE;}}
   return FALSE;
 }
 STATIC EFI_STATUS RtcCounterSeed(CONST EFI_TIME *Time)
