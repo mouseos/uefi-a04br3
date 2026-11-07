@@ -23,6 +23,8 @@ shared_io=${A04_DIAGNOSTIC_SHARED_IO_PROFILE:-0}
 [[ $shared_io == 0 || ($shared_io == 1 && $shared == 1 && $apmixed == 1 && $battery == 1 && $gpu == 1 && $display == 1 && $shared_touch_power == 1) ]] || exit 2
 bq=${A04_DIAGNOSTIC_BQ_HANDOFF:-0}
 thermal=${A04_DIAGNOSTIC_THERMAL_HANDOFF_RECORD:-0}
+camera=${A04_DIAGNOSTIC_CAMERA_HANDOFF:-0}
+[[ $camera == 0 || $camera == 1 ]] || exit 2
 gce_observation=${A04_DIAGNOSTIC_GCE_OBSERVATION:-0}
 [[ $gce_observation == 0 || $gce_observation == 1 ]] || exit 2
 [[ $thermal == 0 || $thermal == 1 ]] || exit 2
@@ -104,6 +106,7 @@ if [[ $three == 2 || $three == 3 || $three == 4 ]]; then buildflags+=(-D A04BR3_
 if [[ $battery == 1 ]]; then buildflags+=(-D A04BR3_BATTERY_PROVIDER=1); fi
 if [[ $bq == 1 ]]; then buildflags+=(-D A04BR3_BQ_HANDOFF=1); fi
 if [[ $thermal == 1 ]]; then buildflags+=(-D A04BR3_THERMAL_HANDOFF_RECORD=1); fi
+if [[ $camera == 1 ]]; then buildflags+=(-D A04BR3_CAMERA_HANDOFF=1); fi
 if [[ $gce_observation == 1 ]]; then buildflags+=(-D A04BR3_GCE_OBSERVATION=1); fi
 if [[ $gpu_mmpll == 1 ]]; then buildflags+=(-D A04BR3_GPU_MMPLL=1); fi
 if [[ $gpu == 1 ]]; then buildflags+=(-D A04BR3_GPU_HANDOFF=1); fi
@@ -145,10 +148,10 @@ EOF
   fi
   "$a64prefix"objcopy -O binary "$shimobj" "$fv/BootShim.bin"
 fi
-python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" "$gce_observation" "$cpu1_l1" "$clear_lk_overlay" "$gpu_mmpll" "$shared_io" <<'PY'
+python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" "$gce_observation" "$cpu1_l1" "$clear_lk_overlay" "$gpu_mmpll" "$shared_io" "$camera" <<'PY'
 from pathlib import Path
 import hashlib,json,subprocess,sys
-root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce,gce_observation,cpu1_l1,clear_lk_overlay,gpu_mmpll,shared_io=sys.argv[1:]
+root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce,gce_observation,cpu1_l1,clear_lk_overlay,gpu_mmpll,shared_io,camera=sys.argv[1:]
 def sha(path):
  h=hashlib.sha256()
  with open(path,'rb') as f:
@@ -193,6 +196,10 @@ result['build_defines']['A04BR3_SHARED_PARENT']=shared
 result['build_defines']['A04BR3_SHARED_TOUCH_POWER']=shared_touch_power
 result['build_defines']['A04BR3_SHARED_APMIXED']=apmixed
 result['build_defines']['A04BR3_SHARED_IO_PROFILE']=shared_io
+result['build_defines']['A04BR3_CAMERA_HANDOFF']=camera
+if camera == '1':
+ camera_path=Path(root)/'Platforms/Benesse/a04br3Pkg/WindowsArm32/Drivers/CameraHandoffDxe'
+ result['camera_handoff']={'model':'rear HI556','mclk_hz':24000000,'rails_pinned':True,'old_isp_dma_reset_ack_required':True,'hardware_verified':False,'inputs':{n:sha(camera_path/n) for n in ('CameraHandoffDxe.c','Camera.asl','CameraAml.h','CameraHandoffDxe.inf')}}
 if shared_io == '1':
  contract=Path(root)/'Platforms/Benesse/a04br3Pkg/WindowsArm32/Acpi/shared-io-contract.json'
  result['shared_io_contract']={'sha256':sha(contract),'contract':json.loads(contract.read_text())}

@@ -39,6 +39,22 @@ STATIC BOOLEAN Rail(UINT32 Reg,UINT32 Enable)
  UINT32 Value;UINTN I;if(!Pmic(Reg,Enable,Enable))return FALSE;
  for(I=0;I<1000;I++){if(!A04BR3PmicRead(Reg,&Value))return FALSE;if(Value&BIT15)return TRUE;MicroSecondDelay(10);}return FALSE;
 }
+/* CT3 cameraisp/src/mt8167 reset handshake: do not publish a power
+ * handoff while inherited ISP DMA can still target firmware/OS memory. */
+STATIC BOOLEAN QuiesceIsp(VOID)
+{
+ UINTN Base=0x15004000U;
+ Update(Base+0x414,BIT0,0);Update(Base+0x410,BIT0,0);
+ MmioWrite32(Base+0x20,0);MmioWrite32(Base+0x0c,0);
+ MmioWrite32(Base+0x5c,BIT0);
+ if(!Wait(Base+0x5c,BIT1,BIT1))return FALSE;
+ MmioWrite32(Base+0x200,0x003f01feU);
+ MmioWrite32(Base+0x5c,BIT0|BIT2);MicroSecondDelay(1);
+ MmioWrite32(Base+0x5c,BIT2);MmioWrite32(Base+0x5c,0);
+ return !(MmioRead32(Base+0x5c)&(BIT0|BIT2))&&
+  !(MmioRead32(Base+0x0c)&BIT0)&&!(MmioRead32(Base+0x414)&BIT0)&&
+  !(MmioRead32(Base+0x410)&BIT0);
+}
 STATIC EFI_STATUS Configure(VOID)
 {
  UINT32 V,ClockCount,SavedMeter;
@@ -59,6 +75,7 @@ STATIC EFI_STATUS Configure(VOID)
  Update(SPM+0x238,BIT4,0);Update(SPM+0x238,BIT1,0);Update(SPM+0x238,BIT0,BIT0);
  Update(SPM+0x238,0xf00,0);if(!Wait(SPM+0x238,0x3000,0))return EFI_TIMEOUT;
  MmioWrite32(TOP+0x080,BIT1);MmioWrite32(TOP+0x050,BIT4);MmioWrite32(IMG+8,0x1e1);
+ if(!QuiesceIsp())return EFI_TIMEOUT;
  Update(TOP,7U<<15,2U<<15);
  MmioWrite32(GPIO+0x448,7U<<6);MmioWrite32(GPIO+0x444,1U<<6);
  Update(GPIO+0xd50,0x300,0x200);
