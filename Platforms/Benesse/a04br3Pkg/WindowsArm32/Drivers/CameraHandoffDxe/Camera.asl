@@ -15,9 +15,9 @@ DefinitionBlock ("", "SSDT", 2, "BENESS", "A04CAM  ", 1) {
   Field (IMGR,DWordAcc,NoLock,Preserve) { IMGC,32 }
   OperationRegion (SENR,SystemMemory,0x15008200,8)
   Field (SENR,DWordAcc,NoLock,Preserve) { PHAS,32,DIVS,32 }
-  OperationRegion (GPDR,SystemMemory,0x10005010,4)
+  OperationRegion (GPDR,SystemMemory,0x10005030,4)
   Field (GPDR,DWordAcc,NoLock,Preserve) { DIRC,32 }
-  OperationRegion (GPOR,SystemMemory,0x10005110,4)
+  OperationRegion (GPOR,SystemMemory,0x10005130,4)
   Field (GPOR,DWordAcc,NoLock,Preserve) { OUTC,32 }
   OperationRegion (GPMR,SystemMemory,0x10005390,4)
   Field (GPMR,DWordAcc,NoLock,Preserve) { MODC,32 }
@@ -33,8 +33,8 @@ DefinitionBlock ("", "SSDT", 2, "BENESS", "A04CAM  ", 1) {
    If (LNotEqual(And(MUX0,0x38000),0x10000)) {Return(Zero)}
    If (LNot(And(PLLC,One))) {Return(Zero)} If (LNotEqual(And(PLPW,3),One)) {Return(Zero)}
    If (LNotEqual(PLLP,PCWS)) {Return(Zero)}
-   If (LNotEqual(And(DIRC,0x30000),0x30000)) {Return(Zero)}
-   If (LNotEqual(And(OUTC,0x30000),0x30000)) {Return(Zero)}
+   If (LNotEqual(And(DIRC,3),3)) {Return(Zero)}
+   If (LNotEqual(And(OUTC,3),3)) {Return(Zero)}
    If (And(MODC,0x7e00)) {Return(Zero)}
    If (LNotEqual(And(MODK,0x1c0),0x40)) {Return(Zero)}
    If (And(SMIC,One)) {Return(Zero)}

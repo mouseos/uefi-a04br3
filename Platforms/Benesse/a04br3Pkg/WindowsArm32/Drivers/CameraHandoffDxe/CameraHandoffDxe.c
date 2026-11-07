@@ -49,7 +49,7 @@ STATIC EFI_STATUS Configure(VOID)
  if((V&BIT14)&&(!A04BR3PmicRead(0x055c,&V)||(V&0x60)))return EFI_UNSUPPORTED;
  /* GPIO48/49 only. Never change MMA's GPIO52/53 or its I2C clock/timing. */
  MmioWrite32(GPIO+0x398,(7U<<9)|(7U<<12));
- MmioWrite32(GPIO+0x118,BIT16|BIT17);MmioWrite32(GPIO+0x014,BIT16|BIT17);
+ MmioWrite32(GPIO+0x138,BIT0|BIT1);MmioWrite32(GPIO+0x034,BIT0|BIT1);
  /* Kernel ISP domain: MM clock prerequisite, ON/2ND, ACK, CLK/ISO/RST, SRAM. */
  MmioWrite32(TOP+0x080,BIT9);
  /* CCF MM_SMI_COMMON prerequisite, already shared with active display. */
@@ -77,12 +77,12 @@ STATIC EFI_STATUS Configure(VOID)
  /* Exact board HI556 rail order: IO1.8, A2.8, D1.2. */
  if(!Rail(0x055e,BIT14)||!Rail(0x0408,BIT15)||!Pmic(0x055c,0x60,0)||!Rail(0x055a,BIT14))return EFI_DEVICE_ERROR;
  Update(SEN+0x200,BIT29,BIT29);
- MmioWrite32(GPIO+0x114,BIT16);MicroSecondDelay(1000);MmioWrite32(GPIO+0x114,BIT17);MicroSecondDelay(1000);
+ MmioWrite32(GPIO+0x134,BIT0);MicroSecondDelay(1000);MmioWrite32(GPIO+0x134,BIT1);MicroSecondDelay(1000);
  /* IRQ180/183 inversion follows the existing MT8167 sysirq contract. */
  Update(0x10200634U,BIT20|BIT23,BIT20|BIT23);
  if((MmioRead32(GPIO+0x390)&((7U<<9)|(7U<<12)))||
-    (MmioRead32(GPIO+0x010)&(BIT16|BIT17))!=(BIT16|BIT17)||
-    (MmioRead32(GPIO+0x110)&(BIT16|BIT17))!=(BIT16|BIT17)||
+    (MmioRead32(GPIO+0x030)&(BIT0|BIT1))!=(BIT0|BIT1)||
+    (MmioRead32(GPIO+0x130)&(BIT0|BIT1))!=(BIT0|BIT1)||
     (MmioRead32(GPIO+0x440)&(7U<<6))!=(1U<<6)||
     (MmioRead32(SEN+0x200)&0xb0000047U)!=0xa0000001U||
     (MmioRead32(SEN+0x204)&0x003f3f3fU)!=0x00010001U||
