@@ -16,6 +16,7 @@
 [LibraryClasses]
   DebugLib
   IoLib
+  HobLib
   UefiBootServicesTableLib
   UefiRuntimeServicesTableLib
   UefiDriverEntryPoint
