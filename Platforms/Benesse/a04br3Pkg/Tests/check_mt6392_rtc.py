@@ -56,9 +56,9 @@ static void (*before_exit)(EFI_EVENT,VOID*);
 static EFI_STATUS EventEx(unsigned type,EFI_TPL tpl,void(*fn)(EFI_EVENT,VOID*),VOID*ctx,EFI_GUID*guid,EFI_EVENT*out){assert((!runtime || pre_exit_phase) && type==1 && tpl==8 && !ctx && guid==&gEfiEventBeforeExitBootServicesGuid);before_exit=fn;*out=(void*)1;return 0;}
 static EFI_STATUS CloseEvent(EFI_EVENT e){assert((!runtime || pre_exit_phase) && e==(void*)1);before_exit=0;return 0;}
 #if A04BR3_MT6392_RTC_RUNTIME_COUNTER
-static UINT64 counter_ticks;static UINTN counter_freq=13000000;
+static int counter_stopped;static UINT64 counter_ticks;static UINTN counter_freq=13000000;
 static void ArmDataMemoryBarrier(void){__sync_synchronize();}
-static UINT64 ArmReadCntPct(void){return counter_ticks;}
+static UINT64 ArmReadCntPct(void){return counter_stopped?counter_ticks:counter_ticks++;}
 static UINTN ArmReadCntFrq(void){return counter_freq;}
 #endif
 static BOOLEAN EfiAtRuntime(void){return runtime;}
@@ -100,8 +100,10 @@ int main(void){EFI_TIME_CAPABILITIES caps,copy;unsigned saved;
  reset();rollover=2;failure();assert(commands==27);
  reset();memset(&caps,0xa5,sizeof(caps));copy=caps;assert(LibGetTime(&answer,&caps)==EFI_UNSUPPORTED && !commands && !raise_count && !memcmp(&caps,&copy,sizeof(caps)) && !memcmp(&answer,&sentinel,sizeof(answer)));
  reset();assert(LibGetTime(0,0)==EFI_INVALID_PARAMETER && !commands && !raise_count);
- reset();runtime=1;assert(LibGetTime(&answer,0)==EFI_UNSUPPORTED && !commands && !raise_count && !memcmp(&answer,&sentinel,sizeof(answer)));assert(LibSetTime(&answer)==EFI_UNSUPPORTED);assert(LibGetWakeupTime(0,0,0)==EFI_INVALID_PARAMETER);assert(LibSetWakeupTime(0,0)==EFI_UNSUPPORTED);
- reset();assert(LibSetTime(&answer)==EFI_UNSUPPORTED && !commands);assert(LibSetTime(0)==EFI_INVALID_PARAMETER);
+ reset();runtime=1;assert(LibGetTime(&answer,0)==EFI_UNSUPPORTED && !commands && !raise_count && !memcmp(&answer,&sentinel,sizeof(answer)));assert(LibSetTime(&answer)==EFI_INVALID_PARAMETER);assert(LibGetWakeupTime(0,0,0)==EFI_INVALID_PARAMETER);assert(LibSetWakeupTime(0,0)==EFI_UNSUPPORTED);
+ reset();assert(LibSetTime(&answer)==EFI_INVALID_PARAMETER && !commands);assert(LibSetTime(0)==EFI_INVALID_PARAMETER);
+ reset();assert(!LibGetTime(&answer,0));saved=commands;assert(!LibSetTime(&answer) && commands==saved+10);answer.Second++;assert(LibSetTime(&answer)==EFI_UNSUPPORTED);answer.Second=60;saved=commands;assert(LibSetTime(&answer)==EFI_INVALID_PARAMETER && commands==saved);
+ reset();assert(!LibGetTime(&answer,0));answer.Year=2100;saved=commands;assert(LibSetTime(&answer)==EFI_UNSUPPORTED && commands==saved);answer.Month=2;answer.Day=29;assert(LibSetTime(&answer)==EFI_INVALID_PARAMETER && commands==saved);
  reset();assert(!LibRtcInitialize(0,0) && installed && installed->Version==1 && installed->Length==8 && installed->RuntimeServicesSupported==0x3ff0 && logs==1);
  saved=commands;runtime=1;assert(LibGetTime(&answer,0)==EFI_UNSUPPORTED && commands==saved);
  reset();existing=1;previous.Version=1;previous.Length=8;previous.RuntimeServicesSupported=0x291f;assert(!LibRtcInitialize(0,0) && installed->RuntimeServicesSupported==0x2910);
@@ -113,25 +115,35 @@ int main(void){EFI_TIME_CAPABILITIES caps,copy;unsigned saved;
     if os.environ.get('RTC_COUNTER_TEST')=='1':
         harness=r'''
 #include "SOURCE"
-static void setup(void){runtime=raised=raise_count=restore_count=logs=pre_exit_phase=0;fsm=pmic=bbpu=commands=sec_reads=delays=0;initialized=1;stall=rollover=existing=install_fail=0;installed=0;mLogged=0;mCounterValid=0;counter_freq=13000000;counter_ticks=100;gBS=&bs;
+static void setup(void){runtime=raised=raise_count=restore_count=logs=pre_exit_phase=0;fsm=pmic=bbpu=commands=sec_reads=delays=0;initialized=1;stall=rollover=existing=install_fail=0;installed=0;mLogged=0;mCounterValid=mCounterProgressVerified=mCounterUnsupported=mRtcRuntimeAdopted=mRtcCalendarValid=mRtcTcChangeObserved=0;counter_stopped=0;counter_freq=13000000;counter_ticks=100;gBS=&bs;
  raw[0]=23;raw[1]=45;raw[2]=12;raw[3]=7;raw[4]=6;raw[5]=11;raw[6]=58;}
 static void handoff(void){assert(before_exit);pre_exit_phase=1;before_exit((void*)1,0);pre_exit_phase=0;runtime=1;gBS=0;}
 int main(void){EFI_TIME t,unchanged;unsigned n;
  setup();assert(!LibRtcInitialize(0,0) && installed->RuntimeServicesSupported==0x3ff1);handoff();n=commands;
  counter_ticks+=13000000ULL*61;assert(!LibGetTime(&t,0) && t.Year==2026 && t.Month==11 && t.Day==7 && t.Hour==12 && t.Minute==46 && t.Second==24 && commands==n);
- memset(&unchanged,0xa5,sizeof(unchanged));t=unchanged;counter_freq=14000000;assert(LibGetTime(&t,0)==EFI_DEVICE_ERROR && !memcmp(&t,&unchanged,sizeof(t)));counter_freq=13000000;assert(LibGetTime(&t,0)==EFI_DEVICE_ERROR);
+ memset(&unchanged,0xa5,sizeof(unchanged));t=unchanged;counter_freq=14000000;assert(LibGetTime(&t,0)==EFI_UNSUPPORTED && !memcmp(&t,&unchanged,sizeof(t)));counter_freq=13000000;assert(LibGetTime(&t,0)==EFI_UNSUPPORTED);
  setup();raw[6]=56;raw[5]=2;raw[3]=28;raw[2]=23;raw[1]=59;raw[0]=59;assert(!LibRtcInitialize(0,0));handoff();counter_ticks+=26000000;assert(!LibGetTime(&t,0) && t.Month==2 && t.Day==29 && t.Hour==0 && t.Minute==0 && t.Second==1);
  setup();raw[6]=46;raw[5]=1;raw[3]=18;assert(!LibRtcInitialize(0,0));handoff();counter_ticks+=13000000ULL*86400*7;assert(!LibGetTime(&t,0) && t.Year==2014 && t.Month==1 && t.Day==25);
  setup();assert(!LibRtcInitialize(0,0));initialized=0;handoff();t=unchanged;assert(LibGetTime(&t,0)==EFI_DEVICE_ERROR && !memcmp(&t,&unchanged,sizeof(t)));
- setup();assert(!LibRtcInitialize(0,0));handoff();counter_ticks--;t=unchanged;assert(LibGetTime(&t,0)==EFI_DEVICE_ERROR && !memcmp(&t,&unchanged,sizeof(t)));
+ setup();assert(!LibRtcInitialize(0,0));handoff();counter_ticks=mCounterTicks-3;t=unchanged;assert(LibGetTime(&t,0)==EFI_UNSUPPORTED && !memcmp(&t,&unchanged,sizeof(t)));
+ setup();assert(!LibRtcInitialize(0,0));handoff();counter_ticks+=130000000;assert(!LibGetTime(&t,0));counter_ticks-=65000000;assert(LibGetTime(&t,0)==EFI_UNSUPPORTED); /* Regression still above original anchor. */
  setup();raw[6]=127;raw[5]=12;raw[3]=31;raw[2]=23;raw[1]=59;raw[0]=59;assert(!LibRtcInitialize(0,0));handoff();counter_ticks+=13000000;assert(LibGetTime(&t,0)==EFI_DEVICE_ERROR);
- setup();assert(!LibRtcInitialize(0,0));handoff();EFI_TIME_CAPABILITIES caps;assert(LibGetTime(&t,&caps)==EFI_UNSUPPORTED && LibSetTime(&t)==EFI_UNSUPPORTED);
+ setup();assert(!LibRtcInitialize(0,0));handoff();EFI_TIME_CAPABILITIES caps,capcopy;memset(&caps,0xa5,sizeof(caps));capcopy=caps;assert(LibGetTime(&t,&caps)==EFI_UNSUPPORTED && !memcmp(&caps,&capcopy,sizeof(caps)));assert(!LibGetTime(&t,0) && LibSetTime(&t)==EFI_UNSUPPORTED);
+ setup();assert(!LibRtcInitialize(0,0));runtime=1;gBS=0;t=unchanged;assert(LibGetTime(&t,0)==EFI_DEVICE_ERROR && !memcmp(&t,&unchanged,sizeof(t)));
+ setup();assert(!LibRtcInitialize(0,0));handoff();counter_stopped=1;t=unchanged;assert(LibGetTime(&t,0)==EFI_UNSUPPORTED && !memcmp(&t,&unchanged,sizeof(t)));counter_stopped=0;assert(LibGetTime(&t,0)==EFI_UNSUPPORTED);
+ setup();counter_stopped=1;assert(!LibRtcInitialize(0,0));handoff();assert(mRtcCalendarValid && !mCounterProgressVerified && !mRtcRuntimeAdopted && LibGetTime(&t,0)==EFI_DEVICE_ERROR);
+ setup();assert(!LibGetTime(&t,0));UINT64 anchor=mCounterTicks;EFI_TIME anchorTime=mCounterAnchor;assert(!LibSetTime(&t) && anchor==mCounterTicks && !memcmp(&anchorTime,&mCounterAnchor,sizeof(anchorTime)));t.Second++;assert(LibSetTime(&t)==EFI_UNSUPPORTED);
  setup();assert(!LibRtcInitialize(0,0));runtime=1;handoff();counter_ticks+=13000000;assert(!LibGetTime(&t,0) && t.Second==24); /* Failed-EBS retry notification is still a boot-owned phase. */
  setup();install_fail=1;assert(LibRtcInitialize(0,0)==EFI_DEVICE_ERROR && !before_exit);
  return 0;}
 '''.replace('SOURCE',str(source))
+    accuracy=int(os.environ.get('RTC_TEST_ACCURACY','0'))
+    if accuracy:
+        assert os.environ.get('RTC_COUNTER_TEST')=='1'
+        harness=harness.replace('assert(LibGetTime(&t,&caps)==EFI_UNSUPPORTED && !memcmp(&caps,&capcopy,sizeof(caps)))',
+            'assert(!LibGetTime(&t,&caps) && caps.Resolution==1 && caps.Accuracy=='+str(accuracy)+'U && !caps.SetsToZero);(void)capcopy')
     (tmp/'test.c').write_text(harness)
     binary=tmp/'test'
-    subprocess.run([os.environ.get('CC','clang'),'-std=c11','-O1','-g','-Wall','-Wextra','-Werror','-fsanitize=address,undefined','-DA04BR3_MT6392_RTC_RUNTIME_COUNTER='+('1' if os.environ.get('RTC_COUNTER_TEST')=='1' else '0'),'-I'+str(tmp),str(tmp/'test.c'),'-o',str(binary)],check=True)
+    subprocess.run([os.environ.get('CC','clang'),'-std=c11','-O1','-g','-Wall','-Wextra','-Werror','-fsanitize=address,undefined','-DA04BR3_MT6392_RTC_RUNTIME_COUNTER='+('1' if os.environ.get('RTC_COUNTER_TEST')=='1' else '0'),'-DA04BR3_RTC_ACCURACY_X1E6_PPM='+str(accuracy),'-I'+str(tmp),str(tmp/'test.c'),'-o',str(binary)],check=True)
     subprocess.run([str(binary)],check=True)
 print('PASS RTC-seeded physical-counter S0 runtime branch with gBS=NULL and forbidden runtime MMIO (ASan/UBSan).' if os.environ.get('RTC_COUNTER_TEST')=='1' else 'PASS actual MT6392 boot library + bounded PWRAP/calendar/rollover/failure tests (ASan/UBSan).')

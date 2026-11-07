@@ -11,6 +11,12 @@ battery=${A04_DIAGNOSTIC_BATTERY:-0}
 gpu=${A04_DIAGNOSTIC_GPU:-0}
 rtc_counter=${A04_DIAGNOSTIC_MT6392_RTC_RUNTIME_COUNTER:-0}
 rtc_read=${A04_DIAGNOSTIC_MT6392_RTC_READ:-0}
+rtc_accuracy=${A04_DIAGNOSTIC_RTC_ACCURACY_X1E6_PPM:-0}
+rtc_evidence=${A04_DIAGNOSTIC_RTC_ACCURACY_EVIDENCE:-}
+[[ $rtc_accuracy =~ ^[0-9]{1,10}$ && $rtc_accuracy -le 4294967295 ]] || exit 2
+if [[ $rtc_accuracy != 0 ]]; then
+  [[ $rtc_read == 1 && -f $rtc_evidence ]] || { echo 'RTC accuracy needs a backend qualification evidence file' >&2; exit 2; }
+fi
 [[ $rtc_counter == 0 || ($rtc_counter == 1 && $rtc_read == 1) ]] || exit 2
 [[ $rtc_read == 0 || $rtc_read == 1 ]] || exit 2
 gpu_mmpll=${A04_DIAGNOSTIC_GPU_MMPLL:-0}
@@ -64,6 +70,7 @@ PY
 fi
 [[ $output =~ ^[A-Za-z0-9_-]+$ ]] || exit 2
 root=$(git rev-parse --show-toplevel)
+if [[ $rtc_counter == 1 ]]; then python3 "$root/Platforms/Benesse/a04br3Pkg/Tests/check_rtc_s0_contract.py"; fi
 [[ -z $(git -C "$root" -c core.filemode=false status --porcelain --untracked-files=normal --ignore-submodules=all) ]] || { echo 'source worktree must be clean' >&2; exit 2; }
 [[ ! -e "$root/Build/$output" ]] || { echo 'output already exists' >&2; exit 2; }
 if [[ $gpu == 1 ]]; then
@@ -115,7 +122,7 @@ if [[ $bq == 1 ]]; then buildflags+=(-D A04BR3_BQ_HANDOFF=1); fi
 if [[ $thermal == 1 ]]; then buildflags+=(-D A04BR3_THERMAL_HANDOFF_RECORD=1); fi
 if [[ $gce_observation == 1 ]]; then buildflags+=(-D A04BR3_GCE_OBSERVATION=1); fi
 if [[ $rtc_counter == 1 ]]; then buildflags+=(-D A04BR3_MT6392_RTC_RUNTIME_COUNTER=1); fi
-if [[ $rtc_read == 1 ]]; then buildflags+=(-D A04BR3_MT6392_RTC_READ=1); fi
+if [[ $rtc_read == 1 ]]; then buildflags+=(-D A04BR3_MT6392_RTC_READ=1 -D "A04BR3_RTC_ACCURACY_X1E6_PPM=$rtc_accuracy"); fi
 if [[ $gpu_mmpll == 1 ]]; then buildflags+=(-D A04BR3_GPU_MMPLL=1); fi
 if [[ $gpu == 1 ]]; then buildflags+=(-D A04BR3_GPU_HANDOFF=1); fi
 if [[ $display == 1 ]]; then buildflags+=(-D A04BR3_DISPLAY_PROVIDER=1); fi
@@ -126,6 +133,7 @@ if [[ $shared_touch_power == 1 ]]; then buildflags+=(-D A04BR3_SHARED_TOUCH_POWE
 if [[ $shared_io == 1 ]]; then buildflags+=(-D A04BR3_SHARED_IO_PROFILE=1); fi
 if [[ $apmixed == 1 ]]; then buildflags+=(-D A04BR3_SHARED_APMIXED=1); fi
 "$EDK_TOOLS_PATH/BinWrappers/PosixLike/build" -p a04br3Pkg/WindowsArm32/WindowsArm32.dsc -a ARM -b DEBUG -t GCC5 -D FD_BASE=0x41080000 -D FD_SIZE=0x00300000 -D FD_BLOCKS=0x300 -D "A04_BUILD_OUTPUT=Build/$output" "${buildflags[@]}"
+if [[ $rtc_counter == 1 ]]; then python3 "$root/Platforms/Benesse/a04br3Pkg/Tests/check_rtc_s0_contract.py" --build-output "$root/Build/$output/DEBUG_GCC5"; fi
 python3 "$root/Platforms/Benesse/a04br3Pkg/Tests/check_acpi_storage_guid.py" \
   --build-output "$root/Build/$output/DEBUG_GCC5" \
   --mde-module-dec "$canonical/Mu_Basecore/MdeModulePkg/MdeModulePkg.dec" \
@@ -160,10 +168,10 @@ EOF
   fi
   "$a64prefix"objcopy -O binary "$shimobj" "$fv/BootShim.bin"
 fi
-python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" "$gce_observation" "$cpu1_l1" "$clear_lk_overlay" "$gpu_mmpll" "$shared_io" "$display_brightness" "$rtc_read" "$rtc_counter" <<'PY'
+python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" "$gce_observation" "$cpu1_l1" "$clear_lk_overlay" "$gpu_mmpll" "$shared_io" "$display_brightness" "$rtc_read" "$rtc_counter" "$rtc_accuracy" "$rtc_evidence" <<'PY'
 from pathlib import Path
 import hashlib,json,subprocess,sys
-root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce,gce_observation,cpu1_l1,clear_lk_overlay,gpu_mmpll,shared_io,display_brightness,rtc_read,rtc_counter=sys.argv[1:]
+root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce,gce_observation,cpu1_l1,clear_lk_overlay,gpu_mmpll,shared_io,display_brightness,rtc_read,rtc_counter,rtc_accuracy,rtc_evidence=sys.argv[1:]
 def sha(path):
  h=hashlib.sha256()
  with open(path,'rb') as f:
@@ -202,7 +210,9 @@ result['build_defines']['A04BR3_GPU_HANDOFF']=gpu
 result['build_defines']['A04BR3_GPU_MMPLL']=gpu_mmpll
 result['build_defines']['A04BR3_MT6392_RTC_READ']=rtc_read
 result['build_defines']['A04BR3_MT6392_RTC_RUNTIME_COUNTER']=rtc_counter
-result['rtc_time']={'runtime_counter':rtc_counter=='1','runtime_counter_live_pmic_read':False,'runtime_counter_suspend_compensation':False,'runtime_counter_capabilities':False,'source':'MT6392 TC calendar via boot-only bounded PWRAP reads' if rtc_read=='1' else 'unchanged Null library','runtime_time_services':'gettime-calendar-continuous-S0' if rtc_counter=='1' else (False if rtc_read=='1' else 'unchanged'),'set_time_supported':False,'wakeup_supported':False,'host_time_fallback':False,'capabilities_query_supported':False if rtc_read=='1' else 'unchanged','power_loss_validity':'not established'}
+result['build_defines']['A04BR3_RTC_ACCURACY_X1E6_PPM']=rtc_accuracy
+result['rtc_time']={'runtime_counter':rtc_counter=='1','runtime_counter_live_pmic_read':False,'runtime_counter_suspend_compensation':False,'runtime_counter_capabilities':rtc_counter=='1' and int(rtc_accuracy)!=0,'source':'MT6392 TC calendar via boot-only bounded PWRAP reads' if rtc_read=='1' else 'unchanged Null library','runtime_time_services':'gettime-calendar-continuous-S0' if rtc_counter=='1' else (False if rtc_read=='1' else 'unchanged'),'set_time_supported':False,'wakeup_supported':False,'host_time_fallback':False,'capabilities_query_supported':int(rtc_accuracy)!=0 if rtc_read=='1' else 'unchanged','power_loss_validity':'not established'}
+result['rtc_time'].update({'declared_accuracy_x1e6_ppm':int(rtc_accuracy),'accuracy_evidence_sha256':sha(rtc_evidence) if rtc_evidence else None,'accuracy_evidence_is_not_hardware_validation':True,'set_time_boot':'read-verified exact-match no-op only','set_time_runtime':'unsupported','counter_progress_is_not_rtc_oscillator_proof':True})
 result['gpu_clock_record']={'name':'Mt8167GpuClock','guid':'9c50bc94-6c80-4fa2-939d-9278d07f7010','version':1,'bytes':44,'attributes':6,'fields':['version','bytes','parent','clock_hz','con0','con1','power','rail_control','rail_status','sel0','sel1'],'publish':'validated-parent7-only','fallback_hz':26000000}
 result['build_defines']['A04BR3_DISPLAY_PROVIDER']=display
 result['build_defines']['A04BR3_CLEAR_LK_OVERLAY']=clear_lk_overlay
