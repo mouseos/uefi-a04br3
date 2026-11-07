@@ -223,6 +223,18 @@
 !endif
 
 # Observation only: no ownership or EL3 handoff is asserted.
+!ifndef A04BR3_GPU_THERMAL_PROFILE
+  DEFINE A04BR3_GPU_THERMAL_PROFILE = 0
+!endif
+!if $(A04BR3_GPU_THERMAL_PROFILE) != 0 && $(A04BR3_GPU_THERMAL_PROFILE) != 1
+  !error A04BR3_GPU_THERMAL_PROFILE must be 0 or 1
+!endif
+!ifndef A04BR3_THERMAL_PIO_HANDOFF
+  DEFINE A04BR3_THERMAL_PIO_HANDOFF = 0
+!endif
+!if $(A04BR3_THERMAL_PIO_HANDOFF) != 0 && $(A04BR3_THERMAL_PIO_HANDOFF) != 1
+  !error A04BR3_THERMAL_PIO_HANDOFF must be 0 or 1
+!endif
 !ifndef A04BR3_THERMAL_HANDOFF_RECORD
   DEFINE A04BR3_THERMAL_HANDOFF_RECORD = 0
 !endif
@@ -406,6 +418,13 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
   #
 
 
+!if $(A04BR3_GPU_THERMAL_PROFILE) == 1 && $(A04BR3_GPU_DOMAIN_OWNER) != 1
+  !error Parent1022 requires GPU domain owner and SD1
+!endif
+!if $(A04BR3_GPU_THERMAL_PROFILE) == 1 && $(A04BR3_THERMAL_PIO_HANDOFF) != 1
+  !error Parent1022 requires actual BeforeEBS PIO handoff
+!endif
+
 [Components]
 !if $(A04BR3_CHARGER_OWNER) == 1
   a04br3Pkg/Drivers/A04BR3ChargerDxe/A04BR3ChargerDxe.inf
@@ -465,11 +484,15 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
       NULL|MdeModulePkg/Library/LzmaCustomDecompressLib/LzmaCustomDecompressLib.inf
       NULL|a04br3Pkg/WindowsArm32/Library/EarlyStackGuard/EarlyStackGuard.inf
     <BuildOptions>
-      GCC:*_*_ARM_CC_FLAGS = -DA04BR3_BOOT_DIAGNOSTIC=$(A04BR3_BOOT_DIAGNOSTIC) -DA04BR3_BOUNDED_RECOVERY=$(A04BR3_BOUNDED_RECOVERY) -DA04BR3_CACHE_TEST=$(A04BR3_CACHE_TEST)
+      GCC:*_*_ARM_CC_FLAGS = -DA04BR3_BOOT_DIAGNOSTIC=$(A04BR3_BOOT_DIAGNOSTIC) -DA04BR3_BOUNDED_RECOVERY=$(A04BR3_BOUNDED_RECOVERY) -DA04BR3_CACHE_TEST=$(A04BR3_CACHE_TEST) -DA04BR3_THERMAL_PROVIDER=$(A04BR3_THERMAL_PIO_HANDOFF)
   }
 !if $(A04BR3_SHARED_IO_PROFILE) == 1
 !if $(A04BR3_GPU_DOMAIN_OWNER) == 1
+!if $(A04BR3_GPU_THERMAL_PROFILE) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedGpuThermal.inf
+!else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedGpuDomain.inf
+!endif
 !else
 !if $(A04BR3_SD_PIO_PROFILE) == 1
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedIoSd.inf
@@ -573,7 +596,10 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
 !endif
 !endif
 !if $(A04BR3_THERMAL_HANDOFF_RECORD) == 1
-  a04br3Pkg/WindowsArm32/Drivers/ThermalHandoffDxe/ThermalHandoffDxe.inf
+  a04br3Pkg/WindowsArm32/Drivers/ThermalHandoffDxe/ThermalHandoffDxe.inf {
+    <BuildOptions>
+      GCC:*_*_ARM_CC_FLAGS = -DA04BR3_THERMAL_PIO_HANDOFF=$(A04BR3_THERMAL_PIO_HANDOFF)
+  }
 !endif
 !if $(A04BR3_GCE_OBSERVATION) == 1
   a04br3Pkg/WindowsArm32/Drivers/GceObservationDxe/GceObservationDxe.inf
