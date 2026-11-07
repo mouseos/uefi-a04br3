@@ -37,20 +37,11 @@ STATIC BOOLEAN CalendarValid(CONST UINT16 *v)
   if(v[5]==2 && (Year%4==0 && (Year%100!=0 || Year%400==0)))++Limit;
   return v[3]>=1 && v[3]<=Limit;
 }
-EFI_STATUS EFIAPI LibGetTime(EFI_TIME *Time,EFI_TIME_CAPABILITIES *Capabilities)
+STATIC EFI_STATUS BootGetTime(EFI_TIME *Time,EFI_TIME_CAPABILITIES *Capabilities)
 {
   EFI_STATUS Status=EFI_NOT_READY;EFI_TPL OldTpl;UINT16 Raw[7]={0},Bbpu=0,After=0;UINTN Attempt=0,i;
   EFI_TIME Result;
   if(Time==NULL)return EFI_INVALID_PARAMETER;
-  /* No boot-service calls, MMIO or virtual physical pointers on this path. */
-  if(EfiAtRuntime()) {
-#if A04BR3_MT6392_RTC_RUNTIME_COUNTER
-    if(Capabilities!=NULL)return EFI_UNSUPPORTED;
-    return RtcCounterGet(Time);
-#else
-    return EFI_UNSUPPORTED;
-#endif
-  }
   /* No verified MT6392 oscillator error bound is available. Do not claim
    * Accuracy=0 (perfect) or fabricate a ppm rating. Calendar-only subset. */
   if(Capabilities!=NULL)return EFI_UNSUPPORTED;
@@ -85,6 +76,20 @@ Done:
   /* Transport / unready / incoherent / invalid calendar never returns success. */
   return EFI_ERROR(Status)?EFI_DEVICE_ERROR:EFI_SUCCESS;
 }
+EFI_STATUS EFIAPI LibGetTime(EFI_TIME *Time,EFI_TIME_CAPABILITIES *Capabilities)
+{
+  if(Time==NULL)return EFI_INVALID_PARAMETER;
+  /* Public runtime entry never reaches PWRAP or boot services. */
+  if(EfiAtRuntime()) {
+#if A04BR3_MT6392_RTC_RUNTIME_COUNTER
+    if(Capabilities!=NULL)return EFI_UNSUPPORTED;
+    return RtcCounterGet(Time);
+#else
+    return EFI_UNSUPPORTED;
+#endif
+  }
+  return BootGetTime(Time,Capabilities);
+}
 EFI_STATUS EFIAPI LibSetTime(EFI_TIME *Time)
 {return Time==NULL?EFI_INVALID_PARAMETER:EFI_UNSUPPORTED;}
 EFI_STATUS EFIAPI LibGetWakeupTime(BOOLEAN *Enabled,BOOLEAN *Pending,EFI_TIME *Time)
@@ -98,7 +103,10 @@ STATIC VOID EFIAPI RtcBeforeExit(EFI_EVENT Event,VOID *Context)
   (VOID)Event;(VOID)Context;
   /* Refresh from real TC immediately before handoff, while boot still owns
    * WACS2. A failed final snapshot invalidates the runtime clock. */
-  mCounterValid=FALSE;Status=LibGetTime(&Last,NULL);
+  mCounterValid=FALSE;
+  /* This event is a boot-services ownership boundary, not the runtime API.
+   * A prior failed EBS attempt may already have set UefiRuntimeLib's flag. */
+  Status=BootGetTime(&Last,NULL);
   if(EFI_ERROR(Status))mCounterValid=FALSE;
   DEBUG((DEBUG_ERROR,"A04RTC counter-handoff status=%r valid=%u source=MT6392+CNTPCT live_pmic_runtime=0 suspend_compensation=0\n",Status,(UINT32)mCounterValid));
 }

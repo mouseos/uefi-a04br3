@@ -20,6 +20,8 @@ Capabilities/SetTime/保持電源/suspendを含む完全RTC対応の完成品と
 runtime-counter flagはRTC_READ=1を要求する。bootではRTC real readのたびにcalendarと
 physical counterをanchorにし、BeforeExitBootServicesで最後に再取得する。
 最後のRTC取得・INIT_DONE/CBUSY/calendar/frequency検査失敗ではanchorを無効化して渡す。
+BeforeExit callbackはboot所有の専用readへ入り、失敗したEBS試行が既にruntime flagを
+立てていた場合もruntime getterと混同しない。public runtime entryは常にPWRAPへ入らない。
 実RTCが2014なら2014をseedにする。host time/compile timestamp/NV fake epochは使用しない。
 
 EBS後はseedが有効で、CNTFRQがLinux値13000000と一致し、CNTPCTがanchorから退行していない

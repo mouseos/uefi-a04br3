@@ -18,12 +18,13 @@ STATIC EFI_STATUS RtcCounterSeed(CONST EFI_TIME *Time)
    * Read physical count, not CNTVCT whose offset belongs to the OS. */
   if(ArmReadCntFrq()!=13000000U)return EFI_DEVICE_ERROR;
   CopyMem(&mCounterAnchor,Time,sizeof(*Time));mCounterTicks=ArmReadCntPct();
-  mCounterValid=TRUE;return EFI_SUCCESS;
+  ArmDataMemoryBarrier();mCounterValid=TRUE;return EFI_SUCCESS;
 }
 STATIC EFI_STATUS RtcCounterGet(EFI_TIME *Time)
 {
   EFI_TIME Result;UINT64 Count,Seconds,DaySeconds;UINT32 Days,Year,Month,Day,Step;
   if(!mCounterValid)return EFI_DEVICE_ERROR;
+  ArmDataMemoryBarrier();
   if(ArmReadCntFrq()!=13000000U){mCounterValid=FALSE;return EFI_DEVICE_ERROR;}
   Count=ArmReadCntPct();
   if(Count<mCounterTicks){mCounterValid=FALSE;return EFI_DEVICE_ERROR;}
