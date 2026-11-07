@@ -146,8 +146,17 @@
   !error APMIXED diagnostic requires the shared parent
 !endif
 # Combined BEN0001 parent/PDO contract; board-only and opt-in.
+!ifndef A04BR3_GPU_DOMAIN_OWNER
+  DEFINE A04BR3_GPU_DOMAIN_OWNER = 0
+!endif
+!if $(A04BR3_GPU_DOMAIN_OWNER) != 0 && $(A04BR3_GPU_DOMAIN_OWNER) != 1
+  !error A04BR3_GPU_DOMAIN_OWNER must be 0 or 1
+!endif
 !ifndef A04BR3_SHARED_IO_PROFILE
   DEFINE A04BR3_SHARED_IO_PROFILE = 0
+!endif
+!if $(A04BR3_GPU_DOMAIN_OWNER) == 1 && $(A04BR3_SHARED_IO_PROFILE) != 1
+  !error GPU domain owner requires the matched shared IO profile
 !endif
 !if $(A04BR3_SHARED_IO_PROFILE) != 0 && $(A04BR3_SHARED_IO_PROFILE) != 1
   !error A04BR3_SHARED_IO_PROFILE must be 0 or 1
@@ -446,7 +455,11 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
       GCC:*_*_ARM_CC_FLAGS = -DA04BR3_BOOT_DIAGNOSTIC=$(A04BR3_BOOT_DIAGNOSTIC) -DA04BR3_BOUNDED_RECOVERY=$(A04BR3_BOUNDED_RECOVERY) -DA04BR3_CACHE_TEST=$(A04BR3_CACHE_TEST)
   }
 !if $(A04BR3_SHARED_IO_PROFILE) == 1
+!if $(A04BR3_GPU_DOMAIN_OWNER) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedGpuDomain.inf
+!else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedIo.inf
+!endif
 !else
 !if $(A04BR3_SHARED_PARENT) == 1
 !if $(A04BR3_BATTERY_PROVIDER) == 1
