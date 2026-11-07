@@ -16,7 +16,8 @@ STATIC BOOLEAN Idle(UINTN Address,UINT32 Mask,UINTN Attempts,UINTN Delay) {
 }
 VOID A04ThermalPioBeforeExit(VOID) {
  A04_THERMAL_PIO_RECORD r={0};EFI_GUID guid=A04_THERMAL_PIO_GUID;EFI_STATUS status;UINT32 v;UINTN n;
- if(mAttempted)return;mAttempted=TRUE;r.version=2;r.bytes=sizeof(r);r.stage=1;
+ if(mAttempted) { return; }
+ mAttempted=TRUE;r.version=2;r.bytes=sizeof(r);r.stage=1;
  r.clock_before=MmioRead32(TOP+0x24);r.reset_before=MmioRead32(I+0x128);
  if(r.clock_before==MAX_UINT32||r.reset_before==MAX_UINT32)goto publish;
  if(r.clock_before&0x40000002U) {
