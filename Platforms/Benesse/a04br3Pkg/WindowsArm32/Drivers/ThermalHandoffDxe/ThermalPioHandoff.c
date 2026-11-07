@@ -20,7 +20,7 @@ VOID A04ThermalPioBeforeExit(VOID) {
  mAttempted=TRUE;r.version=2;r.bytes=sizeof(r);r.stage=1;
  r.clock_before=MmioRead32(TOP+0x24);r.reset_before=MmioRead32(I+0x128);
  if(r.clock_before==MAX_UINT32||r.reset_before==MAX_UINT32)goto publish;
- if(r.clock_before&0x40000002U) {
+ if((r.clock_before&0x40000002U)||(r.reset_before&1)) {
   // Linux reset precedes ungating: never resume an old AHB address program.
   MmioWrite32(I+0x120,1);if(!(MmioRead32(I+0x128)&1))goto publish;
   MmioWrite32(TOP+0x84,r.clock_before&0x40000002U);
