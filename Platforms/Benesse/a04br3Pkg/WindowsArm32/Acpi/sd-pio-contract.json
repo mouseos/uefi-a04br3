@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "driver_source_commit": "9e07f0a6cdf20f6efe9a4a75ed5f42fcd6ee583c",
+  "driver_acpi_path": "drivers/storage/mt8167-sd/acpi/MT8167-SD.asl",
+  "git_asl_sha256": "cf26beacba45d82ad74d3b0d6e81b6523937c30a0199f4f9b6b928951493aa9b",
+  "signed_tuple_asl_sha256": "cf26beacba45d82ad74d3b0d6e81b6523937c30a0199f4f9b6b928951493aa9b",
+  "line_endings_only_difference": false,
+  "with_dep_parent": "\\_SB.SHR0",
+  "parent_driver_ver": "11/07/2026,2026.11.7.1010",
+  "sd_driver_ver": "11/07/2026,2026.11.7.3",
+  "signed_tuple_zip_sha256": "86360d8fdc1e97c1deb767a1f510abbe4a981896048bebb48cc94f31e05a8da5",
+  "firmware_rail_clock_writes_added": false,
+  "rtc_enabled": false,
+  "default_enabled": false
+}

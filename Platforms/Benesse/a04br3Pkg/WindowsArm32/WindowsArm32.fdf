@@ -97,7 +97,11 @@ READ_LOCK_STATUS   = TRUE
   INF MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf
   INF MdeModulePkg/Universal/Acpi/AcpiPlatformDxe/AcpiPlatformDxe.inf
 !if $(A04BR3_SHARED_IO_PROFILE) == 1
+!if $(A04BR3_SD_PIO_PROFILE) == 1
+  INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedIoSd.inf
+!else
   INF RuleOverride = ACPITABLE a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedIo.inf
+!endif
 !else
 !if $(A04BR3_SHARED_PARENT) == 1
 !if $(A04BR3_BATTERY_PROVIDER) == 1

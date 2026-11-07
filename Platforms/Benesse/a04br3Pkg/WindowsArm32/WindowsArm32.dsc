@@ -146,11 +146,21 @@
   !error APMIXED diagnostic requires the shared parent
 !endif
 # Combined BEN0001 parent/PDO contract; board-only and opt-in.
+# Standalone microSD ACPI publication; power remains the Windows parent's job.
+!ifndef A04BR3_SD_PIO_PROFILE
+  DEFINE A04BR3_SD_PIO_PROFILE = 0
+!endif
+!if $(A04BR3_SD_PIO_PROFILE) != 0 && $(A04BR3_SD_PIO_PROFILE) != 1
+  !error A04BR3_SD_PIO_PROFILE must be 0 or 1
+!endif
 !ifndef A04BR3_SHARED_IO_PROFILE
   DEFINE A04BR3_SHARED_IO_PROFILE = 0
 !endif
 !if $(A04BR3_SHARED_IO_PROFILE) != 0 && $(A04BR3_SHARED_IO_PROFILE) != 1
   !error A04BR3_SHARED_IO_PROFILE must be 0 or 1
+!endif
+!if $(A04BR3_SD_PIO_PROFILE) == 1 && $(A04BR3_SHARED_IO_PROFILE) != 1
+  !error SD-only ACPI requires the existing SharedIo parent profile
 !endif
 !if $(A04BR3_SHARED_IO_PROFILE) == 1 && ($(A04BR3_SHARED_PARENT) != 1 || $(A04BR3_SHARED_APMIXED) != 1 || $(A04BR3_BATTERY_PROVIDER) != 1 || $(A04BR3_GPU_HANDOFF) != 1 || $(A04BR3_DISPLAY_PROVIDER) != 1 || $(A04BR3_SHARED_TOUCH_POWER) != 1)
   !error Shared IO profile requires the retained parent/APMIXED/battery/GPU/display/shared-touch baseline
@@ -446,7 +456,11 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
       GCC:*_*_ARM_CC_FLAGS = -DA04BR3_BOOT_DIAGNOSTIC=$(A04BR3_BOOT_DIAGNOSTIC) -DA04BR3_BOUNDED_RECOVERY=$(A04BR3_BOUNDED_RECOVERY) -DA04BR3_CACHE_TEST=$(A04BR3_CACHE_TEST)
   }
 !if $(A04BR3_SHARED_IO_PROFILE) == 1
+!if $(A04BR3_SD_PIO_PROFILE) == 1
+  a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedIoSd.inf
+!else
   a04br3Pkg/WindowsArm32/Acpi/AcpiTablesSharedIo.inf
+!endif
 !else
 !if $(A04BR3_SHARED_PARENT) == 1
 !if $(A04BR3_BATTERY_PROVIDER) == 1
