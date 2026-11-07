@@ -20,3 +20,7 @@ PWRON_CONFIG_EN(0)は既存unlockのreadのみで、key/CPU4/watchdog/wakeup/TOP
 effective define/resourceとsourceをdiagnostic-manifestへ記録する。既存SD/全baseline flagsも渡す。
 ASL standalone compile、fullFD build、署名package、実機正常停止/描画は別々の検証段階。
 本source変更は実機flash済みという意味ではない。
+
+GPU0の_DEPをSHR0へ追加する（固定SD-onlyのSdPio.aslと同じprovider開始依存）。
+親V2 interface登録前にGPU StartDeviceが先行しNOT_FOUNDになる競合を避ける。
+GPUProvider本体やGPU0のCRSを重複定義せず、optional SSDTから_DEPだけを付ける。

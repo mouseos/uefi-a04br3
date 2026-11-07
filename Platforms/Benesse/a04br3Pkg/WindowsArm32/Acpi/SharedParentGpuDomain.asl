@@ -5,6 +5,7 @@
  * normalizes the board's level-low inputs to the GIC level-high contract. */
 DefinitionBlock ("shared-parent-gpu-domain.aml", "SSDT", 2, "BENESS", "A04GPUPM", 1)
 {
+    External (\_SB.GPU0, DeviceObj)
     Scope (_SB)
     {
         Device (SHR0)
@@ -25,5 +26,11 @@ DefinitionBlock ("shared-parent-gpu-domain.aml", "SSDT", 2, "BENESS", "A04GPUPM"
                 Memory32Fixed (ReadWrite, 0x10006000, 0x1000)
             })
         }
+    }
+    // Same provider-start dependency already used by the fixed SD-only
+    // profile. Native factory must not race discovery of the V2 parent.
+    Scope (\_SB.GPU0)
+    {
+        Name (_DEP, Package () {\_SB.SHR0})
     }
 }
