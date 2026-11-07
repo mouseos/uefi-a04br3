@@ -7,4 +7,8 @@
   gEmbeddedTokenSpaceGuid.PcdPrePiStackSize|0x00040000
 
 [LibraryClasses]
+!if $(A04BR3_CAMERA_HANDOFF) == 1
+  MemoryMapLib|a04br3Pkg/WindowsArm32/Library/MemoryMapLib/MemoryMapCameraLib.inf
+!else
   MemoryMapLib|a04br3Pkg/WindowsArm32/Library/MemoryMapLib/MemoryMapLib.inf
+!endif

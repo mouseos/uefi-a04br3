@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+ INF_VERSION = 0x0001001B
+ BASE_NAME = A04CameraHandoffDxe
+ FILE_GUID = CB930C72-E8E6-4C28-B00B-CA04B3002001
+ MODULE_TYPE = DXE_DRIVER
+ VERSION_STRING = 1.0
+ ENTRY_POINT = CameraHandoffEntry
+[Sources]
+ CameraHandoffDxe.c
+ CameraAml.h
+[Packages]
+ MdePkg/MdePkg.dec
+ a04br3Pkg/a04br3.dec
+[LibraryClasses]
+ A04BR3TestCycleLib
+ BaseLib
+ BaseMemoryLib
+ CacheMaintenanceLib
+ DebugLib
+ IoLib
+ TimerLib
+ UefiBootServicesTableLib
+ UefiDriverEntryPoint
+[Guids]
+ gEfiEventBeforeExitBootServicesGuid
+[Protocols]
+ gEfiAcpiTableProtocolGuid
+[Depex]
+ gEfiAcpiTableProtocolGuid
