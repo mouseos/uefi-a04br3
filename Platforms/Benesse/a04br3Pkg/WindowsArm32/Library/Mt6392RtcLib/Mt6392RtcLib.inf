@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+  INF_VERSION = 0x00010019
+  BASE_NAME = A04Br3Mt6392RtcLib
+  FILE_GUID = 276AA5E4-8A95-4FF9-963E-159427A1BEF9
+  MODULE_TYPE = DXE_RUNTIME_DRIVER
+  VERSION_STRING = 1.0
+  LIBRARY_CLASS = RealTimeClockLib|DXE_RUNTIME_DRIVER
+[Sources]
+  Mt6392RtcLib.c
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+[LibraryClasses]
+  BaseMemoryLib
+  DebugLib
+  IoLib
+  TimerLib
+  UefiBootServicesTableLib
+  UefiLib
+  UefiRuntimeLib
+[Guids]
+  gEfiRtPropertiesTableGuid

@@ -329,7 +329,11 @@
   #
   # RTC Libraries
   #
+!if $(A04BR3_MT6392_RTC_READ) == 1
+  RealTimeClockLib|a04br3Pkg/WindowsArm32/Library/Mt6392RtcLib/Mt6392RtcLib.inf
+!else
   RealTimeClockLib|SiliciumNullPkg/Library/RealTimeClockLibNull/RealTimeClockLibNull.inf
+!endif
 
   #
   # ...

@@ -75,6 +75,14 @@
 !ifndef A04BR3_GPU_HANDOFF
   DEFINE A04BR3_GPU_HANDOFF = 0
 !endif
+# Read-only real MT6392 calendar, boot only. Never grant OS-time PWRAP access.
+!ifndef A04BR3_MT6392_RTC_READ
+  DEFINE A04BR3_MT6392_RTC_READ = 0
+!endif
+!if $(A04BR3_MT6392_RTC_READ) != 0 && $(A04BR3_MT6392_RTC_READ) != 1
+  !error A04BR3_MT6392_RTC_READ must be 0 or 1
+!endif
+
 !ifndef A04BR3_GPU_MMPLL
   DEFINE A04BR3_GPU_MMPLL = 0
 !endif
