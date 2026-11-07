@@ -11,6 +11,15 @@
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeLib.h>
 #include <Guid/RtPropertiesTable.h>
+#ifndef A04BR3_MT6392_RTC_RUNTIME_COUNTER
+#define A04BR3_MT6392_RTC_RUNTIME_COUNTER 0
+#endif
+#if A04BR3_MT6392_RTC_RUNTIME_COUNTER
+#include <Library/ArmLib.h>
+#include <Guid/EventGroup.h>
+#include "RtcCounterClock.h"
+STATIC EFI_EVENT mBeforeExitEvent;
+#endif
 #include "../../Include/PwrapRead.h"
 #define RTC_BBPU 0x8000U
 #define RTC_TC_SEC 0x800aU
@@ -34,7 +43,14 @@ EFI_STATUS EFIAPI LibGetTime(EFI_TIME *Time,EFI_TIME_CAPABILITIES *Capabilities)
   EFI_TIME Result;
   if(Time==NULL)return EFI_INVALID_PARAMETER;
   /* No boot-service calls, MMIO or virtual physical pointers on this path. */
-  if(EfiAtRuntime())return EFI_UNSUPPORTED;
+  if(EfiAtRuntime()) {
+#if A04BR3_MT6392_RTC_RUNTIME_COUNTER
+    if(Capabilities!=NULL)return EFI_UNSUPPORTED;
+    return RtcCounterGet(Time);
+#else
+    return EFI_UNSUPPORTED;
+#endif
+  }
   /* No verified MT6392 oscillator error bound is available. Do not claim
    * Accuracy=0 (perfect) or fabricate a ppm rating. Calendar-only subset. */
   if(Capabilities!=NULL)return EFI_UNSUPPORTED;
@@ -54,6 +70,9 @@ EFI_STATUS EFIAPI LibGetTime(EFI_TIME *Time,EFI_TIME_CAPABILITIES *Capabilities)
     Result.Year=(UINT16)(1968U+Raw[6]);Result.Month=(UINT8)Raw[5];Result.Day=(UINT8)Raw[3];
     Result.Hour=(UINT8)Raw[2];Result.Minute=(UINT8)Raw[1];Result.Second=(UINT8)Raw[0];
     Result.TimeZone=EFI_UNSPECIFIED_TIMEZONE; /* RTC stores no timezone. */
+#if A04BR3_MT6392_RTC_RUNTIME_COUNTER
+    Status=RtcCounterSeed(&Result);if(EFI_ERROR(Status))break;
+#endif
     CopyMem(Time,&Result,sizeof(Result));Status=EFI_SUCCESS;break;
   }
 Done:
@@ -72,6 +91,18 @@ EFI_STATUS EFIAPI LibGetWakeupTime(BOOLEAN *Enabled,BOOLEAN *Pending,EFI_TIME *T
 {return !Enabled || !Pending || !Time?EFI_INVALID_PARAMETER:EFI_UNSUPPORTED;}
 EFI_STATUS EFIAPI LibSetWakeupTime(BOOLEAN Enabled,EFI_TIME *Time)
 {return Enabled && !Time?EFI_INVALID_PARAMETER:EFI_UNSUPPORTED;}
+#if A04BR3_MT6392_RTC_RUNTIME_COUNTER
+STATIC VOID EFIAPI RtcBeforeExit(EFI_EVENT Event,VOID *Context)
+{
+  EFI_TIME Last;EFI_STATUS Status;
+  (VOID)Event;(VOID)Context;
+  /* Refresh from real TC immediately before handoff, while boot still owns
+   * WACS2. A failed final snapshot invalidates the runtime clock. */
+  mCounterValid=FALSE;Status=LibGetTime(&Last,NULL);
+  if(EFI_ERROR(Status))mCounterValid=FALSE;
+  DEBUG((DEBUG_ERROR,"A04RTC counter-handoff status=%r valid=%u source=MT6392+CNTPCT live_pmic_runtime=0 suspend_compensation=0\n",Status,(UINT32)mCounterValid));
+}
+#endif
 EFI_STATUS EFIAPI LibRtcInitialize(EFI_HANDLE ImageHandle,EFI_SYSTEM_TABLE *SystemTable)
 {
   EFI_STATUS Status;EFI_RT_PROPERTIES_TABLE *Previous=NULL;EFI_TIME Probe;
@@ -89,8 +120,19 @@ EFI_STATUS EFIAPI LibRtcInitialize(EFI_HANDLE ImageHandle,EFI_SYSTEM_TABLE *Syst
   } else mProperties.RuntimeServicesSupported=0x3fffU;
   mProperties.RuntimeServicesSupported&=~(EFI_RT_SUPPORTED_GET_TIME|EFI_RT_SUPPORTED_SET_TIME|
     EFI_RT_SUPPORTED_GET_WAKEUP_TIME|EFI_RT_SUPPORTED_SET_WAKEUP_TIME);
-  Status=gBS->InstallConfigurationTable(&gEfiRtPropertiesTableGuid,&mProperties);
+#if A04BR3_MT6392_RTC_RUNTIME_COUNTER
+  mProperties.RuntimeServicesSupported|=EFI_RT_SUPPORTED_GET_TIME;
+  Status=gBS->CreateEventEx(EVT_NOTIFY_SIGNAL,TPL_CALLBACK,RtcBeforeExit,NULL,
+    &gEfiEventBeforeExitBootServicesGuid,&mBeforeExitEvent);
   if(EFI_ERROR(Status))return Status;
+#endif
+  Status=gBS->InstallConfigurationTable(&gEfiRtPropertiesTableGuid,&mProperties);
+  if(EFI_ERROR(Status)) {
+#if A04BR3_MT6392_RTC_RUNTIME_COUNTER
+    gBS->CloseEvent(mBeforeExitEvent);mBeforeExitEvent=NULL;mCounterValid=FALSE;
+#endif
+    return Status;
+  }
   /* Driver registration must succeed even if the clock is unavailable; the
    * real GetTime then fails rather than leaving a fabricated default clock. */
   (VOID)LibGetTime(&Probe,NULL);

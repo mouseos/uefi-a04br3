@@ -1,4 +1,7 @@
-# RTC runtimeの成立条件と未完了点
+# RTC runtime直読の成立条件と未完了点
+
+この本文は24377acf時点のlive RTC直読調査。後続の別候補（実RTC seed＋physical counter）は
+RTC-COUNTER-CLOCK.mdに分離した。以下のPWRAP直読/Capabilities/SetTimeの未解決点は維持する。
 
 39bbe10a後の調査。現時点でEBS後GetTime/Capabilitiesは**未完成**。
 共通EDK2/canonical/実機を変更せず、39bbeのruntime refusalを維持する。

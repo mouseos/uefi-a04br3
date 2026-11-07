@@ -1,5 +1,8 @@
 # MT6392 RTC calendarのboot読出し
 
+別の既定OFF RTC_RUNTIME_COUNTER候補はRTC-COUNTER-CLOCK.mdを参照。
+本文のboot-only仕様はRTC_READ単独のもので、live RTC直読やcapsの制約は変えない。
+
 実装範囲は機種package内の既定OFF `A04BR3_MT6392_RTC_READ=1`。
 既存RealTimeClockRuntimeDxeのlibrary bindingだけを機種Mt6392RtcLibへ替える。
 共通EDK2、既存PwrapRead.h、GPU/4CPU/ACPI GUID/brightness/touch/battery/buttons/
