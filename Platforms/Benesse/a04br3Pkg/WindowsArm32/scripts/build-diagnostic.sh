@@ -30,6 +30,8 @@ shared_io=${A04_DIAGNOSTIC_SHARED_IO_PROFILE:-0}
 [[ $shared_io == 0 || ($shared_io == 1 && $shared == 1 && $apmixed == 1 && $battery == 1 && $gpu == 1 && $display == 1 && $shared_touch_power == 1) ]] || exit 2
 bq=${A04_DIAGNOSTIC_BQ_HANDOFF:-0}
 thermal=${A04_DIAGNOSTIC_THERMAL_HANDOFF_RECORD:-0}
+thermal_pio=${A04_DIAGNOSTIC_THERMAL_PIO_HANDOFF:-0}
+[[ $thermal_pio == 0 || ($thermal_pio == 1 && $thermal == 1) ]] || exit 2
 gce_observation=${A04_DIAGNOSTIC_GCE_OBSERVATION:-0}
 [[ $gce_observation == 0 || $gce_observation == 1 ]] || exit 2
 [[ $thermal == 0 || $thermal == 1 ]] || exit 2
@@ -123,6 +125,7 @@ if [[ $clear_lk_overlay == 1 ]]; then buildflags+=(-D A04BR3_CLEAR_LK_OVERLAY=1)
 if [[ $touch == 1 ]]; then buildflags+=(-D A04BR3_TOUCH_PROVIDER=1); fi
 if [[ $shared == 1 ]]; then buildflags+=(-D A04BR3_SHARED_PARENT=1); fi
 if [[ $shared_touch_power == 1 ]]; then buildflags+=(-D A04BR3_SHARED_TOUCH_POWER=1); fi
+if [[ $thermal_pio == 1 ]]; then buildflags+=(-D A04BR3_THERMAL_PIO_HANDOFF=1); fi
 if [[ $sd_pio == 1 ]]; then buildflags+=(-D A04BR3_SD_PIO_PROFILE=1); fi
 if [[ $shared_io == 1 ]]; then buildflags+=(-D A04BR3_SHARED_IO_PROFILE=1); fi
 if [[ $apmixed == 1 ]]; then buildflags+=(-D A04BR3_SHARED_APMIXED=1); fi
@@ -161,10 +164,10 @@ EOF
   fi
   "$a64prefix"objcopy -O binary "$shimobj" "$fv/BootShim.bin"
 fi
-python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" "$gce_observation" "$cpu1_l1" "$clear_lk_overlay" "$gpu_mmpll" "$shared_io" "$display_brightness" "$sd_pio" <<'PY'
+python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" "$gce_observation" "$cpu1_l1" "$clear_lk_overlay" "$gpu_mmpll" "$shared_io" "$display_brightness" "$sd_pio" "$thermal_pio" <<'PY'
 from pathlib import Path
 import hashlib,json,subprocess,sys
-root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce,gce_observation,cpu1_l1,clear_lk_overlay,gpu_mmpll,shared_io,display_brightness,sd_pio=sys.argv[1:]
+root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce,gce_observation,cpu1_l1,clear_lk_overlay,gpu_mmpll,shared_io,display_brightness,sd_pio,thermal_pio=sys.argv[1:]
 def sha(path):
  h=hashlib.sha256()
  with open(path,'rb') as f:
@@ -201,6 +204,7 @@ result['acpi_storage_validation']=json.loads((fd.parent/'acpi-storage-validation
 result['build_defines']['A04BR3_BATTERY_PROVIDER']=battery
 result['build_defines']['A04BR3_GPU_HANDOFF']=gpu
 result['build_defines']['A04BR3_GPU_MMPLL']=gpu_mmpll
+result['build_defines']['A04BR3_THERMAL_PIO_HANDOFF']=thermal_pio
 result['build_defines']['A04BR3_SD_PIO_PROFILE']=sd_pio
 result['sd_pio']=dict(json.loads((Path(root)/'Platforms/Benesse/a04br3Pkg/WindowsArm32/Acpi/sd-pio-contract.json').read_text()),enabled=sd_pio=='1')
 result['gpu_clock_record']={'name':'Mt8167GpuClock','guid':'9c50bc94-6c80-4fa2-939d-9278d07f7010','version':1,'bytes':44,'attributes':6,'fields':['version','bytes','parent','clock_hz','con0','con1','power','rail_control','rail_status','sel0','sel1'],'publish':'validated-parent7-only','fallback_hz':26000000}

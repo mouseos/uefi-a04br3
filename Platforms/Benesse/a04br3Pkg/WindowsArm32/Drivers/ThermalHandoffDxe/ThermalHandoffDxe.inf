@@ -9,10 +9,13 @@
 [Sources]
   ThermalHandoffDxe.c
   ThermalHandoffRecord.h
+  ThermalPioHandoff.c
+  ThermalPioRecord.h
 [Packages]
   MdePkg/MdePkg.dec
 [LibraryClasses]
   DebugLib
+  IoLib
   UefiBootServicesTableLib
   UefiRuntimeServicesTableLib
   UefiDriverEntryPoint

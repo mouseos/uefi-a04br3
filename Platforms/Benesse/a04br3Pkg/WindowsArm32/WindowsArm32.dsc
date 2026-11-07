@@ -211,6 +211,12 @@
 !endif
 
 # Observation only: no ownership or EL3 handoff is asserted.
+!ifndef A04BR3_THERMAL_PIO_HANDOFF
+  DEFINE A04BR3_THERMAL_PIO_HANDOFF = 0
+!endif
+!if $(A04BR3_THERMAL_PIO_HANDOFF) != 0 && $(A04BR3_THERMAL_PIO_HANDOFF) != 1
+  !error A04BR3_THERMAL_PIO_HANDOFF must be 0 or 1
+!endif
 !ifndef A04BR3_THERMAL_HANDOFF_RECORD
   DEFINE A04BR3_THERMAL_HANDOFF_RECORD = 0
 !endif
@@ -557,7 +563,10 @@ DEFINE DARWINBOOT_BOARD_HANDOFF = $(A04BR3_CHARGER_OWNER)
 !endif
 !endif
 !if $(A04BR3_THERMAL_HANDOFF_RECORD) == 1
-  a04br3Pkg/WindowsArm32/Drivers/ThermalHandoffDxe/ThermalHandoffDxe.inf
+  a04br3Pkg/WindowsArm32/Drivers/ThermalHandoffDxe/ThermalHandoffDxe.inf {
+    <BuildOptions>
+      GCC:*_*_ARM_CC_FLAGS = -DA04BR3_THERMAL_PIO_HANDOFF=$(A04BR3_THERMAL_PIO_HANDOFF)
+  }
 !endif
 !if $(A04BR3_GCE_OBSERVATION) == 1
   a04br3Pkg/WindowsArm32/Drivers/GceObservationDxe/GceObservationDxe.inf
