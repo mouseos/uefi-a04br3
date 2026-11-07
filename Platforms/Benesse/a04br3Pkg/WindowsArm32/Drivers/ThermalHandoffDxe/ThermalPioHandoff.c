@@ -35,7 +35,7 @@ VOID A04ThermalPioBeforeExit(VOID) {
  if(!Idle(T+0x418,0xffff0000U,50,2))goto publish;
  r.ahb_after=MmioRead32(T+0x418);r.stage=4;
  // No future thermal AHB/IRQ producer survives this handoff. Linux INFRA reset.
- MmioWrite32(I+0x120,1);r.reset_after=MmioRead32(I+0x128);if(!(r.reset_after&1))goto publish;
+ MmioWrite32(I+0x120,1);r.reset_after=MmioRead32(I+0x128);if(r.reset_after==MAX_UINT32||!(r.reset_after&1))goto publish;
  // AUXADC Linux suspend clears all software channel triggers. Do not guess
  // other auto-mode configurations: only the known thermal channel11 is removed.
  v=MmioRead16(A);if(v==0xffffU || (v&~0x800U))goto publish;
