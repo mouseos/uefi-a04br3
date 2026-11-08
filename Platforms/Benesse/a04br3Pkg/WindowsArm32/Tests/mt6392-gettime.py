@@ -44,7 +44,9 @@ typedef struct {UINT32 Resolution,Accuracy;BOOLEAN SetsToZero;} EFI_TIME_CAPABIL
 static unsigned probe_registrations;void MtRtcRegisterBootProbe(void){++probe_registrations;}
 static UINT64 counter=1000000;static UINT32 frequency=1000;static unsigned reads,mmio,raised,restored;static int runtime_phase,fault,unstable;
 static UINT16 raw[7]={58,59,23,28,0,2,58};
-UINT64 ArmGenericTimerGetSystemCount(void){return counter;}
+static unsigned synchronized;
+void ArmInstructionSynchronizationBarrier(void){synchronized=1;}
+UINT64 ArmGenericTimerGetSystemCount(void){assert(synchronized);synchronized=0;return counter;}
 UINTN ArmGenericTimerGetTimerFreq(void){return frequency;}
 void ArmDataSynchronizationBarrier(void){}
 UINT32 MmioRead32(UINTN a){assert(!runtime_phase&&a==0x1000f09c);++mmio;return 1;}

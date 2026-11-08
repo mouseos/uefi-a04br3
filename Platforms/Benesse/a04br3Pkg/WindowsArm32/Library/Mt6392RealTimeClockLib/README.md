@@ -12,7 +12,7 @@ counter/timerが正常動作するbootを前提とする。異常タイマーま
 
 ## runtime
 
-immutable scalarのseed seconds/counter/frequencyだけをDXE_RUNTIME_DRIVER内に保持する。GetTimeは既存USE_PHYSICAL_TIMER=1→PhyCounterLibのArmReadCntPct/CntFrqを読むだけで、PWRAP/MMIO/gBS/gRT/NVサービスへ進まない。pointer/boot allocation/関数callbackを保持しないため独自ConvertPointerは不要。既存UefiRuntimeLibはgeneric RTC driverのruntime table pointerを標準のvirtual-address eventで変換する。
+immutable scalarのseed seconds/counter/frequencyだけをDXE_RUNTIME_DRIVER内に保持する。GetTimeは既存USE_PHYSICAL_TIMER=1→PhyCounterLibのArmReadCntPct/CntFrqを読むだけで、PWRAP/MMIO/gBS/gRT/NVサービスへ進まない。CT3 arch/arm/include/asm/arch_timer.hのISB→MRRCに従い、機種wrapperで各CNTPCT読出し前にISBを置く。共通ArmLibは変更しない。pointer/boot allocation/関数callbackを保持しないため独自ConvertPointerは不要。既存UefiRuntimeLibはgeneric RTC driverのruntime table pointerを標準のvirtual-address eventで変換する。
 
 1秒分解能、Nanosecond0、TimeZone=EFI_UNSPECIFIED_TIMEZONE、Daylight0（DST管理無し）。UTC/JSTへ変換しない。frequency0/変化、counter巻戻り、日付overflowはEFI_DEVICE_ERROR。physical counterの将来の停止/forward jumpやsleep継続、oscillator精度は未検証であり、実時刻精度やsleep-resumeを保証しない。
 
