@@ -52,10 +52,12 @@ EFI_STATUS EFIAPI LibGetTime(OUT EFI_TIME *Time,OUT EFI_TIME_CAPABILITIES *Capab
 }
 EFI_STATUS EFIAPI LibSetTime(IN EFI_TIME *Time){return Time?EFI_UNSUPPORTED:EFI_INVALID_PARAMETER;}
 EFI_STATUS EFIAPI LibGetWakeupTime(OUT BOOLEAN *Enabled,OUT BOOLEAN *Pending,OUT EFI_TIME *Time){
- if(!Enabled||!Pending||!Time)return EFI_INVALID_PARAMETER;return EFI_UNSUPPORTED;
+ if(!Enabled||!Pending||!Time) { return EFI_INVALID_PARAMETER; }
+ return EFI_UNSUPPORTED;
 }
 EFI_STATUS EFIAPI LibSetWakeupTime(IN BOOLEAN Enabled,OUT EFI_TIME *Time){
- if(Enabled&&!Time)return EFI_INVALID_PARAMETER;return EFI_UNSUPPORTED;
+ if(Enabled&&!Time) { return EFI_INVALID_PARAMETER; }
+ return EFI_UNSUPPORTED;
 }
 EFI_STATUS EFIAPI LibRtcInitialize(IN EFI_HANDLE ImageHandle,IN EFI_SYSTEM_TABLE *SystemTable){
  EFI_TPL old;EFI_STATUS status;EFI_TIME check;
