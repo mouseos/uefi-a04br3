@@ -11,6 +11,8 @@ battery=${A04_DIAGNOSTIC_BATTERY:-0}
 gpu=${A04_DIAGNOSTIC_GPU:-0}
 sd_pio=${A04_DIAGNOSTIC_SD_PIO_PROFILE:-0}
 gpu_domain=${A04_DIAGNOSTIC_GPU_DOMAIN_OWNER:-0}
+gpu_thermal=${A04_DIAGNOSTIC_GPU_THERMAL_PROFILE:-0}
+[[ $gpu_thermal == 0 || $gpu_thermal == 1 ]] || exit 2
 [[ $gpu_domain == 0 || $gpu_domain == 1 ]] || exit 2
 [[ $sd_pio == 0 || $sd_pio == 1 ]] || exit 2
 if [[ $sd_pio == 1 ]]; then
@@ -33,6 +35,9 @@ shared_io=${A04_DIAGNOSTIC_SHARED_IO_PROFILE:-0}
 [[ $shared_io == 0 || ($shared_io == 1 && $shared == 1 && $apmixed == 1 && $battery == 1 && $gpu == 1 && $display == 1 && $shared_touch_power == 1) ]] || exit 2
 bq=${A04_DIAGNOSTIC_BQ_HANDOFF:-0}
 thermal=${A04_DIAGNOSTIC_THERMAL_HANDOFF_RECORD:-0}
+thermal_pio=${A04_DIAGNOSTIC_THERMAL_PIO_HANDOFF:-0}
+[[ $thermal_pio == 0 || ($thermal_pio == 1 && $thermal == 1) ]] || exit 2
+[[ $gpu_thermal == 0 || ($gpu_domain == 1 && $sd_pio == 1 && $thermal_pio == 1) ]] || { echo "1101 requires GPU domain/SD1/thermal PIO handoff" >&2; exit 2; }
 gce_observation=${A04_DIAGNOSTIC_GCE_OBSERVATION:-0}
 [[ $gce_observation == 0 || $gce_observation == 1 ]] || exit 2
 [[ $thermal == 0 || $thermal == 1 ]] || exit 2
@@ -126,8 +131,10 @@ if [[ $clear_lk_overlay == 1 ]]; then buildflags+=(-D A04BR3_CLEAR_LK_OVERLAY=1)
 if [[ $touch == 1 ]]; then buildflags+=(-D A04BR3_TOUCH_PROVIDER=1); fi
 if [[ $shared == 1 ]]; then buildflags+=(-D A04BR3_SHARED_PARENT=1); fi
 if [[ $shared_touch_power == 1 ]]; then buildflags+=(-D A04BR3_SHARED_TOUCH_POWER=1); fi
+if [[ $thermal_pio == 1 ]]; then buildflags+=(-D A04BR3_THERMAL_PIO_HANDOFF=1); fi
 if [[ $sd_pio == 1 ]]; then buildflags+=(-D A04BR3_SD_PIO_PROFILE=1); fi
 if [[ $gpu_domain == 1 ]]; then buildflags+=(-D A04BR3_GPU_DOMAIN_OWNER=1); fi
+if [[ $gpu_thermal == 1 ]]; then buildflags+=(-D A04BR3_GPU_THERMAL_PROFILE=1); fi
 if [[ $shared_io == 1 ]]; then buildflags+=(-D A04BR3_SHARED_IO_PROFILE=1); fi
 if [[ $apmixed == 1 ]]; then buildflags+=(-D A04BR3_SHARED_APMIXED=1); fi
 "$EDK_TOOLS_PATH/BinWrappers/PosixLike/build" -p a04br3Pkg/WindowsArm32/WindowsArm32.dsc -a ARM -b DEBUG -t GCC5 -D FD_BASE=0x41080000 -D FD_SIZE=0x00300000 -D FD_BLOCKS=0x300 -D "A04_BUILD_OUTPUT=Build/$output" "${buildflags[@]}"
@@ -165,10 +172,10 @@ EOF
   fi
   "$a64prefix"objcopy -O binary "$shimobj" "$fv/BootShim.bin"
 fi
-python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" "$gce_observation" "$cpu1_l1" "$clear_lk_overlay" "$gpu_mmpll" "$shared_io" "$display_brightness" "$sd_pio" "$gpu_domain" <<'PY'
+python3 - "$root" "$canonical" "$oldtools" "$template" "$gccprefix" "$output" "$conf" "$three" "$a64prefix" "$overlay" "$battery" "$gpu" "$display" "$touch" "$shared" "$apmixed" "$bq" "$thermal" "$shared_touch_power" "$display_gce" "$gce_observation" "$cpu1_l1" "$clear_lk_overlay" "$gpu_mmpll" "$shared_io" "$display_brightness" "$sd_pio" "$gpu_domain" "$thermal_pio" "$gpu_thermal" <<'PY'
 from pathlib import Path
 import hashlib,json,subprocess,sys
-root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce,gce_observation,cpu1_l1,clear_lk_overlay,gpu_mmpll,shared_io,display_brightness,sd_pio,gpu_domain=sys.argv[1:]
+root,canonical,old,template,gccprefix,output,conf,three,a64prefix,overlay,battery,gpu,display,touch,shared,apmixed,bq,thermal,shared_touch_power,display_gce,gce_observation,cpu1_l1,clear_lk_overlay,gpu_mmpll,shared_io,display_brightness,sd_pio,gpu_domain,thermal_pio,gpu_thermal=sys.argv[1:]
 def sha(path):
  h=hashlib.sha256()
  with open(path,'rb') as f:
@@ -207,6 +214,9 @@ result['build_defines']['A04BR3_GPU_HANDOFF']=gpu
 result['build_defines']['A04BR3_GPU_MMPLL']=gpu_mmpll
 result['build_defines']['A04BR3_GPU_DOMAIN_OWNER']=gpu_domain
 result['gpu_domain']=dict(enabled=gpu_domain=='1',parent='1014 SD-on V2 SPM',resource_base='0x10006000',resource_bytes=4096,default_off=True)
+result['build_defines']['A04BR3_THERMAL_PIO_HANDOFF']=thermal_pio
+result['build_defines']['A04BR3_GPU_THERMAL_PROFILE']=gpu_thermal
+result['gpu_thermal']=dict(enabled=gpu_thermal=='1',parent='1101 RTC/capture1026 GPU/SD1/thermal PIO',thermal_base='0x1100d000',adc_base='0x11003000',range_bytes=4096,default_off=True)
 result['build_defines']['A04BR3_SD_PIO_PROFILE']=sd_pio
 result['sd_pio']=dict(json.loads((Path(root)/'Platforms/Benesse/a04br3Pkg/WindowsArm32/Acpi/sd-pio-contract.json').read_text()),enabled=sd_pio=='1')
 result['gpu_clock_record']={'name':'Mt8167GpuClock','guid':'9c50bc94-6c80-4fa2-939d-9278d07f7010','version':1,'bytes':44,'attributes':6,'fields':['version','bytes','parent','clock_hz','con0','con1','power','rail_control','rail_status','sel0','sel1'],'publish':'validated-parent7-only','fallback_hz':26000000}

@@ -18,7 +18,7 @@
 
 #include "Pi.h"
 #if A04BR3_THERMAL_PROVIDER == 1
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <Library/HobLib.h>
 #include <A04BR3ThermalCal.h>
 STATIC EFI_GUID mThermalCalGuid = A04BR3_THERMAL_CAL_GUID;
@@ -26,12 +26,12 @@ STATIC VOID CaptureThermalCal (UINT32 Address) {
   CONST VOID *Tree; CONST UINT8 *Prop; UINT32 Count, Size; INT32 Node, Len; A04BR3_THERMAL_CAL Cal;
   if (Address < 0x40000000U || Address > 0xbfffffd8U || (Address & 3U)) return;
   Tree=(CONST VOID *)(UINTN)Address;
-  if (fdt_check_header(Tree) != 0) return;
-  Size=fdt_totalsize(Tree);
+  if (FdtCheckHeader(Tree) != 0) return;
+  Size=FdtTotalSize(Tree);
   if (Size < 40 || Size > 0x100000U || Size > 0xc0000000U-Address) return;
-  Node=fdt_path_offset(Tree,"/chosen"); if (Node<0) Node=fdt_path_offset(Tree,"/chosen@0");
+  Node=FdtPathOffset(Tree,"/chosen"); if (Node<0) Node=FdtPathOffset(Tree,"/chosen@0");
   if (Node<0) return;
-  Prop=(CONST UINT8 *)fdt_getprop(Tree,Node,"atag,devinfo",&Len);
+  Prop=(CONST UINT8 *)FdtGetProp(Tree,Node,"atag,devinfo",&Len);
   if (Prop==NULL || Len<256) return;
   Count=ReadUnaligned32((CONST UINT32 *)Prop);
   if (Count<63 || Count>300 || Count>(UINT32)(Len-4)/4) return;
