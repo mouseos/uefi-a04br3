@@ -24,6 +24,23 @@ STATIC BOOLEAN Idle(UINTN Address,UINT32 Mask,UINTN Attempts,UINTN Delay) {
  UINTN n;UINT32 v;
  for(n=0;n<Attempts;n++) {v=MmioRead32(Address);if(v==MAX_UINT32)return FALSE;if(!(v&Mask))return TRUE;gBS->Stall(Delay);}return FALSE;
 }
+/* CT3 suspend: idle -> pause all sensing -> MON0 -> clock off.
+ * Only an already retained stopped program may use the probe clock-on/reset
+ * order. Never prepare or wake an unqualified old AHB address program.
+ * Nonzero pause bits reject the all-zero gated-register response.
+ * All offsets below are already read by the existing stop/ready path. */
+STATIC BOOLEAN ThermalStoppedBeforeUngate(VOID) {
+ UINT32 pause,mon,ahb,irq,pending;UINT16 mode,trigger,busy;
+ pause=MmioRead32(T+0x3c);mon=MmioRead32(T);
+ ahb=MmioRead32(T+0x418);irq=MmioRead32(T+0xc);pending=MmioRead32(T+0x10);
+ mode=MmioRead16(A);trigger=MmioRead16(A+4);busy=MmioRead16(A+0x10);
+ if(pause==MAX_UINT32||(pause&0x10eU)!=0x10eU||mon||ahb==MAX_UINT32||
+    (ahb&0xffff0000U)||irq||pending||mode||trigger||busy==0xffffU||(busy&1)) {
+  DEBUG((DEBUG_ERROR,"A04 THM PIO stage1 pre-ungate-stop-proof rejected; no clock/reset write\n"));
+  return FALSE;
+ }
+ return TRUE;
+}
 VOID A04ThermalPioBeforeExit(VOID) {
  A04_THERMAL_PIO_RECORD r={0};EFI_GUID guid=A04_THERMAL_PIO_GUID;EFI_STATUS status;UINT32 v,stage1Readback;UINTN n;
  if(mAttempted) { return; }
@@ -31,15 +48,30 @@ VOID A04ThermalPioBeforeExit(VOID) {
  r.clock_before=MmioRead32(TOP+0x24);r.reset_before=MmioRead32(I+0x128);
  if(r.clock_before==MAX_UINT32||r.reset_before==MAX_UINT32)goto publish;
  if((r.clock_before&0x40000002U)||(r.reset_before&1)) {
-  // Linux reset precedes ungating: never resume an old AHB address program.
-  ThermalSyncWrite32(I+0x120,1);stage1Readback=MmioRead32(I+0x128);
-  if(!(stage1Readback&1)) {
-   DEBUG((DEBUG_ERROR,"A04 THM PIO stage1 phase=1(assert) actual=%08x\n",stage1Readback));goto publish;
-  }
-  ThermalSyncWrite32(TOP+0x84,r.clock_before&0x40000002U);
-  stage1Readback=MmioRead32(TOP+0x24);
-  if(stage1Readback&0x40000002U) {
-   DEBUG((DEBUG_ERROR,"A04 THM PIO stage1 phase=2(ungate) actual=%08x\n",stage1Readback));goto publish;
+  if((r.clock_before&0x40000002U)&&!(r.reset_before&1)) {
+   /* Linux probe is clock_on -> reset. Only use it if the old program is
+    * already paused/disabled/idle. A failed guard performs no control write. */
+   if(!ThermalStoppedBeforeUngate())goto publish;
+   ThermalSyncWrite32(TOP+0x84,r.clock_before&0x40000002U);
+   stage1Readback=MmioRead32(TOP+0x24);
+   if(stage1Readback==MAX_UINT32||(stage1Readback&0x40000002U)) {
+    DEBUG((DEBUG_ERROR,"A04 THM PIO stage1 phase=2(ungate) actual=%08x\n",stage1Readback));goto publish;
+   }
+   ThermalSyncWrite32(I+0x120,1);stage1Readback=MmioRead32(I+0x128);
+   if(stage1Readback==MAX_UINT32||!(stage1Readback&1)) {
+    DEBUG((DEBUG_ERROR,"A04 THM PIO stage1 phase=1(assert) actual=%08x\n",stage1Readback));goto publish;
+   }
+  } else {
+   /* Existing reset-first path when reset is already asserted. */
+   ThermalSyncWrite32(I+0x120,1);stage1Readback=MmioRead32(I+0x128);
+   if(stage1Readback==MAX_UINT32||!(stage1Readback&1)) {
+    DEBUG((DEBUG_ERROR,"A04 THM PIO stage1 phase=1(assert) actual=%08x\n",stage1Readback));goto publish;
+   }
+   ThermalSyncWrite32(TOP+0x84,r.clock_before&0x40000002U);
+   stage1Readback=MmioRead32(TOP+0x24);
+   if(stage1Readback==MAX_UINT32||(stage1Readback&0x40000002U)) {
+    DEBUG((DEBUG_ERROR,"A04 THM PIO stage1 phase=2(ungate) actual=%08x\n",stage1Readback));goto publish;
+   }
   }
   ThermalSyncWrite32(I+0x124,1);stage1Readback=MmioRead32(I+0x128);
   if(stage1Readback&1) {

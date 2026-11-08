@@ -1,0 +1,13 @@
+# 既停止条件付きthermal probe順候補
+
+783fからの独立後段差分。現在一括へ混載しない。DSB追加で実assert0は解消しなかった。clock停止中のreset latch未反映は有力候補であり未確定。
+
+固定CT3 7c478212のmtk_ts_cpu.c:tscpu_thermal_probeはAUXADC/thermalのclock_on→reset-pair。suspendはAHB high16 idle→TEMPMSRCTL1 pause10e→MON0→clockoff、releaseはpause10eを明示clearする。これを条件として既停止のretained programだけにprobe順を許す。Linuxがゲート中readback成功を保証すると一般化しない。
+
+clock_beforeの対象gateがありreset_before bit0が無い場合、既に使っているregister offsetだけを先行readし、pause10e全bit/MON0/AHB high16idle/IRQ enable0/pending0/AUXADC mode0/trigger0/busy0を全て要求する。非ゼロpauseを必須とし、gate中の全ゼロ読出しを停止証拠にしない。未知bank/追加SMCなし。既知offsetへの先行read8回は追加されるため、従来とMMIO access数が同じとは称さない。いずれか不成立ならclock/reset write前にready0で終了する。pauseやMONを条件成立用に書換えない。
+
+条件成立時だけLinuxprobeに合わせungate→strict gate readback→assert→strict STA readback→deassert→strict STA readback。既assert時は旧reset-first順を保持。後段IRQ disable/AHB idle/pause/MON0/AHB idle/最終reset保持/ADC停止/ready6の全確認を保持。record72byte/version2とWindows親1104/HP1107のV3 owner ABIは非変更。guard除去/ready合成ではない。
+
+gate中read値が有効なretained値を返すこと自体のsilicon資格、未知EL3 ownerとUEFI観測の相互排他、現在のmatchedbootがこの条件を満たすことは未証明。上記の失敗閉鎖条件は、現在のready0を必ず解消するものではない。全条件読戻し→strict reset成功が次通常一括で確認されるまで、根因/温度/HP校正・音出し成功とは称さない。専用probe bootを要求しない。
+
+Tests/thermal-idle-probe-order.pyはproduction C制御flowを限定MMIO modelで実行し、各停止条件拒否時のwrite0、二つの順序、strict gate/assert/deassert拒否、全write後DSB、最終reset/72byte record/onceをASan/UBSanで確認する。modelが返したready1は実MMIO成功ではない。旧thermal-write-completion/stage1-readback試験は旧順序比較用の履歴で、この候補の制御flow試験は本scriptを使う。
