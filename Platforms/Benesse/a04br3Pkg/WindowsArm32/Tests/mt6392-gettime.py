@@ -41,6 +41,7 @@ typedef uint8_t UINT8;typedef uint16_t UINT16;typedef uint32_t UINT32;typedef ui
 #define DEBUG_ERROR 1
 typedef struct {UINT16 Year;UINT8 Month,Day,Hour,Minute,Second,Pad1;UINT32 Nanosecond;int16_t TimeZone;UINT8 Daylight,Pad2;} EFI_TIME;
 typedef struct {UINT32 Resolution,Accuracy;BOOLEAN SetsToZero;} EFI_TIME_CAPABILITIES;
+static unsigned probe_registrations;void MtRtcRegisterBootProbe(void){++probe_registrations;}
 static UINT64 counter=1000000;static UINT32 frequency=1000;static unsigned reads,mmio,raised,restored;static int runtime_phase,fault,unstable;
 static UINT16 raw[7]={58,59,23,28,0,2,58};
 UINT64 ArmGenericTimerGetSystemCount(void){return counter;}
@@ -70,7 +71,7 @@ int main(void){EFI_SYSTEM_TABLE st={0};EFI_TIME t,old;EFI_TIME_CAPABILITIES cap,
  assert(LibRtcInitialize(NULL,&st)==EFI_SUCCESS&&!mValid);runtime_phase=1;assert(LibGetTime(&t,NULL)==EFI_DEVICE_ERROR);
  runtime_phase=0;mInitialized=mValid=0;fault=0;unstable=1;reads=0;counter=1000000;
  assert(LibRtcInitialize(NULL,&st)==0&&!mValid&&reads==30);runtime_phase=1;assert(LibGetTime(&t,NULL)==EFI_DEVICE_ERROR);
- assert(raised==3&&restored==3);puts("PASS actual library control flow: one bounded boot seed, no runtime PMIC/MMIO, frequency/backward/failure rejection, unsupported quality/set/alarm, TPL restored");
+ assert(raised==3&&restored==3&&probe_registrations==3);puts("PASS actual library control flow: one bounded boot seed, no runtime PMIC/MMIO, frequency/backward/failure rejection, unsupported quality/set/alarm, TPL restored");
 }
 '''
 (o/'runtime-test.c').write_text(head)

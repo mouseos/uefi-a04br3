@@ -8,6 +8,7 @@
  LIBRARY_CLASS = RealTimeClockLib|DXE_RUNTIME_DRIVER
 [Sources]
  Mt6392Rtc.c
+ BootProbe.c
  Calendar.h
 [Packages]
  MdePkg/MdePkg.dec
@@ -19,6 +20,9 @@
  ArmLib
  ArmGenericTimerCounterLib
  UefiBootServicesTableLib
+ UefiRuntimeServicesTableLib
  DebugLib
  IoLib
  TimerLib
+[Guids]
+ gEfiEventReadyToBootGuid

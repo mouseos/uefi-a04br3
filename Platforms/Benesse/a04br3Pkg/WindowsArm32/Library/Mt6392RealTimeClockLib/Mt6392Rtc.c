@@ -15,6 +15,7 @@
 STATIC BOOLEAN mInitialized,mValid;
 STATIC UINT32 mFrequency;
 STATIC UINT64 mSeedCounter,mSeedSeconds;
+VOID MtRtcRegisterBootProbe(VOID);
 /* Invoked only once by LibRtcInitialize before installing the RTC Arch
  * protocol. HIGH_LEVEL blocks other DXE events using the same boot transport.
  * AP boot workers do not use WACS2. No transport reset/recovery is offered. */
@@ -60,7 +61,7 @@ EFI_STATUS EFIAPI LibSetWakeupTime(IN BOOLEAN Enabled,OUT EFI_TIME *Time){
  return EFI_UNSUPPORTED;
 }
 EFI_STATUS EFIAPI LibRtcInitialize(IN EFI_HANDLE ImageHandle,IN EFI_SYSTEM_TABLE *SystemTable){
- EFI_TPL old;EFI_STATUS status;EFI_TIME check;
+ EFI_TPL old;EFI_STATUS status;
  (VOID)ImageHandle;
  if(mInitialized)return EFI_ALREADY_STARTED;
  if(!SystemTable||!gBS)return EFI_INVALID_PARAMETER;
@@ -72,8 +73,7 @@ EFI_STATUS EFIAPI LibRtcInitialize(IN EFI_HANDLE ImageHandle,IN EFI_SYSTEM_TABLE
   gBS->RestoreTPL(old);
  }
  DEBUG((DEBUG_ERROR,"MT6392 RTC boot seed status=%r valid=%u; local timezone unspecified; accuracy unqualified\n",status,(UINT32)mValid));
- if(mValid&&!EFI_ERROR(LibGetTime(&check,NULL)))
-  DEBUG((DEBUG_ERROR,"MT6392 RTC seed-derived local %04u-%02u-%02u %02u:%02u:%02u; counter-derived, no runtime PMIC\n",check.Year,check.Month,check.Day,check.Hour,check.Minute,check.Second));
+ MtRtcRegisterBootProbe();
  /* Install callable services even for a failed seed: GetTime returns error,
   * never a dummy epoch. BDS must not wait forever for an absent RTC protocol. */
  return EFI_SUCCESS;

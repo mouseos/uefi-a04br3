@@ -31,3 +31,5 @@ SetTime/GetWakeupTime/SetWakeupTimeはunsupportedで、成功stub・PMIC clock w
 Tests/mt6392-gettime.pyはproduction calendar/library制御flowを限定host stubで確認する。閏日/月年越し、invalid day0/年/秒/overflow、boot snapshot一回、runtime PMIC/MMIO無し、frequency/巻戻り/seed failure、未知quality/set/alarmの拒否、TPL復元を対象とし、実UEFI/PMIC/Windowsの実行とは区別する。
 
 783fは凍結し、同一profile・全8range/ACPI/4CPU/reset/UART/自動復帰を保持した独立FD/boot候補を作る。現GPU327＋周辺freezeを待たせない。次にmain/Menciusが選ぶ通常一括だけでseed status/実GetTime caller/Windows日時を別々に確認する。Read-only RTC IOCTLの2026成功をOS時計同期の証拠にしない。
+
+ReadyToBootで一回だけ標準gRT->GetTimeをTime-onlyとCapabilities付きで照会するboot専用probeを登録する。eventを閉じ、registration pointerをruntime stateへ保存しない。前者の実status/返却local calendarと後者の非対応statusを別に記録し、SetTimeは呼ばない。これも実Windows壁時計同期の証拠とはしない。Lib内部の自己呼出しだけを標準table成功と誤認しないための消費側接続である。boot probe登録失敗は診断失敗として記録し、サービス自体の登録を妨げない。
