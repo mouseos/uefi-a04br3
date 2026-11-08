@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include <Uefi.h>
 #include <Library/IoLib.h>
+#include <Library/ArmLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/DebugLib.h>
@@ -9,6 +10,15 @@
 #define A 0x11003000U
 #define TOP 0x10000000U
 #define I 0x10001000U
+/* CT3 sync_write.h: volatile register store followed by mb()==dsb(sy).
+ * The selected board IoLib only stores; MemoryFence is DMB, not completion.
+ * Use the existing board ArmLib DSB. No additional register access/delay. */
+STATIC VOID ThermalSyncWrite32(UINTN Address,UINT32 Value) {
+ MmioWrite32(Address,Value);ArmDataSynchronizationBarrier();
+}
+STATIC VOID ThermalSyncWrite16(UINTN Address,UINT16 Value) {
+ MmioWrite16(Address,Value);ArmDataSynchronizationBarrier();
+}
 STATIC BOOLEAN mAttempted;
 STATIC BOOLEAN Idle(UINTN Address,UINT32 Mask,UINTN Attempts,UINTN Delay) {
  UINTN n;UINT32 v;
@@ -22,34 +32,34 @@ VOID A04ThermalPioBeforeExit(VOID) {
  if(r.clock_before==MAX_UINT32||r.reset_before==MAX_UINT32)goto publish;
  if((r.clock_before&0x40000002U)||(r.reset_before&1)) {
   // Linux reset precedes ungating: never resume an old AHB address program.
-  MmioWrite32(I+0x120,1);stage1Readback=MmioRead32(I+0x128);
+  ThermalSyncWrite32(I+0x120,1);stage1Readback=MmioRead32(I+0x128);
   if(!(stage1Readback&1)) {
    DEBUG((DEBUG_ERROR,"A04 THM PIO stage1 phase=1(assert) actual=%08x\n",stage1Readback));goto publish;
   }
-  MmioWrite32(TOP+0x84,r.clock_before&0x40000002U);
+  ThermalSyncWrite32(TOP+0x84,r.clock_before&0x40000002U);
   stage1Readback=MmioRead32(TOP+0x24);
   if(stage1Readback&0x40000002U) {
    DEBUG((DEBUG_ERROR,"A04 THM PIO stage1 phase=2(ungate) actual=%08x\n",stage1Readback));goto publish;
   }
-  MmioWrite32(I+0x124,1);stage1Readback=MmioRead32(I+0x128);
+  ThermalSyncWrite32(I+0x124,1);stage1Readback=MmioRead32(I+0x128);
   if(stage1Readback&1) {
    DEBUG((DEBUG_ERROR,"A04 THM PIO stage1 phase=3(deassert) actual=%08x\n",stage1Readback));goto publish;
   }
  }
  r.stage=2;r.irq_before=MmioRead32(T+0xc);r.ahb_before=MmioRead32(T+0x418);
- MmioWrite32(T+0xc,0);r.irq_after=MmioRead32(T+0xc);if(r.irq_after)goto publish;
+ ThermalSyncWrite32(T+0xc,0);r.irq_after=MmioRead32(T+0xc);if(r.irq_after)goto publish;
  if(!Idle(T+0x418,0xffff0000U,50,2))goto publish;
  r.stage=3;v=MmioRead32(T+0x3c);if(v==MAX_UINT32)goto publish;
- MmioWrite32(T+0x3c,v|0x10e);r.pause_after=MmioRead32(T+0x3c);if((r.pause_after&0x10e)!=0x10e)goto publish;
- MmioWrite32(T,0);r.mon_after=MmioRead32(T);if(r.mon_after)goto publish;
+ ThermalSyncWrite32(T+0x3c,v|0x10e);r.pause_after=MmioRead32(T+0x3c);if((r.pause_after&0x10e)!=0x10e)goto publish;
+ ThermalSyncWrite32(T,0);r.mon_after=MmioRead32(T);if(r.mon_after)goto publish;
  if(!Idle(T+0x418,0xffff0000U,50,2))goto publish;
  r.ahb_after=MmioRead32(T+0x418);r.stage=4;
  // No future thermal AHB/IRQ producer survives this handoff. Linux INFRA reset.
- MmioWrite32(I+0x120,1);r.reset_after=MmioRead32(I+0x128);if(r.reset_after==MAX_UINT32||!(r.reset_after&1))goto publish;
+ ThermalSyncWrite32(I+0x120,1);r.reset_after=MmioRead32(I+0x128);if(r.reset_after==MAX_UINT32||!(r.reset_after&1))goto publish;
  // AUXADC Linux suspend clears all software channel triggers. Do not guess
  // other auto-mode configurations: only the known thermal channel11 is removed.
  v=MmioRead16(A);if(v==0xffffU || (v&~0x800U))goto publish;
- MmioWrite16(A,(UINT16)(v&~0x800U));MmioWrite16(A+4,0);
+ ThermalSyncWrite16(A,(UINT16)(v&~0x800U));ThermalSyncWrite16(A+4,0);
  for(n=0;n<32;n++){v=MmioRead16(A+0x10);if(v==0xffffU)goto publish;if(!(v&1))break;gBS->Stall(1000);}if(n==32)goto publish;
  r.stage=5;r.adc_mode=MmioRead16(A);r.adc_trigger=MmioRead16(A+4);r.adc_busy=MmioRead16(A+0x10);
  r.clock_after=MmioRead32(TOP+0x24);r.irq_pending=MmioRead32(T+0x10);
