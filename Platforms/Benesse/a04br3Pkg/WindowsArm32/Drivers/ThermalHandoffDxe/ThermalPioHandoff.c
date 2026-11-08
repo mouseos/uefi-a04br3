@@ -15,17 +15,26 @@ STATIC BOOLEAN Idle(UINTN Address,UINT32 Mask,UINTN Attempts,UINTN Delay) {
  for(n=0;n<Attempts;n++) {v=MmioRead32(Address);if(v==MAX_UINT32)return FALSE;if(!(v&Mask))return TRUE;gBS->Stall(Delay);}return FALSE;
 }
 VOID A04ThermalPioBeforeExit(VOID) {
- A04_THERMAL_PIO_RECORD r={0};EFI_GUID guid=A04_THERMAL_PIO_GUID;EFI_STATUS status;UINT32 v;UINTN n;
+ A04_THERMAL_PIO_RECORD r={0};EFI_GUID guid=A04_THERMAL_PIO_GUID;EFI_STATUS status;UINT32 v,stage1Readback;UINTN n;
  if(mAttempted) { return; }
  mAttempted=TRUE;r.version=2;r.bytes=sizeof(r);r.stage=1;
  r.clock_before=MmioRead32(TOP+0x24);r.reset_before=MmioRead32(I+0x128);
  if(r.clock_before==MAX_UINT32||r.reset_before==MAX_UINT32)goto publish;
  if((r.clock_before&0x40000002U)||(r.reset_before&1)) {
   // Linux reset precedes ungating: never resume an old AHB address program.
-  MmioWrite32(I+0x120,1);if(!(MmioRead32(I+0x128)&1))goto publish;
+  MmioWrite32(I+0x120,1);stage1Readback=MmioRead32(I+0x128);
+  if(!(stage1Readback&1)) {
+   DEBUG((DEBUG_ERROR,"A04 THM PIO stage1 phase=1(assert) actual=%08x\n",stage1Readback));goto publish;
+  }
   MmioWrite32(TOP+0x84,r.clock_before&0x40000002U);
-  if(MmioRead32(TOP+0x24)&0x40000002U)goto publish;
-  MmioWrite32(I+0x124,1);if(MmioRead32(I+0x128)&1)goto publish;
+  stage1Readback=MmioRead32(TOP+0x24);
+  if(stage1Readback&0x40000002U) {
+   DEBUG((DEBUG_ERROR,"A04 THM PIO stage1 phase=2(ungate) actual=%08x\n",stage1Readback));goto publish;
+  }
+  MmioWrite32(I+0x124,1);stage1Readback=MmioRead32(I+0x128);
+  if(stage1Readback&1) {
+   DEBUG((DEBUG_ERROR,"A04 THM PIO stage1 phase=3(deassert) actual=%08x\n",stage1Readback));goto publish;
+  }
  }
  r.stage=2;r.irq_before=MmioRead32(T+0xc);r.ahb_before=MmioRead32(T+0x418);
  MmioWrite32(T+0xc,0);r.irq_after=MmioRead32(T+0xc);if(r.irq_after)goto publish;
