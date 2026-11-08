@@ -5,7 +5,10 @@
 #define A04_THERMAL_PIO_NAME L"A04BR3ThermalPioHandoff"
 #define A04_THERMAL_PIO_GUID {0x79c36824,0x7e48,0x4ec8,{0xb5,0xe7,0x57,0xf8,0xae,0x04,0x10,0x16}}
 /* Boot-local normal-world producer takeover; not a claim about secure firmware.
- * Ready records leave the thermal bus master held in reset and both clocks on.
+ * Version2: ready leaves the thermal bus master held in reset, clocks on.
+ * Version3: CT3 reset pair then clocks on; pause10e/MON0/IRQ0/AHB idle
+ * and stopped AUXADC are observed live. reset_after is diagnostic ONLY.
+ * v3 requires a matching parent with live stop checks at acquire/release.
  * No IRQ is used by the Windows PIO consumer. All fields UINT32, attrs exactly6. */
 typedef struct {
  uint32_t version,bytes,ready,stage,clock_before,clock_after,reset_before,reset_after;
