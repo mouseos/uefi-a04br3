@@ -44,9 +44,9 @@ typedef struct {UINT32 Resolution,Accuracy;BOOLEAN SetsToZero;} EFI_TIME_CAPABIL
 static unsigned probe_registrations;void MtRtcRegisterBootProbe(void){++probe_registrations;}
 static UINT64 counter=1000000;static UINT32 frequency=1000;static unsigned reads,mmio,raised,restored;static int runtime_phase,fault,unstable;
 static UINT16 raw[7]={58,59,23,28,0,2,58};
-static unsigned synchronized;
+static unsigned synchronized;static int frozen;
 void ArmInstructionSynchronizationBarrier(void){synchronized=1;}
-UINT64 ArmGenericTimerGetSystemCount(void){assert(synchronized);synchronized=0;return counter;}
+UINT64 ArmGenericTimerGetSystemCount(void){assert(synchronized);synchronized=0;return frozen?counter:counter++;}
 UINTN ArmGenericTimerGetTimerFreq(void){return frequency;}
 void ArmDataSynchronizationBarrier(void){}
 UINT32 MmioRead32(UINTN a){assert(!runtime_phase&&a==0x1000f09c);++mmio;return 1;}
@@ -65,7 +65,12 @@ int main(void){EFI_SYSTEM_TABLE st={0};EFI_TIME t,old;EFI_TIME_CAPABILITIES cap,
  old=t;memset(&cap,0xa5,sizeof(cap));capold=cap;assert(LibGetTime(&t,&cap)==EFI_UNSUPPORTED&&!memcmp(&cap,&capold,sizeof(cap))&&!memcmp(&t,&old,sizeof(t)));
  assert(LibGetTime(NULL,NULL)==EFI_INVALID_PARAMETER);
  ++frequency;assert(LibGetTime(&t,NULL)==EFI_DEVICE_ERROR);--frequency;
- counter=mSeedCounter-1;assert(LibGetTime(&t,NULL)==EFI_DEVICE_ERROR);
+ assert(LibGetTime(&t,NULL)==EFI_DEVICE_ERROR); /* restored rate cannot revive anchor */
+ mValid=TRUE;counter=mSeedCounter+frequency; /* above seed, below prior success */
+ assert(LibGetTime(&t,NULL)==EFI_DEVICE_ERROR);
+ mValid=TRUE;counter=mLastCounter+frequency;frozen=1;
+ assert(LibGetTime(&t,NULL)==EFI_DEVICE_ERROR);frozen=0;
+ assert(LibGetTime(&t,NULL)==EFI_DEVICE_ERROR); /* restart cannot revive anchor */
  assert(LibSetTime(&old)==EFI_UNSUPPORTED&&LibSetTime(NULL)==EFI_INVALID_PARAMETER);
  assert(LibSetWakeupTime(FALSE,NULL)==EFI_UNSUPPORTED);
  assert(reads==before&&mmio==1); /* after boot: no PMIC/MMIO, including errors */
@@ -73,7 +78,7 @@ int main(void){EFI_SYSTEM_TABLE st={0};EFI_TIME t,old;EFI_TIME_CAPABILITIES cap,
  assert(LibRtcInitialize(NULL,&st)==EFI_SUCCESS&&!mValid);runtime_phase=1;assert(LibGetTime(&t,NULL)==EFI_DEVICE_ERROR);
  runtime_phase=0;mInitialized=mValid=0;fault=0;unstable=1;reads=0;counter=1000000;
  assert(LibRtcInitialize(NULL,&st)==0&&!mValid&&reads==30);runtime_phase=1;assert(LibGetTime(&t,NULL)==EFI_DEVICE_ERROR);
- assert(raised==3&&restored==3&&probe_registrations==3);puts("PASS actual library control flow: one bounded boot seed, no runtime PMIC/MMIO, frequency/backward/failure rejection, unsupported quality/set/alarm, TPL restored");
+ assert(raised==3&&restored==3&&probe_registrations==3);puts("PASS actual library control flow: one bounded boot seed, no runtime PMIC/MMIO, frequency/last-value-backward/stopped/sticky-failure rejection, unsupported quality/set/alarm, TPL restored");
 }
 '''
 (o/'runtime-test.c').write_text(head)

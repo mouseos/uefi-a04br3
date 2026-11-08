@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-2-Clause-Patent
  * Boot-only MT6392 read through the existing WACS2 transport. Runtime is
- * immutable calendar seed plus the existing physical architectural counter.
+ * calendar seed plus the existing physical architectural counter.
  * No PMIC owner, MMIO, boot/runtime service calls, or NVRAM at GetTime. */
 #include <Uefi.h>
 #include <Library/BaseLib.h>
@@ -14,12 +14,24 @@
 #include "Calendar.h"
 STATIC BOOLEAN mInitialized,mValid;
 STATIC UINT32 mFrequency;
-STATIC UINT64 mSeedCounter,mSeedSeconds;
+STATIC UINT64 mSeedCounter,mSeedSeconds,mLastCounter;
 VOID MtRtcRegisterBootProbe(VOID);
 /* CT3 arch/arm/include/asm/arch_timer.h: ISB before physical MRRC. */
 STATIC UINT64 MtReadCounter(VOID){
  ArmInstructionSynchronizationBarrier();
  return ArmGenericTimerGetSystemCount();
+}
+/* Reuse the earlier board RTC CounterAdvances contract: bounded instruction
+ * reads, no delay/PMIC/boot service. The bound rejects an unqualified clock;
+ * it is not an oscillator-accuracy or wall-time timeout claim. */
+STATIC BOOLEAN MtAdvancingCounter(UINT64 *count){
+ UINT64 first=MtReadCounter(),next;UINTN i;
+ for(i=0;i<64;++i){
+  next=MtReadCounter();
+  if(next<first)return FALSE;
+  if(next>first){*count=next;return TRUE;}
+ }
+ return FALSE;
 }
 /* Invoked only once by LibRtcInitialize before installing the RTC Arch
  * protocol. HIGH_LEVEL blocks other DXE events using the same boot transport.
@@ -50,8 +62,14 @@ EFI_STATUS EFIAPI LibGetTime(OUT EFI_TIME *Time,OUT EFI_TIME_CAPABILITIES *Capab
  /* UEFI Accuracy has no unknown sentinel. Do not return Accuracy0 (perfect)
   * or a made-up bound. This candidate supports time-only queries explicitly. */
  if(Capabilities)return EFI_UNSUPPORTED;
- if(!mValid||!mFrequency||ArmGenericTimerGetTimerFreq()!=mFrequency)return EFI_DEVICE_ERROR;
- now=MtReadCounter();if(now<mSeedCounter)return EFI_DEVICE_ERROR;
+ if(!mValid||!mFrequency)return EFI_DEVICE_ERROR;
+ /* UEFI time-service calls must be serialized (spec8.1); state is scalar.
+  * Once continuity is lost, never resume the old anchor automatically. */
+ if(ArmGenericTimerGetTimerFreq()!=mFrequency||!MtAdvancingCounter(&now)||
+    now<mLastCounter||ArmGenericTimerGetTimerFreq()!=mFrequency){
+  mValid=FALSE;return EFI_DEVICE_ERROR;
+ }
+ mLastCounter=now;
  elapsed=DivU64x32(now-mSeedCounter,mFrequency);
  if(elapsed>MAX_UINT64-mSeedSeconds||!MtSecondsCalendar(mSeedSeconds+elapsed,&result))return EFI_DEVICE_ERROR;
  *Time=result;return EFI_SUCCESS;
@@ -74,6 +92,8 @@ EFI_STATUS EFIAPI LibRtcInitialize(IN EFI_HANDLE ImageHandle,IN EFI_SYSTEM_TABLE
  if(mFrequency){
   old=gBS->RaiseTPL(TPL_HIGH_LEVEL);
   status=MtSnapshot(&mSeedSeconds,&mSeedCounter,mFrequency);
+  if(!EFI_ERROR(status)&&(!MtAdvancingCounter(&mLastCounter)||
+     mLastCounter<mSeedCounter||ArmGenericTimerGetTimerFreq()!=mFrequency))status=EFI_DEVICE_ERROR;
   mValid=!EFI_ERROR(status);
   gBS->RestoreTPL(old);
  }
