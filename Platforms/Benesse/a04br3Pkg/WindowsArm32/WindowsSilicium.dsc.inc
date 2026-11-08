@@ -329,7 +329,7 @@
   #
   # RTC Libraries
   #
-  RealTimeClockLib|SiliciumNullPkg/Library/RealTimeClockLibNull/RealTimeClockLibNull.inf
+  RealTimeClockLib|a04br3Pkg/WindowsArm32/Library/Mt6392RealTimeClockLib/Mt6392RealTimeClockLib.inf
 
   #
   # ...

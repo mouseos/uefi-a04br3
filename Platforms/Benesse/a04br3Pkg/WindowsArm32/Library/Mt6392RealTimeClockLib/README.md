@@ -1,0 +1,33 @@
+# MT6392 boot-seeded UEFI GetTime
+
+機種WindowsArm32のRealTimeClockLibNullを置換する。共通RealTimeClockRuntimeDxeは変更せず、既存標準moduleがLibRtcInitialize後にRuntimeServices.GetTimeへGetTime→LibGetTimeを接続する。元null providerのYear2019/Month1/Day=elapsedDays（初日0）は有効な日付でなく、今回除去する。ただしWindowsのイベント日時2014との因果は未証明。
+
+## bootだけのPMIC snapshot
+
+CT3 7c478212のmfd/mt6397-core.cはMT6392 RTC base8000。rtc-mt6397.cの通常__mtk_rtc_read_timeはTC_SEC+0x0aから7個をreadしsecを再確認する。alarm補助で行うBBPU RELOAD/write-triggerとは区別する。既存Windows sourceのpmic_read.c/calendar.c（共有親1102/RTC calendar）と同じBBPU.CBUSY bit6/年1968+raw7bit/16bit stride/厳密sec一致/全Gregorian範囲検査を使用する。
+
+LibRtcInitializeは既存機種Include/PwrapRead.hのReadPmicを使う。WACS2 INIT_DONE2を確認後、TPL_HIGH_LEVELでboot DXEイベントを排他し、一回のbounded snapshotを採る。通常AP boot workerはWACS2を使わない。最大3回の秒window確認、全体1秒未満、既存transportのbounded FSM waitを使う。WACS CMD/VLDCLRは読取りtransportだけでPMIC書込みbit31は立てない。RTC calendar/BBPU/PDN/alarm/IRQ/32k/校正設定のwriteや再初期化は無い。
+
+counter/timerが正常動作するbootを前提とする。異常タイマーまでの強制停止保証や、未知EL3 ownerとの共存を新たに実証したものではない。boot-only ReadPmicをruntimeから呼ばず、Windowsの単一PWRAP ownerへ干渉しない。
+
+## runtime
+
+immutable scalarのseed seconds/counter/frequencyだけをDXE_RUNTIME_DRIVER内に保持する。GetTimeは既存USE_PHYSICAL_TIMER=1→PhyCounterLibのArmReadCntPct/CntFrqを読むだけで、PWRAP/MMIO/gBS/gRT/NVサービスへ進まない。pointer/boot allocation/関数callbackを保持しないため独自ConvertPointerは不要。既存UefiRuntimeLibはgeneric RTC driverのruntime table pointerを標準のvirtual-address eventで変換する。
+
+1秒分解能、Nanosecond0、TimeZone=EFI_UNSPECIFIED_TIMEZONE、Daylight0（DST管理無し）。UTC/JSTへ変換しない。frequency0/変化、counter巻戻り、日付overflowはEFI_DEVICE_ERROR。physical counterの将来の停止/forward jumpやsleep継続、oscillator精度は未検証であり、実時刻精度やsleep-resumeを保証しない。
+
+seed失敗ではLibRtcInitializeはerror-stateのcallable servicesを登録できるよう成功を返すが、GetTimeはEFI_DEVICE_ERRORを返し、偽epochを返さない。これは時計取得成功ではない。BDSをRTC Arch protocol待ちで止めないための設計である。
+
+## 仕様上の制約
+
+UEFI2.10 8.3 GetTimeのAccuracyにunknown sentinelは定義されない。Accuracy0を完全精度と誤報せず、能力情報を要求するCapabilities非NULL呼出しはEFI_UNSUPPORTED。Time-only GetTimeだけ実seedを返す限定候補であり、全GetTime呼出しを満たす完全適合/Windows利用成功とは称さない。Capabilitiesが必須のloader/OSには未適合の可能性がある。既知の実accuracy根拠が得られるまで推測値は追加しない。
+
+SetTime/GetWakeupTime/SetWakeupTimeはunsupportedで、成功stub・PMIC clock writeは無い。元から非対応のこれらを実装済みと広告する変更や、platform全体のRT properties能力mask推測はしない。OS壁時計の変更/同期をユーザーhelper等で強制しない。
+
+一次仕様: https://uefi.org/specs/UEFI/2.10/08_Services_Runtime_Services.html#gettime （time/local timezone/capabilities/runtime reentry/unsupported）。共通module/headerと既存physical counter実装を実source/ARM link mapで確認する。
+
+## 検証・採用
+
+Tests/mt6392-gettime.pyはproduction calendar/library制御flowを限定host stubで確認する。閏日/月年越し、invalid day0/年/秒/overflow、boot snapshot一回、runtime PMIC/MMIO無し、frequency/巻戻り/seed failure、未知quality/set/alarmの拒否、TPL復元を対象とし、実UEFI/PMIC/Windowsの実行とは区別する。
+
+783fは凍結し、同一profile・全8range/ACPI/4CPU/reset/UART/自動復帰を保持した独立FD/boot候補を作る。現GPU327＋周辺freezeを待たせない。次にmain/Menciusが選ぶ通常一括だけでseed status/実GetTime caller/Windows日時を別々に確認する。Read-only RTC IOCTLの2026成功をOS時計同期の証拠にしない。

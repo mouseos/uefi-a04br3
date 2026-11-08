@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+ INF_VERSION = 0x00010005
+ BASE_NAME = Mt6392RealTimeClockLib
+ FILE_GUID = C56E372C-8D62-4B76-9664-D2438F2A47CA
+ MODULE_TYPE = BASE
+ VERSION_STRING = 1.0
+ LIBRARY_CLASS = RealTimeClockLib|DXE_RUNTIME_DRIVER
+[Sources]
+ Mt6392Rtc.c
+ Calendar.h
+[Packages]
+ MdePkg/MdePkg.dec
+ MdeModulePkg/MdeModulePkg.dec
+ ArmPkg/ArmPkg.dec
+[LibraryClasses]
+ BaseLib
+ BaseMemoryLib
+ ArmLib
+ ArmGenericTimerCounterLib
+ UefiBootServicesTableLib
+ DebugLib
+ IoLib
+ TimerLib
