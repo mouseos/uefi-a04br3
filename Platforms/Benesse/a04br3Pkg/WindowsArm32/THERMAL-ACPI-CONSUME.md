@@ -1,0 +1,9 @@
+# Runtime thermal proofの消費
+
+Windows run151の親1116はvolatile EFI proofの削除でC00000A2となった。標準VariableRuntimeDxeはruntimeのvolatile削除をEFI_WRITE_PROTECTEDとする。共通EDK2を変えずproofのattrs6/bytes/ready/stopped v3を保持する。
+
+SHR0はATCV=1とserialized ATCOを提供する。ATCOはnamespace内ATCLを初回だけ0→1にし1を返し、その後0。親driver再作成ではnamespaceは変わらず、再消費できない。OS rebootでnamespaceが再作成された場合だけ新しい起動のproofを利用できる。ADC MMIO/IRQ/resourceは変更しない。
+
+matched親1117はproof検証後、親mutex前にACPI version/consume応答を厳密に確認する。旧親1116のvolatile削除は新firmwareでも成功扱いにしない。新親を旧firmwareへ載せてもmethod不在で閉じたまま。
+
+baseは実boot1fef/source9ba84ee5。変更は機種AMLと説明だけ。RTC/GOP/4CPU/watchdog/fastboot/producer/MMIO map/校正を保持し、Common/Mu_Basecore/Siliconは変更しない。実機測温成功は未確認。

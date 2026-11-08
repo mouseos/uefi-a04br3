@@ -13,6 +13,17 @@ DefinitionBlock ("shared-parent-gpu-thermal.aml", "SSDT", 2, "BENESS", "A04GPUTH
             Name (_HID, "BEN0001")
             Name (_UID, Zero)
             Name (_CCA, Zero)
+            // A volatile UEFI runtime variable cannot be deleted after EBS.
+            // Keep its immutable proof and consume authority in this ACPI
+            // namespace. Serialized evaluation survives parent PDO reloads.
+            Name (ATCL, Zero)
+            Method (ATCV, 0, NotSerialized) { Return (One) }
+            Method (ATCO, 0, Serialized)
+            {
+                If (ATCL) { Return (Zero) }
+                Store (One, ATCL)
+                Return (One)
+            }
             Name (_CRS, ResourceTemplate ()
             {
                 Memory32Fixed (ReadWrite, 0x10000000, 0x1000)
