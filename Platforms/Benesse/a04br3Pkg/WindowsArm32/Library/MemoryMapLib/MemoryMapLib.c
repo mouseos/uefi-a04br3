@@ -86,6 +86,10 @@ gMemoryDescriptor[] = {
   {"APMixed Sys",        0x10018000, 0x00001000, AddDev, MMAP_IO, UNCACHEABLE, MmIO,   NS_DEVICE},
   {"GIC Distributor",    0x10310000, 0x00010000, AddDev, MMAP_IO, UNCACHEABLE, MmIO,   NS_DEVICE},
   {"GIC CPU Interface",  0x10320000, 0x00020000, AddDev, MMAP_IO, UNCACHEABLE, MmIO,   NS_DEVICE},
+  // CT3 thermal/auxadc reg windows; also assigned to the shared parent by
+  // SSDT-A04GPUTH. ACPI resources do not map the UEFI BeforeEBS callback.
+  {"MT8167 AUXADC",       0x11003000, 0x00001000, AddDev, MMAP_IO, UNCACHEABLE, MmIO,   NS_DEVICE},
+  {"MT8167 Thermal",      0x1100D000, 0x00001000, AddDev, MMAP_IO, UNCACHEABLE, MmIO,   NS_DEVICE},
   {"UART0",              0x11005000, 0x00001000, AddDev, MMAP_IO, UNCACHEABLE, MmIO,   NS_DEVICE},
   {"I2C1 Accelerometer", 0x1100A000, 0x00001000, AddDev, MMAP_IO, UNCACHEABLE, MmIO,   NS_DEVICE},
   {"I2C2 Charger",       0x1100B000, 0x00001000, AddDev, MMAP_IO, UNCACHEABLE, MmIO,   NS_DEVICE},

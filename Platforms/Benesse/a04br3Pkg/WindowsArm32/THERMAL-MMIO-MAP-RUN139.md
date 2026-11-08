@@ -1,0 +1,9 @@
+# run139 BeforeEBS translation fault修正
+
+基点4451d27a。ユーザー実測はDFAR1100D00C/DFSR7 TranslationPageRead、BeforeEBS ThermalHandoffDxe、WinPE未実行。THERMAL controller IRQenable offset0xcでありAUXADC自身のaddressではない。
+
+実ARM32 MemoryMapLibにTHERMAL1100D000/4KiBとAUXADC11003000/4KiBが欠落していた。ACPI8range宣言はUEFI MMUを作らない。両pageを他MMIOと同じAddDev/MMAP_IO/UNCACHEABLE/MmIO/NS_DEVICEで追加。既6range/ACPI8rangeは非変更。Windows driver resourceやowner追加なし。
+
+実MemoryPeimはGetMemoryMap各rowをphysical=virtualのidentity MMU inputへ渡し、AddDevからMMIO resource HOBを生成する。DXE GCDはMMIO HOBをEfiGcdMemoryTypeMemoryMappedIo/UC capabilitiesへ登録し、CPU SyncCacheConfigがMMU属性とGCDを一致させる。runtime allocation HOBを作る条件には該当しない。機種ArmMmuLibは4KiB Device pageをRW/XN/noncacheableに変換する。BeforeExitBootServices callbackはBootServices生存中のidentity accessであり、OS runtime PWRAP/ADC ownerを追加しない。
+
+producer/v3 record/stop/clock/reset/RTC560cfを一切変えない。UEFI descriptor2rowだけのruntime差分。独立sourcebuild/linkmapで選択Libraryと両pageのinputを記録。共通EDK無変更。source/build確認は次実機のabort解消・thermalready/温度/HP成功の証拠ではない。
