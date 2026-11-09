@@ -77,7 +77,19 @@ fi
 [[ $output =~ ^[A-Za-z0-9_-]+$ ]] || exit 2
 root=$(git rev-parse --show-toplevel)
 [[ -z $(git -C "$root" -c core.filemode=false status --porcelain --untracked-files=normal --ignore-submodules=all) ]] || { echo 'source worktree must be clean' >&2; exit 2; }
-[[ ! -e "$root/Build/$output" ]] || { echo 'output already exists' >&2; exit 2; }
+if [[ -e "$root/Build/$output" ]]; then
+  [[ $unified_display == 1 && -n ${A04_DIAGNOSTIC_CACHED_BUILD_PROOF:-} ]] || { echo 'output already exists' >&2; exit 2; }
+  python3 - "$root/Build/$output" "$A04_DIAGNOSTIC_CACHED_BUILD_PROOF" <<'CACHEPY'
+import hashlib,json,sys
+from pathlib import Path
+build=Path(sys.argv[1]).resolve();proof=Path(sys.argv[2]);p=json.loads(proof.read_text())
+assert p['baseline_source']=='b4ce1992af66adcefa02e34357d5dbf4313eaca2'
+assert p['destination']==str(build) and p['role']=='verified-existing-1117-build-cache-not-final356'
+assert p['files']
+for n,h in p['files'].items():
+ f=(build/n).resolve();assert f.is_relative_to(build) and hashlib.sha256(f.read_bytes()).hexdigest()==h,n
+CACHEPY
+fi
 if [[ $gpu == 1 ]]; then
   python3 "$root/Platforms/Benesse/a04br3Pkg/Tests/check_gpu_sysirq_mapping.py"
 fi
