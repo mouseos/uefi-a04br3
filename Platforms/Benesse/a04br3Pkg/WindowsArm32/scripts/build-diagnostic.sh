@@ -24,6 +24,8 @@ display=${A04_DIAGNOSTIC_DISPLAY:-0}
 clear_lk_overlay=${A04_DIAGNOSTIC_CLEAR_LK_OVERLAY:-0}
 [[ $clear_lk_overlay == 0 || $clear_lk_overlay == 1 ]] || exit 2
 display_gce=${A04_DIAGNOSTIC_DISPLAY_GCE_RESOURCES:-0}
+unified_display=${A04_DIAGNOSTIC_UNIFIED_DISPLAY356:-0}
+[[ $unified_display == 0 || ($unified_display == 1 && $display == 1 && $display_gce == 0) ]] || exit 2
 display_brightness=${A04_DIAGNOSTIC_DISPLAY_BRIGHTNESS_RESOURCES:-0}
 touch=${A04_DIAGNOSTIC_TOUCH:-0}
 shared=${A04_DIAGNOSTIC_SHARED:-0}
@@ -83,7 +85,7 @@ for f in "$template"/{target.txt,tools_def.txt,build_rule.txt} "$oldtools/ArmPkg
 conf=$(mktemp -d "${TMPDIR:-/tmp}/a04-windows-build.XXXXXXXX")
 trap 'rm -r -- "$conf"' EXIT
 cp "$template"/{target.txt,tools_def.txt,build_rule.txt} "$conf/"
-python3 - "$conf/tools_def.txt" "$root" "$oldtools" "$overlay" "$display_gce" "$display_brightness" <<'PY'
+python3 - "$conf/tools_def.txt" "$root" "$oldtools" "$overlay" "$display_gce" "$display_brightness" "$unified_display" <<'PY'
 from pathlib import Path
 import sys,re
 p=Path(sys.argv[1]); s=p.read_text(); root=Path(sys.argv[2]); old=Path(sys.argv[3])
@@ -92,6 +94,9 @@ if sys.argv[5]=='1':
  assert n==1
 if sys.argv[6]=='1':
  s,n=re.subn(r'(?m)^(DEFINE GCC_ASLPP_FLAGS\s*=\s*[^\r\n]+)',r'\1 -DA04BR3_DISPLAY_BRIGHTNESS_RESOURCES=1',s)
+ assert n==1
+if sys.argv[7]=='1':
+ s,n=re.subn(r'(?m)^(DEFINE GCC_ASLPP_FLAGS\s*=\s*[^\r\n]+)',r'\1 -DA04BR3_UNIFIED_DISPLAY356=1',s)
  assert n==1
 needle='DEFINE GCC5_ARM_CC_FLAGS             = DEF(GCC49_ARM_CC_FLAGS)'
 assert s.count(needle)==1
@@ -135,6 +140,7 @@ if [[ $thermal_pio == 1 ]]; then buildflags+=(-D A04BR3_THERMAL_PIO_HANDOFF=1); 
 if [[ $sd_pio == 1 ]]; then buildflags+=(-D A04BR3_SD_PIO_PROFILE=1); fi
 if [[ $gpu_domain == 1 ]]; then buildflags+=(-D A04BR3_GPU_DOMAIN_OWNER=1); fi
 if [[ $gpu_thermal == 1 ]]; then buildflags+=(-D A04BR3_GPU_THERMAL_PROFILE=1); fi
+if [[ $unified_display == 1 ]]; then buildflags+=(-D A04BR3_UNIFIED_DISPLAY356=1); fi
 if [[ $shared_io == 1 ]]; then buildflags+=(-D A04BR3_SHARED_IO_PROFILE=1); fi
 if [[ $apmixed == 1 ]]; then buildflags+=(-D A04BR3_SHARED_APMIXED=1); fi
 "$EDK_TOOLS_PATH/BinWrappers/PosixLike/build" -p a04br3Pkg/WindowsArm32/WindowsArm32.dsc -a ARM -b DEBUG -t GCC5 -D FD_BASE=0x41080000 -D FD_SIZE=0x00300000 -D FD_BLOCKS=0x300 -D "A04_BUILD_OUTPUT=Build/$output" "${buildflags[@]}"
@@ -223,6 +229,7 @@ result['gpu_clock_record']={'name':'Mt8167GpuClock','guid':'9c50bc94-6c80-4fa2-9
 result['build_defines']['A04BR3_DISPLAY_PROVIDER']=display
 result['build_defines']['A04BR3_CLEAR_LK_OVERLAY']=clear_lk_overlay
 result['build_defines']['A04BR3_DISPLAY_GCE_RESOURCES']=display_gce
+result['build_defines']['A04BR3_UNIFIED_DISPLAY356']=__import__('os').environ.get('A04_DIAGNOSTIC_UNIFIED_DISPLAY356','0')
 result['build_defines']['A04BR3_DISPLAY_BRIGHTNESS_RESOURCES']=display_brightness
 result['build_defines']['A04BR3_TOUCH_PROVIDER']=touch
 result['build_defines']['A04BR3_SHARED_PARENT']=shared

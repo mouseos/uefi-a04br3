@@ -13,6 +13,9 @@ DefinitionBlock ("GpuProvider.aml", "SSDT", 2, "BENESS", "A04GPU  ", 1)
             // coherent. Conservatively request non-coherent DMA treatment;
             // this does not assert that any fabric path snoops CPU caches.
             Name (_CCA, Zero)
+#ifdef A04BR3_UNIFIED_DISPLAY356
+            Name (_DEP, Package () { \_SB.DIS0 })
+#endif
             // Read-only snapshots of shared power and clock registers. ACPI
             // owns these SystemMemory operation regions; the GPU driver does
             // not claim or write the shared register banks. A snapshot is not

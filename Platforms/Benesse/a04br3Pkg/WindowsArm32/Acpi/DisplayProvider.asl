@@ -15,6 +15,37 @@ DefinitionBlock ("DisplayProvider.aml", "SSDT", 2, "BENESS", "A04DISP ", 1)
             // coherency; the board does not establish hardware snooping.
             // Zero conservatively requests non-coherent DMA treatment.
             Name (_CCA, Zero)
+#ifdef A04BR3_UNIFIED_DISPLAY356
+            // CT3 mt8167.dtsi larb0=0x14016000; m4u_reg.h MMU_EN=0xfc0.
+            // Read-only platform proof. Windows must not infer POST PA=DMA.
+            OperationRegion (DMMU, SystemMemory, 0x14016FC0, 4)
+            Field (DMMU, DWordAcc, NoLock, Preserve) { DME0, 32 }
+            OperationRegion (DPOL, SystemMemory, 0x10200634, 4)
+            Field (DPOL, DWordAcc, NoLock, Preserve) { DPI5, 32 }
+            OperationRegion (DVID, SystemMemory, 0x14012014, 4)
+            Field (DVID, DWordAcc, NoLock, Preserve) { DVM0, 32 }
+            Method (DMS0, 0, Serialized)
+            {
+                Local0 = Buffer (32) {}
+                CreateDWordField (Local0, 0, DMAG)
+                CreateDWordField (Local0, 4, DVER)
+                CreateDWordField (Local0, 8, MMEN)
+                CreateDWordField (Local0, 12, POL5)
+                CreateDWordField (Local0, 16, DWID)
+                CreateDWordField (Local0, 20, DHEI)
+                CreateDWordField (Local0, 24, DPIT)
+                CreateDWordField (Local0, 28, DMOD)
+                DMAG = 0x36354D44
+                DVER = One
+                MMEN = DME0
+                POL5 = DPI5
+                DWID = 800
+                DHEI = 1280
+                DPIT = 3200
+                If (DVM0 == 2) { DMOD = One }
+                Return (Local0)
+            }
+#endif
             Name (_CRS, ResourceTemplate ()
             {
                 Memory32Fixed (ReadWrite, 0x14007000, 0x00001000) // OVL0
@@ -31,7 +62,11 @@ DefinitionBlock ("DisplayProvider.aml", "SSDT", 2, "BENESS", "A04DISP ", 1)
                 // GPIO1 enable, TOPCK and MMSYS remain with their existing owners.
                 Memory32Fixed (ReadWrite, 0x1100F000, 0x00001000) // DISP_PWM0
 #endif
-#ifdef A04BR3_DISPLAY_GCE_RESOURCES
+#ifdef A04BR3_UNIFIED_DISPLAY356
+                // SYSIRQ inverts CT3 LEVEL_LOW SPI160/162; generic GIC high.
+                Interrupt (ResourceConsumer, Level, ActiveHigh, Exclusive) { 192 }
+                Interrupt (ResourceConsumer, Level, ActiveHigh, Exclusive) { 194 }
+#elif defined(A04BR3_DISPLAY_GCE_RESOURCES)
                 // OVL0 SPI 160, translated to GSI 192.
                 Interrupt (ResourceConsumer, Level, ActiveLow, Exclusive) { 192 }
 #endif

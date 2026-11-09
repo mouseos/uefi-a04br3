@@ -924,6 +924,22 @@ ConfigureA04Br3Scanout (
 
   // Linux installs the OVL IRQ before its CRTC state exists. Do not hand off
   // the frame-complete interrupt left enabled by LK.
+#if A04BR3_UNIFIED_DISPLAY356
+  // CT3 SYSIRQ LEVEL_LOW -> GIC LEVEL_HIGH for OVL SPI160 / RDMA SPI162.
+  // Preserve GPU185 and all unrelated interrupt polarity bits.
+  {
+    UINT32 Before = MmioRead32 (0x10200634U);
+    MmioWrite32 (0x10200634U, Before | BIT0 | BIT2);
+    if ((MmioRead32 (0x10200634U) & (BIT0 | BIT2)) != (BIT0 | BIT2))
+      FailClosed ("unified display SYSIRQ160/162 polarity");
+  }
+  // RDMA video-mode frame-end IRQ is connected by the DIS0 resource driver.
+  // Do not expose an asserted interrupt before the OS owns that connection.
+  MmioWrite32 (MT8167_RDMA0_BASE, 0U);
+  MmioWrite32 (MT8167_RDMA0_BASE + 4U, 0U);
+  if (MmioRead32 (MT8167_RDMA0_BASE) != 0U)
+    FailClosed ("unified display RDMA interrupt disable");
+#endif
   MmioWrite32 (OVL_INTEN, 0U);
   MmioWrite32 (OVL_INTSTA, 0U);
   if (MmioRead32 (OVL_INTEN) != 0U) {
