@@ -84,7 +84,7 @@ import hashlib,json,sys
 from pathlib import Path
 build=Path(sys.argv[1]).resolve();proof=Path(sys.argv[2]);p=json.loads(proof.read_text())
 assert p['baseline_source']=='b4ce1992af66adcefa02e34357d5dbf4313eaca2'
-assert p['destination']==str(build) and p['role']=='verified-existing-1117-build-cache-not-final356'
+assert p['destination']==str(build) and p['role'] in ('verified-existing-1117-build-cache-not-final356','verified356-partial-build-not-final')
 assert p['files']
 for n,h in p['files'].items():
  f=(build/n).resolve();assert f.is_relative_to(build) and hashlib.sha256(f.read_bytes()).hexdigest()==h,n

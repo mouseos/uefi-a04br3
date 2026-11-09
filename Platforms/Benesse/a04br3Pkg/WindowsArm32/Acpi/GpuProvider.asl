@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: BSD-2-Clause-Patent */
 DefinitionBlock ("GpuProvider.aml", "SSDT", 2, "BENESS", "A04GPU  ", 1)
 {
+#ifdef A04BR3_UNIFIED_DISPLAY356
+    External (\_SB.DIS0, DeviceObj)
+#endif
     Scope (_SB)
     {
         Device (GPU0)
