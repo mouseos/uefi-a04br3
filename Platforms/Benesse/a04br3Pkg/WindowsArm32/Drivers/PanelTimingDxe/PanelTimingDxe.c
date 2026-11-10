@@ -22,7 +22,8 @@ STATIC BOOLEAN HasDisplayDevice(EFI_ACPI_SDT_PROTOCOL *Sdt,UINTN Key) {
   Found=!EFI_ERROR(Status)&&Type==EFI_ACPI_DATA_TYPE_OPCODE&&Bytes==2&&
         Data&&((CONST UINT8 *)Data)[0]==0x5b&&((CONST UINT8 *)Data)[1]==0x82;
  }
- if(Device&&Device!=Root) Sdt->Close(Device);Sdt->Close(Root);return Found;
+ if(Device&&Device!=Root) { Sdt->Close(Device); }
+ Sdt->Close(Root);return Found;
 }
 STATIC VOID EFIAPI Publish(EFI_EVENT Event,VOID *Context) {
  EFI_ACPI_TABLE_PROTOCOL *Acpi;EFI_ACPI_SDT_PROTOCOL *Sdt;
