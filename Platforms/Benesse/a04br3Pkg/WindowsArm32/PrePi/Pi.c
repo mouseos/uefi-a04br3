@@ -43,6 +43,29 @@ STATIC VOID CaptureThermalCal (UINT32 Address) {
   else DEBUG ((DEBUG_ERROR,"A04 THERMAL: boot devinfo captured\n"));
 }
 #endif
+#if A04BR3_PANEL_TIMING_HANDOFF == 1
+#include <Library/FdtLib.h>
+#include <Library/HobLib.h>
+#define A04BR3_PANEL_TIMING_PARSER 1
+#include <A04BR3PanelTiming.h>
+STATIC EFI_GUID mPanelTimingGuid=A04BR3_PANEL_TIMING_GUID;
+STATIC VOID CapturePanelTiming(UINT32 Address) {
+ CONST VOID *Tree;CONST UINT8 *Prop;UINT32 Size;INT32 Node,Len;UINTN I;
+ CONST CHAR8 *Names[2]={"/chosen","/chosen@0"};A04BR3_PANEL_TIMING Record;
+ if(Address<0x40000000U||Address>0xbfffffd8U||(Address&3U)) return;
+ Tree=(CONST VOID *)(UINTN)Address;if(FdtCheckHeader(Tree)!=0) return;
+ Size=FdtTotalSize(Tree);if(Size<40||Size>0x100000U||Size>0xc0000000U-Address) return;
+ for(I=0;I<2;I++) {
+  Node=FdtPathOffset(Tree,Names[I]);if(Node<0) continue;
+  Prop=(CONST UINT8 *)FdtGetProp(Tree,Node,"atag,videolfb",&Len);
+  if(Prop==NULL||Len<0) continue;
+  if(!A04PanelParse(Prop,(UINTN)Len,&Record)) return;
+  if(BuildGuidDataHob(&mPanelTimingGuid,&Record,sizeof(Record))!=NULL)
+   DEBUG((DEBUG_ERROR,"A04 PANEL: LK fps100=%u captured\n",Record.Fps100));
+  return;
+ }
+}
+#endif
 #if A04BR3_WINDOWS_CPU_1300 == 1
 INT32 A04BR3WindowsCpu1300 (VOID);
 #include <A04BR3CpuHandoff.h>
@@ -163,6 +186,9 @@ PrePiMain(
   // Initialize MMU
   Status = MemoryPeim(UefiMemoryBase, UefiMemorySize);
   ASSERT_EFI_ERROR (Status);
+#if A04BR3_PANEL_TIMING_HANDOFF == 1
+  CapturePanelTiming(BootDtb);
+#endif
 #if A04BR3_THERMAL_PROVIDER == 1
   CaptureThermalCal (BootDtb);
 #else

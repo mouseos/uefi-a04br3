@@ -205,6 +205,9 @@ READ_LOCK_STATUS   = TRUE
 !endif
 !endif
 !endif
+!if $(A04BR3_PANEL_TIMING_HANDOFF) == 1
+  INF a04br3Pkg/WindowsArm32/Drivers/PanelTimingDxe/PanelTimingDxe.inf
+!endif
 !if $(A04BR3_THERMAL_HANDOFF_RECORD) == 1
   INF a04br3Pkg/WindowsArm32/Drivers/ThermalHandoffDxe/ThermalHandoffDxe.inf
 !endif

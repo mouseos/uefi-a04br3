@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+ INF_VERSION = 0x00010019
+ BASE_NAME = A04Br3PanelTimingDxe
+ FILE_GUID = 199DB78C-1DAC-4338-B12A-6522FD59F7E3
+ MODULE_TYPE = DXE_DRIVER
+ VERSION_STRING = 1.0
+ ENTRY_POINT = PanelTimingEntry
+[Sources]
+ PanelTimingDxe.c
+ PanelTimingAml.h
+[Packages]
+ MdePkg/MdePkg.dec
+ a04br3Pkg/a04br3.dec
+[LibraryClasses]
+ BaseMemoryLib
+ DebugLib
+ HobLib
+ UefiBootServicesTableLib
+ UefiDriverEntryPoint
+[Guids]
+ gEfiEventReadyToBootGuid
+[Protocols]
+ gEfiAcpiTableProtocolGuid
+ gEfiAcpiSdtProtocolGuid
+[Depex]
+ gEfiAcpiTableProtocolGuid AND gEfiAcpiSdtProtocolGuid
