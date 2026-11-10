@@ -11,8 +11,8 @@
 #include "PanelTimingAml.h"
 STATIC EFI_GUID mPanelGuid=A04BR3_PANEL_TIMING_GUID;
 STATIC BOOLEAN HasDisplayDevice(EFI_ACPI_SDT_PROTOCOL *Sdt,UINTN Key) {
- /* ACPI encoded absolute dual NameSeg path: \_SB_.DIS0. */
- UINT8 Path[]={0x5c,0x2e,'_','S','B','_','D','I','S','0',0};
+ /* Mu FindPath converts the ASL string to an AML path internally. */
+ CHAR8 Path[]="\\_SB_.DIS0";
  EFI_ACPI_HANDLE Root=NULL,Device=NULL;EFI_ACPI_DATA_TYPE Type;
  CONST VOID *Data=NULL;UINTN Bytes=0;EFI_STATUS Status;BOOLEAN Found=FALSE;
  Status=Sdt->OpenSdt(Key,&Root);if(EFI_ERROR(Status)) return FALSE;
